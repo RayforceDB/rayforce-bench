@@ -1,0 +1,31 @@
+{
+  "name": "example_groupby",
+  "description": "Example Group By dataset for testing (small)",
+  "version": "1.0.0",
+  
+  "schema": [
+    {"name": "id1", "type": "SYMBOL", "nullable": false},
+    {"name": "id2", "type": "SYMBOL", "nullable": false},
+    {"name": "id3", "type": "SYMBOL", "nullable": false},
+    {"name": "id4", "type": "I64", "nullable": false},
+    {"name": "id5", "type": "I64", "nullable": false},
+    {"name": "id6", "type": "I64", "nullable": false},
+    {"name": "v1", "type": "I64", "nullable": false},
+    {"name": "v2", "type": "I64", "nullable": false},
+    {"name": "v3", "type": "F64", "nullable": false}
+  ],
+  
+  "table_name": "t",
+  
+  "row_count": 1000,
+  "seed": 42,
+  
+  "files": [
+    "data.csv"
+  ],
+  
+  "generation": {
+    "tool": "rayforce-bench/generate_example.py",
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}

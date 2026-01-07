@@ -1,0 +1,4 @@
+# Placeholder for generated datasets
+# Each dataset should be in its own subdirectory with:
+#   - manifest.json (schema, checksums, metadata)
+#   - *.csv files
