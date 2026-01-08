@@ -1,0 +1,361 @@
+"""
+Polars adapter for benchmarking.
+
+Uses Polars DataFrame library for in-process execution.
+Measures only query execution time using perf_counter_ns.
+"""
+
+import hashlib
+import time
+from pathlib import Path
+from typing import Any
+
+import polars as pl
+
+from benchmarks.adapter import Adapter, AdapterResult, SetupError, TaskError
+from benchmarks.config import get_config
+
+
+# Type mapping from manifest types to Polars types
+TYPE_MAP = {
+    "I64": pl.Int64,
+    "I32": pl.Int32,
+    "I16": pl.Int16,
+    "F64": pl.Float64,
+    "F32": pl.Float32,
+    "SYMBOL": pl.Utf8,
+    "STRING": pl.Utf8,
+    "DATE": pl.Date,
+    "TIME": pl.Time,
+    "TIMESTAMP": pl.Datetime,
+    "BOOL": pl.Boolean,
+    "B8": pl.Boolean,
+}
+
+
+class PolarsAdapter(Adapter):
+    """Polars in-process adapter.
+    
+    Uses Polars DataFrame library for high-performance operations.
+    All operations run in-process without IPC or network.
+    """
+    
+    name = "polars"
+    version = pl.__version__
+    embedded = True
+    
+    def __init__(self, n_threads: int | None = None):
+        """Initialize Polars adapter.
+        
+        Args:
+            n_threads: Number of threads (None = auto, or from config).
+        """
+        config = get_config()
+        polars_config = config.polars if hasattr(config, 'polars') else {}
+        
+        self.n_threads = n_threads if n_threads is not None else polars_config.get("threads")
+        self._tables: dict[str, pl.DataFrame] = {}
+        self._table_name: str = ""
+        self._schema: dict[str, Any] = {}
+        self._tasks = self._build_task_registry()
+        
+        # Set thread pool size if specified
+        if self.n_threads is not None:
+            pl.Config.set_thread_pool_size(self.n_threads)
+    
+    def _build_task_registry(self) -> dict[str, callable]:
+        """Build registry of task handlers."""
+        return {
+            # H2OAI Group By queries
+            "groupby_q1": self._task_groupby_q1,
+            "groupby_q2": self._task_groupby_q2,
+            "groupby_q3": self._task_groupby_q3,
+            "groupby_q4": self._task_groupby_q4,
+            "groupby_q5": self._task_groupby_q5,
+            "groupby_q6": self._task_groupby_q6,
+            "groupby_q7": self._task_groupby_q7,
+            # Join queries
+            "inner_join": self._task_inner_join,
+            "left_join": self._task_left_join,
+            # Generic execution
+            "sql": self._task_sql,
+        }
+    
+    def setup(self, schema: dict[str, Any]) -> None:
+        """Initialize Polars environment."""
+        self._schema = schema
+        self._table_name = schema.get("table_name", "t")
+    
+    def load_csv(self, csv_paths: list[Path], table_name: str) -> None:
+        """Load CSV files into Polars DataFrame."""
+        if not csv_paths:
+            raise SetupError("No CSV files provided")
+        
+        self._table_name = table_name
+        
+        # Skip if already loaded
+        if table_name in self._tables:
+            return
+        
+        # Build schema from manifest if available
+        schema = None
+        if self._schema.get("columns"):
+            schema = {}
+            for col in self._schema["columns"]:
+                col_name = col.get("name")
+                col_type = col.get("type", "STRING")
+                if col_name:
+                    schema[col_name] = TYPE_MAP.get(col_type, pl.Utf8)
+        
+        # Load CSV(s)
+        if len(csv_paths) == 1:
+            df = pl.read_csv(csv_paths[0], schema=schema)
+        else:
+            # Multiple CSV files
+            dfs = [pl.read_csv(p, schema=schema) for p in csv_paths]
+            df = pl.concat(dfs)
+        
+        self._tables[table_name] = df
+    
+    def run(self, task: str, params: dict[str, Any]) -> AdapterResult:
+        """Execute a benchmark task."""
+        handler = self._tasks.get(task)
+        if handler is None:
+            if "query" in params:
+                return self._execute_sql(params["query"])
+            raise TaskError(f"Unknown task: {task}")
+        
+        return handler(params)
+    
+    def close(self) -> None:
+        """Clean up Polars resources."""
+        self._tables.clear()
+    
+    def clear_cache(self) -> None:
+        """Clear caches for cold-run benchmarks."""
+        # Polars doesn't have explicit cache clearing
+        pass
+    
+    def get_info(self) -> dict[str, Any]:
+        """Return Polars-specific metadata."""
+        info = super().get_info()
+        info.update({
+            "polars_version": pl.__version__,
+            "threads": self.n_threads,
+        })
+        return info
+    
+    def _get_table(self, name: str) -> pl.DataFrame:
+        """Get a loaded table by name."""
+        if name not in self._tables:
+            raise TaskError(f"Table not loaded: {name}")
+        return self._tables[name]
+    
+    def _execute_expr(self, expr_fn, query_desc: str = "") -> AdapterResult:
+        """Execute a Polars expression and return result metadata.
+        
+        Args:
+            expr_fn: A callable that returns a Polars DataFrame/LazyFrame
+            query_desc: Description of the query for logging
+        """
+        try:
+            start_ns = time.perf_counter_ns()
+            result = expr_fn()
+            
+            # Force evaluation if lazy
+            if isinstance(result, pl.LazyFrame):
+                result = result.collect()
+            
+            end_ns = time.perf_counter_ns()
+            
+            row_count = len(result)
+            
+            # Checksum from sample
+            checksum = None
+            if row_count > 0 and len(result.columns) > 0:
+                first_col = result.columns[0]
+                sample = result.head(100).select(first_col).to_series().to_list()
+                checksum = int(hashlib.md5(str(sample).encode()).hexdigest()[:8], 16)
+            
+            return AdapterResult(
+                execution_time_ns=end_ns - start_ns,
+                row_count=row_count,
+                checksum=checksum,
+                query=query_desc,
+            )
+        except Exception as e:
+            return AdapterResult(
+                execution_time_ns=0,
+                row_count=0,
+                success=False,
+                error_message=str(e),
+                query=query_desc,
+            )
+    
+    def _execute_sql(self, query: str) -> AdapterResult:
+        """Execute SQL query using Polars SQL context."""
+        try:
+            # Register all tables with SQL context
+            ctx = pl.SQLContext()
+            for name, df in self._tables.items():
+                ctx.register(name, df)
+            
+            start_ns = time.perf_counter_ns()
+            result = ctx.execute(query).collect()
+            end_ns = time.perf_counter_ns()
+            
+            row_count = len(result)
+            
+            # Checksum
+            checksum = None
+            if row_count > 0 and len(result.columns) > 0:
+                first_col = result.columns[0]
+                sample = result.head(100).select(first_col).to_series().to_list()
+                checksum = int(hashlib.md5(str(sample).encode()).hexdigest()[:8], 16)
+            
+            return AdapterResult(
+                execution_time_ns=end_ns - start_ns,
+                row_count=row_count,
+                checksum=checksum,
+                query=query,
+            )
+        except Exception as e:
+            return AdapterResult(
+                execution_time_ns=0,
+                row_count=0,
+                success=False,
+                error_message=str(e),
+                query=query,
+            )
+    
+    # =========================================================================
+    # H2OAI Group By Queries
+    # =========================================================================
+    
+    def _task_groupby_q1(self, params: dict[str, Any]) -> AdapterResult:
+        """Q1: sum(v1) by id1"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by("id1").agg(pl.sum("v1").alias("v1"))
+        
+        return self._execute_expr(expr, f'df.group_by("id1").agg(pl.sum("v1"))')
+    
+    def _task_groupby_q2(self, params: dict[str, Any]) -> AdapterResult:
+        """Q2: sum(v1) by id1, id2"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by(["id1", "id2"]).agg(pl.sum("v1").alias("v1"))
+        
+        return self._execute_expr(expr, 'df.group_by(["id1","id2"]).agg(pl.sum("v1"))')
+    
+    def _task_groupby_q3(self, params: dict[str, Any]) -> AdapterResult:
+        """Q3: sum(v1), avg(v3) by id3"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by("id3").agg([
+                pl.sum("v1").alias("v1"),
+                pl.mean("v3").alias("v3"),
+            ])
+        
+        return self._execute_expr(expr, 'df.group_by("id3").agg([sum(v1), mean(v3)])')
+    
+    def _task_groupby_q4(self, params: dict[str, Any]) -> AdapterResult:
+        """Q4: avg(v1), avg(v2), avg(v3) by id4"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by("id4").agg([
+                pl.mean("v1").alias("v1"),
+                pl.mean("v2").alias("v2"),
+                pl.mean("v3").alias("v3"),
+            ])
+        
+        return self._execute_expr(expr, 'df.group_by("id4").agg([mean(v1), mean(v2), mean(v3)])')
+    
+    def _task_groupby_q5(self, params: dict[str, Any]) -> AdapterResult:
+        """Q5: sum(v1), sum(v2), sum(v3) by id6"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by("id6").agg([
+                pl.sum("v1").alias("v1"),
+                pl.sum("v2").alias("v2"),
+                pl.sum("v3").alias("v3"),
+            ])
+        
+        return self._execute_expr(expr, 'df.group_by("id6").agg([sum(v1), sum(v2), sum(v3)])')
+    
+    def _task_groupby_q6(self, params: dict[str, Any]) -> AdapterResult:
+        """Q6: max(v1) - min(v2) by id3"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by("id3").agg(
+                (pl.max("v1") - pl.min("v2")).alias("range_v1_v2")
+            )
+        
+        return self._execute_expr(expr, 'df.group_by("id3").agg(max(v1) - min(v2))')
+    
+    def _task_groupby_q7(self, params: dict[str, Any]) -> AdapterResult:
+        """Q7: sum(v3), count by id1-id6"""
+        table_name = params.get("table", self._table_name)
+        df = self._get_table(table_name)
+        
+        def expr():
+            return df.group_by(["id1", "id2", "id3", "id4", "id5", "id6"]).agg([
+                pl.sum("v3").alias("v3"),
+                pl.count().alias("count"),
+            ])
+        
+        return self._execute_expr(expr, 'df.group_by([id1-id6]).agg([sum(v3), count()])')
+    
+    # =========================================================================
+    # Join Queries
+    # =========================================================================
+    
+    def _task_inner_join(self, params: dict[str, Any]) -> AdapterResult:
+        """Inner join on id1, id2"""
+        left_table = params.get("left_table", "x")
+        right_table = params.get("right_table", "y")
+        
+        left_df = self._get_table(left_table)
+        right_df = self._get_table(right_table)
+        
+        def expr():
+            return left_df.join(right_df, on=["id1", "id2"], how="inner")
+        
+        return self._execute_expr(expr, f'{left_table}.join({right_table}, on=["id1","id2"], how="inner")')
+    
+    def _task_left_join(self, params: dict[str, Any]) -> AdapterResult:
+        """Left join on id1, id2"""
+        left_table = params.get("left_table", "x")
+        right_table = params.get("right_table", "y")
+        
+        left_df = self._get_table(left_table)
+        right_df = self._get_table(right_table)
+        
+        def expr():
+            return left_df.join(right_df, on=["id1", "id2"], how="left")
+        
+        return self._execute_expr(expr, f'{left_table}.join({right_table}, on=["id1","id2"], how="left")')
+    
+    def _task_sql(self, params: dict[str, Any]) -> AdapterResult:
+        """Execute arbitrary SQL query."""
+        query = params.get("query")
+        if not query:
+            return AdapterResult(
+                execution_time_ns=0,
+                row_count=0,
+                success=False,
+                error_message="No query provided",
+            )
+        return self._execute_sql(query)

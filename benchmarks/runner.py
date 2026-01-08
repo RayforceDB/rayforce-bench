@@ -40,6 +40,9 @@ class TaskResult:
     warmup_iterations: int = 0
     measured_iterations: int = 0
     
+    # Query that was executed
+    query: str | None = None
+    
     # Error tracking
     errors: list[str] = field(default_factory=list)
     
@@ -183,14 +186,25 @@ class BenchmarkRunner:
         # Setup adapter
         self._log(f"  Setting up {adapter.name}...")
         schema = {
-            "columns": manifest.get("schema", []),
+            "columns": manifest.get("columns", manifest.get("schema", [])),
             "table_name": table_name,
         }
         adapter.setup(schema)
         
-        # Load data
-        self._log(f"  Loading {len(csv_paths)} CSV file(s)...")
-        adapter.load_csv(csv_paths, table_name)
+        # Check if manifest defines multiple tables
+        tables_map = manifest.get("tables")
+        dataset_dir = csv_paths[0].parent if csv_paths else None
+        
+        if tables_map and dataset_dir:
+            # Load each table separately
+            self._log(f"  Loading {len(tables_map)} table(s)...")
+            for tbl_name, csv_file in tables_map.items():
+                csv_path = dataset_dir / csv_file
+                adapter.load_csv([csv_path], tbl_name)
+        else:
+            # Single table mode
+            self._log(f"  Loading {len(csv_paths)} CSV file(s)...")
+            adapter.load_csv(csv_paths, table_name)
         
         # Run each task
         for task_def in suite.get("tasks", []):
@@ -215,7 +229,11 @@ class BenchmarkRunner:
         expected_rows = task_def.get("expected_rows")
         expected_checksum = task_def.get("expected_checksum")
         
-        self._log(f"\n  Task: {task_id}")
+        description = task_def.get("description", "")
+        if description:
+            self._log(f"\n  Task: {task_id} - {description}")
+        else:
+            self._log(f"\n  Task: {task_id}")
         self._log(f"    Cache mode: {cache_mode}, Warmup: {warmup}, Iterations: {iterations}")
         
         task_result = TaskResult(
@@ -251,6 +269,10 @@ class BenchmarkRunner:
                 task_result.row_counts.append(result.row_count)
                 task_result.checksums.append(result.checksum)
                 
+                # Store query from first successful result
+                if task_result.query is None and result.query:
+                    task_result.query = result.query
+                
             except Exception as e:
                 task_result.errors.append(str(e))
         
@@ -280,6 +302,8 @@ class BenchmarkRunner:
             times_ms = [t / 1_000_000 for t in task_result.timings_ns]
             median_ms = sorted(times_ms)[len(times_ms) // 2]
             self._log(f"    Median: {median_ms:.2f} ms ({len(task_result.timings_ns)} runs)")
+        if task_result.query:
+            self._log(f"    Query: {task_result.query}")
         if task_result.errors:
             self._log(f"    Errors: {len(task_result.errors)}")
         if not task_result.validation_passed:

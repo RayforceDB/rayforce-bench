@@ -13,6 +13,7 @@ from typing import Any
 import duckdb
 
 from benchmarks.adapter import Adapter, AdapterResult, SetupError, TaskError
+from benchmarks.config import get_config
 
 
 # Type mapping from manifest types to DuckDB types
@@ -47,11 +48,14 @@ class DuckDBAdapter(Adapter):
         """Initialize DuckDB adapter.
         
         Args:
-            threads: Number of threads (None = auto).
-            memory_limit: Memory limit (e.g., "4GB").
+            threads: Number of threads (None = auto, or from config).
+            memory_limit: Memory limit (e.g., "4GB", or from config).
         """
-        self.threads = threads
-        self.memory_limit = memory_limit
+        config = get_config()
+        ddb_config = config.duckdb
+        
+        self.threads = threads if threads is not None else ddb_config.get("threads")
+        self.memory_limit = memory_limit if memory_limit is not None else ddb_config.get("memory_limit")
         self._conn: duckdb.DuckDBPyConnection | None = None
         self._table_name: str = ""
         self._tasks = self._build_task_registry()
@@ -96,6 +100,13 @@ class DuckDBAdapter(Adapter):
             raise SetupError("No CSV files provided")
         
         self._table_name = table_name
+        
+        # Check if table already exists (multi-table datasets)
+        existing = self._conn.execute(
+            f"SELECT 1 FROM information_schema.tables WHERE table_name = '{table_name}'"
+        ).fetchone()
+        if existing:
+            return  # Table already loaded
         
         # Use DuckDB's efficient read_csv for loading
         if len(csv_paths) == 1:
@@ -149,36 +160,41 @@ class DuckDBAdapter(Adapter):
         return info
     
     def _execute_query(self, query: str) -> AdapterResult:
-        """Execute a query and return result metadata."""
-        start_ns = time.perf_counter_ns()
+        """Execute a query and return result metadata.
         
+        FAIRNESS: DuckDB execute() runs the full query (not lazy).
+        We time only execute(), then fetch results afterward for validation.
+        """
         try:
+            # Time only query execution
+            start_ns = time.perf_counter_ns()
             result = self._conn.execute(query)
-            # Materialize result to get row count without returning data
+            end_ns = time.perf_counter_ns()
+            
+            # Fetch results AFTER timing (for row count and checksum validation)
             rows = result.fetchall()
             row_count = len(rows)
             
-            end_ns = time.perf_counter_ns()
-            
-            # Compute checksum from first column values for validation
+            # Checksum from sample
             checksum = None
             if rows and len(rows[0]) > 0:
-                # Simple checksum from string representation of first column
-                first_col_str = str([row[0] for row in rows[:1000]])  # Limit for performance
+                sample = rows[:100]
+                first_col_str = str([row[0] for row in sample])
                 checksum = int(hashlib.md5(first_col_str.encode()).hexdigest()[:8], 16)
             
             return AdapterResult(
                 execution_time_ns=end_ns - start_ns,
                 row_count=row_count,
                 checksum=checksum,
+                query=query,
             )
         except Exception as e:
-            end_ns = time.perf_counter_ns()
             return AdapterResult(
-                execution_time_ns=end_ns - start_ns,
+                execution_time_ns=time.perf_counter_ns() - start_ns if 'start_ns' in locals() else 0,
                 row_count=0,
                 success=False,
                 error_message=str(e),
+                query=query if 'query' in locals() else None,
             )
     
     # =========================================================================

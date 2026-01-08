@@ -27,6 +27,9 @@ class AdapterResult:
     row_count: int
     checksum: int | None = None  # Optional: hash of result for verification
     
+    # Query/expression that was executed
+    query: str | None = None  # The actual query/expression run
+    
     # Optional metadata
     bytes_processed: int | None = None
     cpu_time_ns: int | None = None

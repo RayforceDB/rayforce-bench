@@ -34,10 +34,11 @@ ENV/
 *.swo
 *~
 
-# Reports (keep .gitkeep)
-reports/*.html
-reports/*.json
-!reports/.gitkeep
+# Old reports folder (deprecated, use docs/ for GitHub Pages)
+reports/
+
+# Keep docs/ (GitHub Pages output) tracked
+# docs/
 
 # Generated datasets (keep manifests and .gitkeep)
 datasets/*/*.csv
@@ -45,9 +46,15 @@ datasets/*/*.csv
 !datasets/.gitkeep
 !datasets/**/MANIFEST_FORMAT.md
 
+# Local config (user-specific paths)
+config.local.yaml
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Rayforce
+.rayhist.dat
 
 # Test artifacts
 .pytest_cache/

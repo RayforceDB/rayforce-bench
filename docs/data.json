@@ -1,0 +1,384 @@
+{
+  "suite_name": "h2oai_groupby_1e7",
+  "dataset_name": "G1_1e7_1e2_0_0",
+  "started_at": "2026-01-08T19:57:00.480415",
+  "finished_at": "2026-01-08T19:57:57.484716",
+  "task_results": [
+    {
+      "task_id": "groupby_q1",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        6877406,
+        7082709,
+        6776413
+      ],
+      "row_counts": [
+        100,
+        100,
+        100
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q2",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        20221522,
+        19439208,
+        19584163
+      ],
+      "row_counts": [
+        10000,
+        10000,
+        10000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q3",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        54211576,
+        54843428,
+        54439492
+      ],
+      "row_counts": [
+        100000,
+        100000,
+        100000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q4",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        6996755,
+        6080398,
+        5656814
+      ],
+      "row_counts": [
+        100,
+        100,
+        100
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q5",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        41489561,
+        42592008,
+        45107842
+      ],
+      "row_counts": [
+        100000,
+        100000,
+        100000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q6",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        58211519,
+        58731323,
+        59203459
+      ],
+      "row_counts": [
+        100000,
+        100000,
+        100000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q7",
+      "adapter_name": "duckdb",
+      "timings_ns": [
+        84426040,
+        83419189,
+        82074075
+      ],
+      "row_counts": [
+        10000000,
+        10000000,
+        10000000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q1",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        12310000,
+        12030000,
+        12050000
+      ],
+      "row_counts": [
+        100,
+        100,
+        100
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q2",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        21550000,
+        22290000,
+        21210000
+      ],
+      "row_counts": [
+        10000,
+        10000,
+        10000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q3",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        28260000,
+        26900000,
+        27030000
+      ],
+      "row_counts": [
+        100000,
+        100000,
+        100000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q4",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        16210000,
+        16140000,
+        16180000
+      ],
+      "row_counts": [
+        100,
+        100,
+        100
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q5",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        26660000,
+        27490000,
+        27130000
+      ],
+      "row_counts": [
+        100000,
+        100000,
+        100000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q6",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        21570000,
+        22370000,
+        22360000
+      ],
+      "row_counts": [
+        100000,
+        100000,
+        100000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q7",
+      "adapter_name": "rayforce",
+      "timings_ns": [
+        1474360000
+      ],
+      "row_counts": [
+        10000000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    }
+  ],
+  "statistics": [
+    {
+      "task_id": "groupby_q1",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 6.776413,
+      "median_ms": 6.877406,
+      "p95_ms": 7.0621787000000005,
+      "max_ms": 7.082709,
+      "std_ms": 0.15608018637546567,
+      "rows_per_sec": 14540.365946113985
+    },
+    {
+      "task_id": "groupby_q2",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 19.439208,
+      "median_ms": 19.584163,
+      "p95_ms": 20.157786100000003,
+      "max_ms": 20.221522,
+      "std_ms": 0.41618378182040344,
+      "rows_per_sec": 510616.66510843474
+    },
+    {
+      "task_id": "groupby_q3",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 54.211576,
+      "median_ms": 54.439492,
+      "p95_ms": 54.8030344,
+      "max_ms": 54.843428,
+      "std_ms": 0.31998618331005174,
+      "rows_per_sec": 1836901.7844619125
+    },
+    {
+      "task_id": "groupby_q4",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 5.656814,
+      "median_ms": 6.080398,
+      "p95_ms": 6.9051193,
+      "max_ms": 6.996755,
+      "std_ms": 0.6849057648058846,
+      "rows_per_sec": 16446.291838132965
+    },
+    {
+      "task_id": "groupby_q5",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 41.489561,
+      "median_ms": 42.592008,
+      "p95_ms": 44.8562586,
+      "max_ms": 45.107842,
+      "std_ms": 1.8545784560705414,
+      "rows_per_sec": 2347858.3118222556
+    },
+    {
+      "task_id": "groupby_q6",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 58.211519,
+      "median_ms": 58.731323,
+      "p95_ms": 59.1562454,
+      "max_ms": 59.203459,
+      "std_ms": 0.4961608550513968,
+      "rows_per_sec": 1702668.9489014235
+    },
+    {
+      "task_id": "groupby_q7",
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 82.074075,
+      "median_ms": 83.419189,
+      "p95_ms": 84.32535490000001,
+      "max_ms": 84.42604,
+      "std_ms": 1.1800296585553867,
+      "rows_per_sec": 119876495.08316365
+    },
+    {
+      "task_id": "groupby_q1",
+      "adapter_name": "rayforce",
+      "n_samples": 3,
+      "min_ms": 12.03,
+      "median_ms": 12.05,
+      "p95_ms": 12.284,
+      "max_ms": 12.31,
+      "std_ms": 0.1562049935181334,
+      "rows_per_sec": 8298.755186721992
+    },
+    {
+      "task_id": "groupby_q2",
+      "adapter_name": "rayforce",
+      "n_samples": 3,
+      "min_ms": 21.21,
+      "median_ms": 21.55,
+      "p95_ms": 22.215999999999998,
+      "max_ms": 22.29,
+      "std_ms": 0.5522076903967676,
+      "rows_per_sec": 464037.12296983757
+    },
+    {
+      "task_id": "groupby_q3",
+      "adapter_name": "rayforce",
+      "n_samples": 3,
+      "min_ms": 26.9,
+      "median_ms": 27.03,
+      "p95_ms": 28.137,
+      "max_ms": 28.26,
+      "std_ms": 0.7504887296511087,
+      "rows_per_sec": 3699593.0447650757
+    },
+    {
+      "task_id": "groupby_q4",
+      "adapter_name": "rayforce",
+      "n_samples": 3,
+      "min_ms": 16.14,
+      "median_ms": 16.18,
+      "p95_ms": 16.207,
+      "max_ms": 16.21,
+      "std_ms": 0.035118845842842555,
+      "rows_per_sec": 6180.469715698393
+    },
+    {
+      "task_id": "groupby_q5",
+      "adapter_name": "rayforce",
+      "n_samples": 3,
+      "min_ms": 26.66,
+      "median_ms": 27.13,
+      "p95_ms": 27.453999999999997,
+      "max_ms": 27.49,
+      "std_ms": 0.4162130864513184,
+      "rows_per_sec": 3685956.505713233
+    },
+    {
+      "task_id": "groupby_q6",
+      "adapter_name": "rayforce",
+      "n_samples": 3,
+      "min_ms": 21.57,
+      "median_ms": 22.36,
+      "p95_ms": 22.369,
+      "max_ms": 22.37,
+      "std_ms": 0.45902069670114004,
+      "rows_per_sec": 4472271.91413238
+    },
+    {
+      "task_id": "groupby_q7",
+      "adapter_name": "rayforce",
+      "n_samples": 1,
+      "min_ms": 1474.36,
+      "median_ms": 1474.36,
+      "p95_ms": 1474.36,
+      "max_ms": 1474.36,
+      "std_ms": 0.0,
+      "rows_per_sec": 6782603.977318972
+    }
+  ]
+}

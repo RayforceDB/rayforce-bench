@@ -1,6 +1,10 @@
 # Rayforce Benchmark Framework
 
-A vendor-neutral benchmarking framework to compare RayforceDB against other databases (SQL and non-SQL).
+A vendor-neutral benchmarking framework to compare RayforceDB against other databases.
+
+## Live Results
+
+📊 **[View Benchmark Results](https://your-github-username.github.io/rayforce-bench/)**
 
 ## Goals
 
@@ -9,10 +13,19 @@ A vendor-neutral benchmarking framework to compare RayforceDB against other data
 - Support both embedded and server-based databases
 - Generate reproducible, verifiable results
 
-## Installation
+## Quick Start
 
 ```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Run benchmarks
+python run_bench.py --suite suites/example_full.yaml \
+    --dataset datasets/example_groupby \
+    --adapters duckdb rayforce \
+    --rayforce-binary /path/to/rayforce
+
+# Results are generated in docs/ (for GitHub Pages)
 ```
 
 ## Project Structure
@@ -20,68 +33,70 @@ pip install -r requirements.txt
 ```
 rayforce-bench/
 ├── benchmarks/           # Benchmark runners and utilities
-│   ├── __init__.py
 │   ├── adapter.py        # Base adapter interface
 │   ├── runner.py         # Benchmark execution engine
 │   ├── stats.py          # Statistics computation
 │   └── report.py         # HTML report generation
 ├── adapters/             # Database adapters
-│   ├── __init__.py
 │   ├── duckdb_adapter.py # DuckDB embedded adapter
-│   └── rayforce_adapter.py # RayforceDB adapter (stub)
-├── datasets/             # Generated datasets (CSV + manifest)
-│   └── h2oai_groupby_1e7/
-│       ├── manifest.json
-│       └── G1_1e7_1e2_0_0.csv
+│   ├── rayforce_adapter.py # RayforceDB adapter
+│   └── kdb_adapter.py    # KDB+/q adapter (stub)
+├── datasets/             # Test datasets (CSV + manifest)
+│   ├── example_groupby/
+│   └── example_join/
 ├── suites/               # Benchmark suite definitions
-│   └── groupby.yaml
-├── reports/              # Generated HTML reports
+│   ├── example.yaml
+│   ├── example_full.yaml
+│   ├── example_join.yaml
+│   ├── groupby.yaml      # H2OAI Group By benchmark
+│   └── join.yaml         # H2OAI Join benchmark
+├── docs/                 # Generated HTML (GitHub Pages)
 ├── requirements.txt
 └── run_bench.py          # CLI entry point
 ```
 
-## Quick Start
+## Configuration
 
-1. Generate or obtain a dataset (CSV files + manifest.json)
-2. Define a benchmark suite (YAML)
-3. Run the benchmark:
+Create `config.local.yaml` to specify local paths:
 
-```bash
-python run_bench.py --suite suites/groupby.yaml --adapters duckdb rayforce
+```yaml
+rayforce:
+  binary_path: /path/to/rayforce
+
+kdb:
+  binary_path: /path/to/q
 ```
 
-4. View the report in `reports/`
+Or use command-line options:
 
-## Concepts
+```bash
+python run_bench.py --rayforce-binary /path/to/rayforce ...
+```
 
-### Dataset
+## GitHub Pages Deployment
 
-A dataset is a collection of CSV files with a manifest describing schema and metadata.
-The framework treats datasets as immutable inputs.
+The benchmark results are automatically generated as a static website in `docs/`:
 
-### Adapter
+1. Run benchmarks to generate `docs/index.html`
+2. Commit and push to GitHub
+3. Enable GitHub Pages from repository Settings → Pages → Source: `docs/`
 
-Each database implements an adapter with a strict interface:
-- `setup(schema)` - Initialize database with schema
-- `load_csv(csv_paths)` - Load CSV data
-- `run(task, params)` - Execute a benchmark task
-- `close()` - Cleanup
+The report includes:
+- Interactive charts with ECharts
+- Dark/light mode toggle
+- Performance comparison cards
+- Detailed results table
+- Per-query breakdown
 
-### Suite
+## Adding a New Adapter
 
-A benchmark suite defines:
-- Which dataset to use
-- Tasks (queries/operations) to run
-- Validation rules
-- Warmup and measured iterations
-- Cold vs warm execution modes
+1. Create `adapters/your_adapter.py` implementing `Adapter` interface
+2. Register in `run_bench.py`
+3. Run benchmarks
 
-## Compatibility with Rayforce Benchmarks
+## Fairness
 
-This framework aligns with existing Rayforce benchmark conventions:
-- Uses H2OAI Group By Benchmark naming (G1_*, J1_*)
-- Supports the same benchmark queries (Q1-Q7 group-by, etc.)
-- Results are comparable to previously published numbers
+See [FAIRNESS.md](FAIRNESS.md) for methodology ensuring fair comparisons between databases.
 
 ## License
 

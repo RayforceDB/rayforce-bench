@@ -19,6 +19,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from benchmarks import BenchmarkRunner, generate_report
 from benchmarks.stats import compute_statistics, format_comparison_table
+from benchmarks.compare import compare_results, format_quick_summary
 
 
 def get_available_adapters() -> dict[str, type]:
@@ -36,6 +37,18 @@ def get_available_adapters() -> dict[str, type]:
         adapters["rayforce"] = RayforceAdapter
     except ImportError as e:
         print(f"Warning: Rayforce adapter not available: {e}")
+    
+    try:
+        from adapters.kdb_adapter import KDBAdapter
+        adapters["kdb"] = KDBAdapter
+    except ImportError as e:
+        print(f"Warning: KDB adapter not available: {e}")
+    
+    try:
+        from adapters.polars_adapter import PolarsAdapter
+        adapters["polars"] = PolarsAdapter
+    except ImportError as e:
+        print(f"Warning: Polars adapter not available: {e}")
     
     return adapters
 
@@ -81,12 +94,14 @@ Examples:
     parser.add_argument(
         "--suite", "-s",
         type=Path,
-        help="Path to benchmark suite YAML file"
+        default=Path("suites/example_full.yaml"),
+        help="Path to benchmark suite YAML file (default: suites/example_full.yaml)"
     )
     parser.add_argument(
         "--dataset", "-d",
         type=Path,
-        help="Path to dataset directory (containing manifest.json)"
+        default=Path("datasets/example_groupby"),
+        help="Path to dataset directory (default: datasets/example_groupby)"
     )
     parser.add_argument(
         "--adapters", "-a",
@@ -97,8 +112,8 @@ Examples:
     parser.add_argument(
         "--output", "-o",
         type=Path,
-        default=Path("reports"),
-        help="Output directory for reports (default: reports/)"
+        default=Path("docs"),
+        help="Output directory for reports (default: docs/ for GitHub Pages)"
     )
     parser.add_argument(
         "--list-adapters",
@@ -131,22 +146,69 @@ Examples:
         "--rayforce-binary",
         type=Path,
         default=None,
-        help="Path to rayforce binary"
+        help="Path to rayforce binary (overrides config)"
+    )
+    parser.add_argument(
+        "--kdb-binary",
+        type=Path,
+        default=None,
+        help="Path to kdb q binary (overrides config)"
+    )
+    parser.add_argument(
+        "--polars-threads",
+        type=int,
+        default=None,
+        help="Number of Polars threads (default: auto)"
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to config directory (default: project root)"
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        default=True,
+        help="Compare results against baseline (default: enabled)"
+    )
+    parser.add_argument(
+        "--no-compare",
+        action="store_true",
+        help="Disable comparison against baseline"
+    )
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=None,
+        help="Path to baseline data.json (default: <output>/data.json)"
+    )
+    parser.add_argument(
+        "--focus-adapter",
+        type=str,
+        default=None,
+        help="Focus comparison on specific adapter (default: show all)"
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=5.0,
+        help="Threshold %% for highlighting changes (default: 5.0)"
     )
     
     args = parser.parse_args()
+    
+    # Load config if specified
+    if args.config:
+        from benchmarks.config import reload_config
+        reload_config(args.config)
     
     # Handle --list-adapters
     if args.list_adapters:
         list_adapters()
         return 0
     
-    # Validate required arguments
-    if not args.suite:
-        parser.error("--suite is required")
-    if not args.dataset:
-        parser.error("--dataset is required")
-    
+    # Validate paths exist
     if not args.suite.exists():
         print(f"Error: Suite file not found: {args.suite}")
         return 1
@@ -176,7 +238,7 @@ Examples:
             print(f"Warning: Adapter '{name}' not available, skipping")
             continue
         
-        # Create adapter with configuration
+        # Create adapter with CLI overrides (config is used as default)
         if name == "duckdb":
             adapter = available[name](
                 threads=args.duckdb_threads,
@@ -185,6 +247,14 @@ Examples:
         elif name == "rayforce":
             adapter = available[name](
                 binary_path=args.rayforce_binary,
+            )
+        elif name == "kdb":
+            adapter = available[name](
+                binary_path=args.kdb_binary,
+            )
+        elif name == "polars":
+            adapter = available[name](
+                n_threads=args.polars_threads,
             )
         else:
             adapter = available[name]()
@@ -216,7 +286,18 @@ Examples:
     print(f"{'='*60}\n")
     print(format_comparison_table(stats))
     
-    # Generate report
+    # Compare against baseline (before generating new report)
+    if not args.no_compare:
+        baseline_path = args.baseline or (args.output / "data.json")
+        comparison = compare_results(
+            stats,
+            baseline_path,
+            focus_adapter=args.focus_adapter,
+            threshold_pct=args.threshold,
+        )
+        print(comparison)
+    
+    # Generate report (this overwrites the baseline)
     if not args.no_report:
         try:
             report_path = generate_report(results, args.output)

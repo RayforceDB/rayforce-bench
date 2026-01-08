@@ -1,77 +1,4 @@
-"""
-Static HTML report generation for GitHub Pages.
-
-Generates a beautiful, interactive benchmark comparison website
-with RayforceDB brand styling matching the official website.
-"""
-
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Any
-
-from .runner import BenchmarkResults
-from .stats import BenchmarkStatistics, compute_statistics
-
-
-def generate_report(
-    results: BenchmarkResults,
-    output_dir: Path,
-    report_name: str | None = None,
-) -> Path:
-    """Generate a static HTML report from benchmark results.
-    
-    Args:
-        results: Raw results from BenchmarkRunner.
-        output_dir: Directory to write report files.
-        report_name: Optional custom name (default: index for GitHub Pages).
-    
-    Returns:
-        Path to generated HTML file.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    stats = compute_statistics(results)
-    
-    # For GitHub Pages, always generate index.html
-    html_filename = "index.html"
-    json_filename = "data.json"
-    
-    # Generate HTML content
-    html_content = _generate_html(results, stats)
-    
-    # Write HTML file
-    html_path = output_dir / html_filename
-    with open(html_path, "w") as f:
-        f.write(html_content)
-    
-    # Write JSON data for programmatic access
-    json_path = output_dir / json_filename
-    with open(json_path, "w") as f:
-        json.dump(_results_to_dict(results, stats), f, indent=2)
-    
-    return html_path
-
-
-def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str:
-    """Generate complete HTML report content."""
-    
-    # Build data for charts
-    chart_data = _prepare_chart_data(results, stats)
-    
-    # Build performance cards
-    perf_cards = _build_performance_cards(stats)
-    
-    # Build results table
-    results_table = _build_results_table(stats)
-    
-    # Build task detail sections
-    task_sections = _build_task_sections(results, stats)
-    
-    timestamp = datetime.now().strftime("%B %d, %Y at %H:%M")
-    
-    html = f"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -93,7 +20,7 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
            Matching official website exactly
            =================================== */
         
-        :root {{
+        :root {
             /* Brand Colors - exact match from official website */
             --primary-navy: #04233b;
             --primary-navy-light: #0a3a5c;
@@ -127,9 +54,9 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             /* Status */
             --success: #4CAF50;
             --error: #f44336;
-        }}
+        }
         
-        [data-theme="dark"] {{
+        [data-theme="dark"] {
             --bg-primary: #04233b;
             --bg-secondary: #021828;
             --bg-tertiary: #0a3a5c;
@@ -140,43 +67,43 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             --card-bg: #0a3a5c;
             --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
             --card-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4);
-        }}
+        }
         
-        *, *::before, *::after {{
+        *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }}
+        }
         
-        html {{
+        html {
             scroll-behavior: smooth;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-        }}
+        }
         
-        body {{
+        body {
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background-color: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
             transition: background-color var(--transition-normal), color var(--transition-normal);
-        }}
+        }
         
-        a {{
+        a {
             color: inherit;
             text-decoration: none;
-        }}
+        }
         
-        img {{
+        img {
             max-width: 100%;
             height: auto;
-        }}
+        }
         
         /* ===================================
            Header - exact match from website
            =================================== */
         
-        .header {{
+        .header {
             position: fixed;
             top: 0;
             left: 0;
@@ -186,9 +113,9 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             border-bottom: 1px solid var(--border-color);
             z-index: 1000;
             transition: background-color var(--transition-normal), border-color var(--transition-normal);
-        }}
+        }
         
-        .header-container {{
+        .header-container {
             max-width: var(--container-max);
             margin: 0 auto;
             padding: 0 24px;
@@ -196,52 +123,52 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             display: flex;
             align-items: center;
             justify-content: space-between;
-        }}
+        }
         
-        .logo-link {{
+        .logo-link {
             display: flex;
             align-items: center;
-        }}
+        }
         
-        .logo {{
+        .logo {
             height: 32px;
             width: auto;
-        }}
+        }
         
-        .logo-light {{
+        .logo-light {
             display: block;
-        }}
+        }
         
-        .logo-dark {{
+        .logo-dark {
             display: none;
-        }}
+        }
         
-        [data-theme="dark"] .logo-light {{
+        [data-theme="dark"] .logo-light {
             display: none;
-        }}
+        }
         
-        [data-theme="dark"] .logo-dark {{
+        [data-theme="dark"] .logo-dark {
             display: block;
-        }}
+        }
         
-        .nav {{
+        .nav {
             display: flex;
             align-items: center;
             gap: 32px;
-        }}
+        }
         
-        .nav-link {{
+        .nav-link {
             font-weight: 500;
             font-size: 1rem;
             color: var(--text-secondary);
             transition: color var(--transition-fast);
-        }}
+        }
         
-        .nav-link:hover {{
+        .nav-link:hover {
             color: var(--accent-golden);
-        }}
+        }
         
-        .theme-toggle {{
+        .theme-toggle {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -253,68 +180,68 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             cursor: pointer;
             color: var(--text-secondary);
             transition: all var(--transition-fast);
-        }}
+        }
         
-        .theme-toggle:hover {{
+        .theme-toggle:hover {
             background: var(--accent-golden);
             color: var(--primary-navy);
-        }}
+        }
         
-        .theme-toggle svg {{
+        .theme-toggle svg {
             width: 20px;
             height: 20px;
-        }}
+        }
         
-        .sun-icon {{
+        .sun-icon {
             display: none;
-        }}
+        }
         
-        .moon-icon {{
+        .moon-icon {
             display: block;
-        }}
+        }
         
-        [data-theme="dark"] .sun-icon {{
+        [data-theme="dark"] .sun-icon {
             display: block;
-        }}
+        }
         
-        [data-theme="dark"] .moon-icon {{
+        [data-theme="dark"] .moon-icon {
             display: none;
-        }}
+        }
         
         /* ===================================
            Hero Section - matching website
            =================================== */
         
-        .hero {{
+        .hero {
             position: relative;
             padding: calc(var(--header-height) + 60px) 24px 80px;
             text-align: center;
             overflow: hidden;
-        }}
+        }
         
-        .hero-bg {{
+        .hero-bg {
             position: absolute;
             inset: 0;
             z-index: 0;
-        }}
+        }
         
-        .hero-gradient {{
+        .hero-gradient {
             position: absolute;
             inset: 0;
             background: 
                 radial-gradient(ellipse 80% 50% at 50% -20%, rgba(233, 160, 51, 0.15), transparent),
                 radial-gradient(ellipse 60% 40% at 80% 80%, rgba(4, 35, 59, 0.1), transparent),
                 radial-gradient(ellipse 40% 30% at 10% 60%, rgba(233, 160, 51, 0.08), transparent);
-        }}
+        }
         
-        [data-theme="dark"] .hero-gradient {{
+        [data-theme="dark"] .hero-gradient {
             background: 
                 radial-gradient(ellipse 80% 50% at 50% -20%, rgba(233, 160, 51, 0.2), transparent),
                 radial-gradient(ellipse 60% 40% at 80% 80%, rgba(233, 160, 51, 0.1), transparent),
                 radial-gradient(ellipse 40% 30% at 10% 60%, rgba(10, 58, 92, 0.5), transparent);
-        }}
+        }
         
-        .hero-grid {{
+        .hero-grid {
             position: absolute;
             inset: 0;
             background-image: 
@@ -322,68 +249,68 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
                 linear-gradient(90deg, rgba(4, 35, 59, 0.03) 1px, transparent 1px);
             background-size: 60px 60px;
             mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
-        }}
+        }
         
-        [data-theme="dark"] .hero-grid {{
+        [data-theme="dark"] .hero-grid {
             background-image: 
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-        }}
+        }
         
-        .hero-content {{
+        .hero-content {
             position: relative;
             z-index: 1;
             max-width: 800px;
             margin: 0 auto;
-        }}
+        }
         
-        .hero h1 {{
+        .hero h1 {
             font-size: clamp(2.5rem, 6vw, 3.5rem);
             font-weight: 300;
             line-height: 1.2;
             margin-bottom: 24px;
             letter-spacing: -0.01em;
-        }}
+        }
         
-        .highlight {{
+        .highlight {
             color: var(--accent-golden);
             font-weight: 700;
-        }}
+        }
         
-        .hero-description {{
+        .hero-description {
             font-size: 1.25rem;
             color: var(--text-secondary);
             max-width: 640px;
             margin: 0 auto 40px;
             line-height: 1.7;
-        }}
+        }
         
-        .hero-meta {{
+        .hero-meta {
             display: flex;
             justify-content: center;
             gap: 40px;
             flex-wrap: wrap;
             font-size: 0.9rem;
             color: var(--text-tertiary);
-        }}
+        }
         
-        .hero-meta span {{
+        .hero-meta span {
             display: flex;
             align-items: center;
             gap: 8px;
-        }}
+        }
         
-        .hero-meta svg {{
+        .hero-meta svg {
             width: 18px;
             height: 18px;
             color: var(--accent-golden);
-        }}
+        }
         
         /* ===================================
            Performance Cards - like stat cards
            =================================== */
         
-        .perf-cards {{
+        .perf-cards {
             display: flex;
             flex-wrap: wrap;
             gap: 24px;
@@ -393,9 +320,9 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             padding: 0 24px;
             position: relative;
             z-index: 10;
-        }}
+        }
         
-        .perf-card {{
+        .perf-card {
             flex: 1;
             min-width: 200px;
             max-width: 280px;
@@ -406,69 +333,69 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             text-align: center;
             box-shadow: var(--card-shadow);
             transition: all var(--transition-normal);
-        }}
+        }
         
-        .perf-card:hover {{
+        .perf-card:hover {
             transform: translateY(-8px);
             box-shadow: var(--card-shadow-hover);
             border-color: var(--accent-golden);
-        }}
+        }
         
-        .perf-card .metric {{
+        .perf-card .metric {
             font-size: 2rem;
             font-weight: 700;
             color: var(--accent-golden);
             line-height: 1;
             margin-bottom: 4px;
             font-family: 'JetBrains Mono', monospace;
-        }}
+        }
         
-        .perf-card .label {{
+        .perf-card .label {
             font-size: 1rem;
             color: var(--text-primary);
             font-weight: 500;
             margin-top: 4px;
-        }}
+        }
         
-        .perf-card .sublabel {{
+        .perf-card .sublabel {
             font-size: 0.9rem;
             color: var(--text-tertiary);
             margin-top: 4px;
-        }}
+        }
         
         /* Container */
-        .container {{
+        .container {
             max-width: var(--container-max);
             margin: 0 auto;
             padding: 0 24px;
-        }}
+        }
         
         /* ===================================
            Section Styles - matching website
            =================================== */
         
-        .section {{
+        .section {
             margin-bottom: 64px;
-        }}
+        }
         
-        .section-header {{
+        .section-header {
             text-align: center;
             margin-bottom: 48px;
-        }}
+        }
         
-        .section-header h2 {{
+        .section-header h2 {
             font-size: clamp(2rem, 4vw, 2.5rem);
             font-weight: 300;
             color: var(--text-primary);
             margin-bottom: 8px;
             letter-spacing: -0.01em;
-        }}
+        }
         
-        .section-header h2 .highlight {{
+        .section-header h2 .highlight {
             font-weight: 700;
-        }}
+        }
         
-        .section-badge {{
+        .section-badge {
             display: inline-block;
             padding: 4px 12px;
             background: var(--accent-golden);
@@ -479,93 +406,93 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-top: 8px;
-        }}
+        }
         
         /* Chart Card */
-        .chart-card {{
+        .chart-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             padding: 24px;
             box-shadow: var(--card-shadow);
-        }}
+        }
         
-        .chart-container {{
+        .chart-container {
             height: 400px;
             width: 100%;
-        }}
+        }
         
         /* Table */
-        .table-wrapper {{
+        .table-wrapper {
             overflow-x: auto;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             box-shadow: var(--card-shadow);
-        }}
+        }
         
-        table {{
+        table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.875rem;
-        }}
+        }
         
-        th, td {{
+        th, td {
             padding: 16px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
-        }}
+        }
         
-        th {{
+        th {
             background: var(--bg-secondary);
             font-weight: 600;
             color: var(--text-primary);
             position: sticky;
             top: 0;
-        }}
+        }
         
-        tr:hover td {{
+        tr:hover td {
             background: rgba(233, 160, 51, 0.05);
-        }}
+        }
         
-        tr.rayforce-row {{
+        tr.rayforce-row {
             background: rgba(233, 160, 51, 0.08);
-        }}
+        }
         
-        tr.rayforce-row:hover td {{
+        tr.rayforce-row:hover td {
             background: rgba(233, 160, 51, 0.15);
-        }}
+        }
         
-        .best-value {{
+        .best-value {
             color: var(--success);
             font-weight: 600;
-        }}
+        }
         
-        .valid {{
+        .valid {
             color: var(--success);
-        }}
+        }
         
-        .invalid {{
+        .invalid {
             color: var(--error);
-        }}
+        }
         
-        .mono {{
+        .mono {
             font-family: 'JetBrains Mono', monospace;
-        }}
+        }
         
         /* ===================================
            Task Tabs - like project cards
            =================================== */
         
-        .task-tabs {{
+        .task-tabs {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             margin-bottom: 24px;
             justify-content: center;
-        }}
+        }
         
-        .task-tab {{
+        .task-tab {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
@@ -576,40 +503,40 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             font-weight: 600;
             transition: all var(--transition-normal);
             font-family: 'JetBrains Mono', monospace;
-        }}
+        }
         
-        .task-tab:hover {{
+        .task-tab:hover {
             border-color: var(--accent-golden);
             color: var(--accent-golden);
             transform: translateY(-2px);
-        }}
+        }
         
-        .task-tab.active {{
+        .task-tab.active {
             background: var(--accent-golden);
             border-color: var(--accent-golden);
             color: var(--primary-navy);
-        }}
+        }
         
-        .task-panel {{
+        .task-panel {
             display: none;
-        }}
+        }
         
-        .task-panel.active {{
+        .task-panel.active {
             display: block;
-        }}
+        }
         
         /* ===================================
            Footer - matching website
            =================================== */
         
-        .footer {{
+        .footer {
             padding: 80px 0 40px;
             background: var(--primary-navy);
             color: rgba(255, 255, 255, 0.8);
             margin-top: 64px;
-        }}
+        }
         
-        .footer-content {{
+        .footer-content {
             max-width: var(--container-max);
             margin: 0 auto;
             padding: 0 24px;
@@ -618,35 +545,35 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             align-items: center;
             flex-wrap: wrap;
             gap: 24px;
-        }}
+        }
         
-        .footer-brand {{
+        .footer-brand {
             display: flex;
             align-items: center;
             gap: 12px;
-        }}
+        }
         
-        .footer-logo {{
+        .footer-logo {
             height: 36px;
             width: auto;
-        }}
+        }
         
-        .footer-links {{
+        .footer-links {
             display: flex;
             gap: 32px;
-        }}
+        }
         
-        .footer-links a {{
+        .footer-links a {
             color: rgba(255, 255, 255, 0.6);
             font-weight: 500;
             transition: color var(--transition-fast);
-        }}
+        }
         
-        .footer-links a:hover {{
+        .footer-links a:hover {
             color: var(--accent-golden);
-        }}
+        }
         
-        .footer-copyright {{
+        .footer-copyright {
             width: 100%;
             text-align: center;
             padding-top: 32px;
@@ -654,66 +581,66 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             color: rgba(255, 255, 255, 0.5);
             font-size: 0.9rem;
-        }}
+        }
         
-        .footer-copyright a {{
+        .footer-copyright a {
             color: var(--accent-golden);
             transition: opacity var(--transition-fast);
-        }}
+        }
         
-        .footer-copyright a:hover {{
+        .footer-copyright a:hover {
             opacity: 0.8;
-        }}
+        }
         
         /* Animations */
-        @keyframes fadeInUp {{
-            from {{
+        @keyframes fadeInUp {
+            from {
                 opacity: 0;
                 transform: translateY(20px);
-            }}
-            to {{
+            }
+            to {
                 opacity: 1;
                 transform: translateY(0);
-            }}
-        }}
+            }
+        }
         
-        .animate-in {{
+        .animate-in {
             animation: fadeInUp 0.5s ease forwards;
-        }}
+        }
         
         /* Responsive */
-        @media (max-width: 768px) {{
-            :root {{
+        @media (max-width: 768px) {
+            :root {
                 --header-height: 64px;
-            }}
+            }
             
-            .hero {{
+            .hero {
                 padding-top: calc(var(--header-height) + 40px);
                 padding-bottom: 60px;
-            }}
+            }
             
-            .perf-cards {{
+            .perf-cards {
                 padding: 0 16px;
-            }}
+            }
             
-            .perf-card {{
+            .perf-card {
                 min-width: 100%;
-            }}
+            }
             
-            .container {{
+            .container {
                 padding: 0 16px;
-            }}
+            }
             
-            .footer-content {{
+            .footer-content {
                 flex-direction: column;
                 text-align: center;
-            }}
+            }
             
-            .footer-links {{
+            .footer-links {
                 flex-wrap: wrap;
                 justify-content: center;
-            }}
-        }}
+            }
+        }
     </style>
 </head>
 <body>
@@ -759,22 +686,42 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             <div class="hero-meta">
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    {results.suite_name}
+                    h2oai_groupby_1e7
                 </span>
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                    {results.dataset_name}
+                    G1_1e7_1e2_0_0
                 </span>
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    {timestamp}
+                    January 08, 2026 at 19:57
                 </span>
             </div>
         </div>
     </section>
     
     <div class="perf-cards">
-        {perf_cards}
+        
+            <div class="perf-card">
+                <div class="metric">2.6x</div>
+                <div class="label">Faster groupby_q6</div>
+                <div class="sublabel">vs. competitor</div>
+            </div>
+        
+
+            <div class="perf-card">
+                <div class="metric">2.0x</div>
+                <div class="label">Faster groupby_q3</div>
+                <div class="sublabel">vs. competitor</div>
+            </div>
+        
+
+            <div class="perf-card">
+                <div class="metric">1.6x</div>
+                <div class="label">Faster groupby_q5</div>
+                <div class="sublabel">vs. competitor</div>
+            </div>
+        
     </div>
     
     <main class="container">
@@ -793,7 +740,166 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
                 <h2>Detailed Results</h2>
                 <span class="section-badge">All Tasks</span>
             </div>
-            {results_table}
+            
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Database</th>
+                        <th>Median (ms)</th>
+                        <th>Min (ms)</th>
+                        <th>P95 (ms)</th>
+                        <th>Rows/sec</th>
+                        <th>Valid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+            <tr class="">
+                <td><strong>groupby_q1</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">6.877</td>
+                <td class="mono">6.776</td>
+                <td class="mono">7.062</td>
+                <td class="mono">14,540</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q2</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">19.584</td>
+                <td class="mono">19.439</td>
+                <td class="mono">20.158</td>
+                <td class="mono">510,617</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q3</strong></td>
+                <td>duckdb</td>
+                <td class=" mono">54.439</td>
+                <td class="mono">54.212</td>
+                <td class="mono">54.803</td>
+                <td class="mono">1,836,902</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q4</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">6.080</td>
+                <td class="mono">5.657</td>
+                <td class="mono">6.905</td>
+                <td class="mono">16,446</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q5</strong></td>
+                <td>duckdb</td>
+                <td class=" mono">42.592</td>
+                <td class="mono">41.490</td>
+                <td class="mono">44.856</td>
+                <td class="mono">2,347,858</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q6</strong></td>
+                <td>duckdb</td>
+                <td class=" mono">58.731</td>
+                <td class="mono">58.212</td>
+                <td class="mono">59.156</td>
+                <td class="mono">1,702,669</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q7</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">83.419</td>
+                <td class="mono">82.074</td>
+                <td class="mono">84.325</td>
+                <td class="mono">119,876,495</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q1</strong></td>
+                <td>rayforce</td>
+                <td class=" mono">12.050</td>
+                <td class="mono">12.030</td>
+                <td class="mono">12.284</td>
+                <td class="mono">8,299</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q2</strong></td>
+                <td>rayforce</td>
+                <td class=" mono">21.550</td>
+                <td class="mono">21.210</td>
+                <td class="mono">22.216</td>
+                <td class="mono">464,037</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q3</strong></td>
+                <td>rayforce</td>
+                <td class="best-value mono">27.030</td>
+                <td class="mono">26.900</td>
+                <td class="mono">28.137</td>
+                <td class="mono">3,699,593</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q4</strong></td>
+                <td>rayforce</td>
+                <td class=" mono">16.180</td>
+                <td class="mono">16.140</td>
+                <td class="mono">16.207</td>
+                <td class="mono">6,180</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q5</strong></td>
+                <td>rayforce</td>
+                <td class="best-value mono">27.130</td>
+                <td class="mono">26.660</td>
+                <td class="mono">27.454</td>
+                <td class="mono">3,685,957</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q6</strong></td>
+                <td>rayforce</td>
+                <td class="best-value mono">22.360</td>
+                <td class="mono">21.570</td>
+                <td class="mono">22.369</td>
+                <td class="mono">4,472,272</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="rayforce-row">
+                <td><strong>groupby_q7</strong></td>
+                <td>rayforce</td>
+                <td class=" mono">1474.360</td>
+                <td class="mono">1474.360</td>
+                <td class="mono">1474.360</td>
+                <td class="mono">6,782,604</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+                </tbody>
+            </table>
+        </div>
+    
         </section>
         
         <section class="section">
@@ -801,7 +907,54 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
                 <h2>Task Breakdown</h2>
                 <span class="section-badge">Per-Query</span>
             </div>
-            {task_sections}
+            
+        <div class="task-tabs">
+            <button class="task-tab active" onclick="showTask(0)">groupby_q1</button><button class="task-tab " onclick="showTask(1)">groupby_q2</button><button class="task-tab " onclick="showTask(2)">groupby_q3</button><button class="task-tab " onclick="showTask(3)">groupby_q4</button><button class="task-tab " onclick="showTask(4)">groupby_q5</button><button class="task-tab " onclick="showTask(5)">groupby_q6</button><button class="task-tab " onclick="showTask(6)">groupby_q7</button>
+        </div>
+        
+            <div class="task-panel active">
+                <div class="chart-card">
+                    <div id="task-chart-0" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+            <div class="task-panel ">
+                <div class="chart-card">
+                    <div id="task-chart-1" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+            <div class="task-panel ">
+                <div class="chart-card">
+                    <div id="task-chart-2" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+            <div class="task-panel ">
+                <div class="chart-card">
+                    <div id="task-chart-3" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+            <div class="task-panel ">
+                <div class="chart-card">
+                    <div id="task-chart-4" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+            <div class="task-panel ">
+                <div class="chart-card">
+                    <div id="task-chart-5" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+            <div class="task-panel ">
+                <div class="chart-card">
+                    <div id="task-chart-6" class="chart-container" style="height: 300px;"></div>
+                </div>
+            </div>
+        
+    
         </section>
     </main>
     
@@ -823,59 +976,59 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
     
     <script>
         // Chart data
-        const chartData = {json.dumps(chart_data)};
+        const chartData = {"comparison": {"adapters": ["duckdb", "rayforce"], "tasks": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7"], "values": [{"adapter": "duckdb", "task": "groupby_q1", "median_ms": 6.877406}, {"adapter": "duckdb", "task": "groupby_q2", "median_ms": 19.584163}, {"adapter": "duckdb", "task": "groupby_q3", "median_ms": 54.439492}, {"adapter": "duckdb", "task": "groupby_q4", "median_ms": 6.080398}, {"adapter": "duckdb", "task": "groupby_q5", "median_ms": 42.592008}, {"adapter": "duckdb", "task": "groupby_q6", "median_ms": 58.731323}, {"adapter": "duckdb", "task": "groupby_q7", "median_ms": 83.419189}, {"adapter": "rayforce", "task": "groupby_q1", "median_ms": 12.05}, {"adapter": "rayforce", "task": "groupby_q2", "median_ms": 21.55}, {"adapter": "rayforce", "task": "groupby_q3", "median_ms": 27.03}, {"adapter": "rayforce", "task": "groupby_q4", "median_ms": 16.18}, {"adapter": "rayforce", "task": "groupby_q5", "median_ms": 27.13}, {"adapter": "rayforce", "task": "groupby_q6", "median_ms": 22.36}, {"adapter": "rayforce", "task": "groupby_q7", "median_ms": 1474.36}]}, "tasks": {"groupby_q1": [{"adapter": "duckdb", "values": [6.877406, 7.082709, 6.776413], "boxplot": [6.776413, 6.776413, 6.877406, 7.082709, 7.082709]}, {"adapter": "rayforce", "values": [12.31, 12.03, 12.05], "boxplot": [12.03, 12.03, 12.05, 12.31, 12.31]}], "groupby_q2": [{"adapter": "duckdb", "values": [20.221522, 19.439208, 19.584163], "boxplot": [19.439208, 19.439208, 19.584163, 20.221522, 20.221522]}, {"adapter": "rayforce", "values": [21.55, 22.29, 21.21], "boxplot": [21.21, 21.21, 21.55, 22.29, 22.29]}], "groupby_q3": [{"adapter": "duckdb", "values": [54.211576, 54.843428, 54.439492], "boxplot": [54.211576, 54.211576, 54.439492, 54.843428, 54.843428]}, {"adapter": "rayforce", "values": [28.26, 26.9, 27.03], "boxplot": [26.9, 26.9, 27.03, 28.26, 28.26]}], "groupby_q4": [{"adapter": "duckdb", "values": [6.996755, 6.080398, 5.656814], "boxplot": [5.656814, 5.656814, 6.080398, 6.996755, 6.996755]}, {"adapter": "rayforce", "values": [16.21, 16.14, 16.18], "boxplot": [16.14, 16.14, 16.18, 16.21, 16.21]}], "groupby_q5": [{"adapter": "duckdb", "values": [41.489561, 42.592008, 45.107842], "boxplot": [41.489561, 41.489561, 42.592008, 45.107842, 45.107842]}, {"adapter": "rayforce", "values": [26.66, 27.49, 27.13], "boxplot": [26.66, 26.66, 27.13, 27.49, 27.49]}], "groupby_q6": [{"adapter": "duckdb", "values": [58.211519, 58.731323, 59.203459], "boxplot": [58.211519, 58.211519, 58.731323, 59.203459, 59.203459]}, {"adapter": "rayforce", "values": [21.57, 22.37, 22.36], "boxplot": [21.57, 21.57, 22.36, 22.37, 22.37]}], "groupby_q7": [{"adapter": "duckdb", "values": [84.42604, 83.419189, 82.074075], "boxplot": [82.074075, 82.074075, 83.419189, 84.42604, 84.42604]}, {"adapter": "rayforce", "values": [1474.36], "boxplot": [1474.36, 1474.36, 1474.36, 1474.36, 1474.36]}]}};
         
         // Theme management - default to light
         const themeToggle = document.querySelector('.theme-toggle');
         
-        function setTheme(isDark) {{
+        function setTheme(isDark) {
             document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
             updateCharts();
-        }}
+        }
         
         // Initialize theme (default to light)
         const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {{
+        if (savedTheme) {
             setTheme(savedTheme === 'dark');
-        }} else {{
+        } else {
             setTheme(false);
-        }}
+        }
         
-        themeToggle.addEventListener('click', () => {{
+        themeToggle.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             setTheme(currentTheme !== 'dark');
-        }});
+        });
         
         // Chart colors
-        const adapterColors = {{
+        const adapterColors = {
             'rayforce': '#e9a033',
             'duckdb': '#1565C0',
             'kdb': '#00897B',
             'clickhouse': '#FFCA28',
             'polars': '#E91E63',
-        }};
+        };
         
-        function getAdapterColor(name) {{
+        function getAdapterColor(name) {
             const lower = name.toLowerCase();
             return adapterColors[lower] || '#' + Math.floor(Math.random()*16777215).toString(16);
-        }}
+        }
         
         // ECharts theme
-        function getChartTheme() {{
+        function getChartTheme() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            return {{
+            return {
                 textColor: isDark ? '#ffffff' : '#04233b',
                 axisLineColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
                 splitLineColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
                 backgroundColor: 'transparent',
-            }};
-        }}
+            };
+        }
         
         // Main comparison chart
         let mainChart = null;
         
-        function initMainChart() {{
+        function initMainChart() {
             const container = document.getElementById('main-chart');
             if (!container) return;
             
@@ -883,98 +1036,98 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
             updateMainChart();
             
             window.addEventListener('resize', () => mainChart.resize());
-        }}
+        }
         
-        function updateMainChart() {{
+        function updateMainChart() {
             if (!mainChart || !chartData.comparison) return;
             
             const theme = getChartTheme();
             const data = chartData.comparison;
             
-            const series = data.adapters.map(adapter => ({{
+            const series = data.adapters.map(adapter => ({
                 name: adapter,
                 type: 'bar',
-                data: data.tasks.map(task => {{
+                data: data.tasks.map(task => {
                     const entry = data.values.find(v => v.adapter === adapter && v.task === task);
                     return entry ? entry.median_ms : null;
-                }}),
-                itemStyle: {{
+                }),
+                itemStyle: {
                     color: getAdapterColor(adapter),
                     borderRadius: [4, 4, 0, 0],
-                }},
-                emphasis: {{
-                    itemStyle: {{
+                },
+                emphasis: {
+                    itemStyle: {
                         shadowBlur: 10,
                         shadowColor: 'rgba(0, 0, 0, 0.3)',
-                    }}
-                }}
-            }}));
+                    }
+                }
+            }));
             
-            const option = {{
+            const option = {
                 backgroundColor: theme.backgroundColor,
-                textStyle: {{ color: theme.textColor }},
-                tooltip: {{
+                textStyle: { color: theme.textColor },
+                tooltip: {
                     trigger: 'axis',
-                    axisPointer: {{ type: 'shadow' }},
+                    axisPointer: { type: 'shadow' },
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     borderColor: 'transparent',
-                    textStyle: {{ color: '#fff' }},
-                    formatter: function(params) {{
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
                         let html = '<div style="font-weight:600;margin-bottom:8px">' + params[0].axisValue + '</div>';
                         params.sort((a, b) => a.value - b.value);
-                        params.forEach(p => {{
-                            if (p.value !== null) {{
+                        params.forEach(p => {
+                            if (p.value !== null) {
                                 html += '<div style="display:flex;justify-content:space-between;gap:24px;margin:4px 0">';
                                 html += '<span style="display:flex;align-items:center;gap:6px">';
                                 html += '<span style="width:10px;height:10px;border-radius:50%;background:' + p.color + '"></span>';
                                 html += p.seriesName + '</span>';
                                 html += '<span style="font-weight:600">' + p.value.toFixed(2) + ' ms</span></div>';
-                            }}
-                        }});
+                            }
+                        });
                         return html;
-                    }}
-                }},
-                legend: {{
+                    }
+                },
+                legend: {
                     data: data.adapters,
                     bottom: 0,
-                    textStyle: {{ color: theme.textColor }},
-                    itemStyle: {{ borderWidth: 0 }}
-                }},
-                grid: {{
+                    textStyle: { color: theme.textColor },
+                    itemStyle: { borderWidth: 0 }
+                },
+                grid: {
                     left: '3%',
                     right: '4%',
                     bottom: '15%',
                     top: '10%',
                     containLabel: true
-                }},
-                xAxis: {{
+                },
+                xAxis: {
                     type: 'category',
                     data: data.tasks,
-                    axisLine: {{ lineStyle: {{ color: theme.axisLineColor }} }},
-                    axisLabel: {{ color: theme.textColor, rotate: data.tasks.length > 5 ? 30 : 0 }}
-                }},
-                yAxis: {{
+                    axisLine: { lineStyle: { color: theme.axisLineColor } },
+                    axisLabel: { color: theme.textColor, rotate: data.tasks.length > 5 ? 30 : 0 }
+                },
+                yAxis: {
                     type: 'value',
                     name: 'Time (ms)',
-                    nameTextStyle: {{ color: theme.textColor }},
-                    axisLine: {{ lineStyle: {{ color: theme.axisLineColor }} }},
-                    axisLabel: {{ color: theme.textColor }},
-                    splitLine: {{ lineStyle: {{ color: theme.splitLineColor }} }},
+                    nameTextStyle: { color: theme.textColor },
+                    axisLine: { lineStyle: { color: theme.axisLineColor } },
+                    axisLabel: { color: theme.textColor },
+                    splitLine: { lineStyle: { color: theme.splitLineColor } },
                     min: 0
-                }},
+                },
                 series: series
-            }};
+            };
             
             mainChart.setOption(option);
-        }}
+        }
         
         // Task detail charts
-        const taskCharts = {{}};
+        const taskCharts = {};
         
-        function initTaskCharts() {{
+        function initTaskCharts() {
             if (!chartData.tasks) return;
             
-            Object.keys(chartData.tasks).forEach((taskId, idx) => {{
+            Object.keys(chartData.tasks).forEach((taskId, idx) => {
                 const containerId = 'task-chart-' + idx;
                 const container = document.getElementById(containerId);
                 if (!container) return;
@@ -984,323 +1137,85 @@ def _generate_html(results: BenchmarkResults, stats: BenchmarkStatistics) -> str
                 updateTaskChart(taskId, chart);
                 
                 window.addEventListener('resize', () => chart.resize());
-            }});
-        }}
+            });
+        }
         
-        function updateTaskChart(taskId, chart) {{
+        function updateTaskChart(taskId, chart) {
             if (!chart || !chartData.tasks[taskId]) return;
             
             const theme = getChartTheme();
             const data = chartData.tasks[taskId];
             
-            const series = data.map(d => ({{
+            const series = data.map(d => ({
                 name: d.adapter,
                 type: 'boxplot',
                 data: [d.boxplot],
-                itemStyle: {{ color: getAdapterColor(d.adapter), borderColor: getAdapterColor(d.adapter) }}
-            }}));
+                itemStyle: { color: getAdapterColor(d.adapter), borderColor: getAdapterColor(d.adapter) }
+            }));
             
-            const option = {{
+            const option = {
                 backgroundColor: theme.backgroundColor,
-                textStyle: {{ color: theme.textColor }},
-                tooltip: {{
+                textStyle: { color: theme.textColor },
+                tooltip: {
                     trigger: 'item',
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     borderColor: 'transparent',
-                    textStyle: {{ color: '#fff' }},
-                }},
-                grid: {{
+                    textStyle: { color: '#fff' },
+                },
+                grid: {
                     left: '10%',
                     right: '10%',
                     bottom: '15%',
                     top: '10%',
-                }},
-                xAxis: {{
+                },
+                xAxis: {
                     type: 'category',
                     data: data.map(d => d.adapter),
-                    axisLine: {{ lineStyle: {{ color: theme.axisLineColor }} }},
-                    axisLabel: {{ color: theme.textColor }}
-                }},
-                yAxis: {{
+                    axisLine: { lineStyle: { color: theme.axisLineColor } },
+                    axisLabel: { color: theme.textColor }
+                },
+                yAxis: {
                     type: 'value',
                     name: 'Time (ms)',
-                    nameTextStyle: {{ color: theme.textColor }},
-                    axisLine: {{ lineStyle: {{ color: theme.axisLineColor }} }},
-                    axisLabel: {{ color: theme.textColor }},
-                    splitLine: {{ lineStyle: {{ color: theme.splitLineColor }} }}
-                }},
+                    nameTextStyle: { color: theme.textColor },
+                    axisLine: { lineStyle: { color: theme.axisLineColor } },
+                    axisLabel: { color: theme.textColor },
+                    splitLine: { lineStyle: { color: theme.splitLineColor } }
+                },
                 series: series
-            }};
+            };
             
             chart.setOption(option);
-        }}
+        }
         
-        function updateCharts() {{
-            setTimeout(() => {{
+        function updateCharts() {
+            setTimeout(() => {
                 updateMainChart();
-                Object.entries(taskCharts).forEach(([taskId, chart]) => {{
+                Object.entries(taskCharts).forEach(([taskId, chart]) => {
                     updateTaskChart(taskId, chart);
-                }});
-            }}, 50);
-        }}
+                });
+            }, 50);
+        }
         
         // Task tabs
-        function showTask(idx) {{
-            document.querySelectorAll('.task-tab').forEach((tab, i) => {{
+        function showTask(idx) {
+            document.querySelectorAll('.task-tab').forEach((tab, i) => {
                 tab.classList.toggle('active', i === idx);
-            }});
-            document.querySelectorAll('.task-panel').forEach((panel, i) => {{
+            });
+            document.querySelectorAll('.task-panel').forEach((panel, i) => {
                 panel.classList.toggle('active', i === idx);
-                if (i === idx) {{
+                if (i === idx) {
                     const chart = Object.values(taskCharts)[idx];
                     if (chart) chart.resize();
-                }}
-            }});
-        }}
+                }
+            });
+        }
         
         // Initialize
-        document.addEventListener('DOMContentLoaded', function() {{
+        document.addEventListener('DOMContentLoaded', function() {
             initMainChart();
             initTaskCharts();
-        }});
+        });
     </script>
 </body>
 </html>
-"""
-    return html
-
-
-def _prepare_chart_data(results: BenchmarkResults, stats: BenchmarkStatistics) -> dict:
-    """Prepare data for JavaScript charts."""
-    chart_data = {
-        "comparison": None,
-        "tasks": {},
-    }
-    
-    if stats.summary_df is not None and len(stats.summary_df) > 0:
-        df = stats.summary_df
-        
-        # Comparison chart data
-        chart_data["comparison"] = {
-            "adapters": df["adapter"].unique().tolist(),
-            "tasks": df["task"].unique().tolist(),
-            "values": [
-                {
-                    "adapter": row["adapter"],
-                    "task": row["task"],
-                    "median_ms": row["median_ms"],
-                }
-                for _, row in df.iterrows()
-            ],
-        }
-    
-    # Task detail data
-    tasks = {}
-    for tr in results.task_results:
-        if tr.task_id not in tasks:
-            tasks[tr.task_id] = []
-        
-        if tr.timings_ns:
-            times_ms = [t / 1_000_000 for t in tr.timings_ns]
-            times_ms_sorted = sorted(times_ms)
-            n = len(times_ms_sorted)
-            
-            q1_idx = n // 4
-            q3_idx = (3 * n) // 4
-            
-            tasks[tr.task_id].append({
-                "adapter": tr.adapter_name,
-                "values": times_ms,
-                "boxplot": [
-                    min(times_ms),
-                    times_ms_sorted[q1_idx] if n > 0 else 0,
-                    times_ms_sorted[n // 2] if n > 0 else 0,
-                    times_ms_sorted[q3_idx] if n > 0 else 0,
-                    max(times_ms),
-                ],
-            })
-    
-    chart_data["tasks"] = tasks
-    return chart_data
-
-
-def _build_performance_cards(stats: BenchmarkStatistics) -> str:
-    """Build HTML for performance highlight cards."""
-    if stats.summary_df is None or len(stats.summary_df) == 0:
-        return ""
-    
-    df = stats.summary_df
-    
-    cards = []
-    
-    for task in df["task"].unique():
-        task_df = df[df["task"] == task]
-        rayforce_time = task_df[task_df["adapter"].str.lower() == "rayforce"]["median_ms"]
-        
-        if len(rayforce_time) == 0:
-            continue
-        
-        rayforce_time = rayforce_time.iloc[0]
-        other_times = task_df[task_df["adapter"].str.lower() != "rayforce"]["median_ms"]
-        
-        if len(other_times) == 0:
-            continue
-        
-        slowest = other_times.max()
-        if slowest > rayforce_time and rayforce_time > 0:
-            speedup = slowest / rayforce_time
-            if speedup > 1.5:
-                cards.append({
-                    "metric": f"{speedup:.1f}x",
-                    "label": f"Faster {task}",
-                    "sublabel": "vs. competitor",
-                })
-    
-    cards = sorted(cards, key=lambda x: float(x["metric"].rstrip("x")), reverse=True)[:3]
-    
-    if not cards:
-        adapters = df["adapter"].unique()
-        tasks = df["task"].unique()
-        cards = [
-            {"metric": str(len(adapters)), "label": "Databases", "sublabel": "compared"},
-            {"metric": str(len(tasks)), "label": "Queries", "sublabel": "benchmarked"},
-            {"metric": f"{len(df)}", "label": "Data Points", "sublabel": "collected"},
-        ]
-    
-    html_cards = []
-    for card in cards:
-        html_cards.append(f"""
-            <div class="perf-card">
-                <div class="metric">{card['metric']}</div>
-                <div class="label">{card['label']}</div>
-                <div class="sublabel">{card['sublabel']}</div>
-            </div>
-        """)
-    
-    return "\n".join(html_cards)
-
-
-def _build_results_table(stats: BenchmarkStatistics) -> str:
-    """Build HTML results table."""
-    if stats.summary_df is None or len(stats.summary_df) == 0:
-        return "<p>No results available.</p>"
-    
-    df = stats.summary_df
-    best_by_task = df.groupby("task")["median_ms"].min().to_dict()
-    
-    rows = []
-    for _, row in df.iterrows():
-        is_best = abs(row["median_ms"] - best_by_task.get(row["task"], float("inf"))) < 0.01
-        is_rayforce = row["adapter"].lower() == "rayforce"
-        
-        median_class = "best-value" if is_best else ""
-        valid_class = "valid" if row["valid"] else "invalid"
-        valid_text = "✓" if row["valid"] else "✗"
-        row_class = "rayforce-row" if is_rayforce else ""
-        
-        rows_per_sec = f"{row['rows/s']:,.0f}" if row['rows/s'] else "—"
-        
-        rows.append(f"""
-            <tr class="{row_class}">
-                <td><strong>{row['task']}</strong></td>
-                <td>{row['adapter']}</td>
-                <td class="{median_class} mono">{row['median_ms']:.3f}</td>
-                <td class="mono">{row['min_ms']:.3f}</td>
-                <td class="mono">{row['p95_ms']:.3f}</td>
-                <td class="mono">{rows_per_sec}</td>
-                <td class="{valid_class}">{valid_text}</td>
-            </tr>
-        """)
-    
-    return f"""
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Database</th>
-                        <th>Median (ms)</th>
-                        <th>Min (ms)</th>
-                        <th>P95 (ms)</th>
-                        <th>Rows/sec</th>
-                        <th>Valid</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {''.join(rows)}
-                </tbody>
-            </table>
-        </div>
-    """
-
-
-def _build_task_sections(results: BenchmarkResults, stats: BenchmarkStatistics) -> str:
-    """Build HTML for task detail sections with tabs."""
-    if not results.task_results:
-        return "<p>No task results available.</p>"
-    
-    tasks = {}
-    for tr in results.task_results:
-        if tr.task_id not in tasks:
-            tasks[tr.task_id] = []
-        tasks[tr.task_id].append(tr)
-    
-    if not tasks:
-        return "<p>No tasks to display.</p>"
-    
-    tabs = []
-    panels = []
-    
-    for idx, (task_id, task_results) in enumerate(tasks.items()):
-        active_class = "active" if idx == 0 else ""
-        tabs.append(f'<button class="task-tab {active_class}" onclick="showTask({idx})">{task_id}</button>')
-        
-        panels.append(f"""
-            <div class="task-panel {active_class}">
-                <div class="chart-card">
-                    <div id="task-chart-{idx}" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-        """)
-    
-    return f"""
-        <div class="task-tabs">
-            {''.join(tabs)}
-        </div>
-        {''.join(panels)}
-    """
-
-
-def _results_to_dict(results: BenchmarkResults, stats: BenchmarkStatistics) -> dict:
-    """Convert results and stats to JSON-serializable dictionary."""
-    return {
-        "suite_name": results.suite_name,
-        "dataset_name": results.dataset_name,
-        "started_at": results.started_at,
-        "finished_at": results.finished_at,
-        "task_results": [
-            {
-                "task_id": tr.task_id,
-                "adapter_name": tr.adapter_name,
-                "timings_ns": tr.timings_ns,
-                "row_counts": tr.row_counts,
-                "validation_passed": tr.validation_passed,
-                "cache_mode": tr.cache_mode,
-            }
-            for tr in results.task_results
-        ],
-        "statistics": [
-            {
-                "task_id": ts.task_id,
-                "adapter_name": ts.adapter_name,
-                "n_samples": ts.n_samples,
-                "min_ms": ts.min_ms,
-                "median_ms": ts.median_ms,
-                "p95_ms": ts.p95_ms,
-                "max_ms": ts.max_ms,
-                "std_ms": ts.std_ms,
-                "rows_per_sec": ts.rows_per_sec,
-            }
-            for ts in stats.task_stats
-        ],
-    }

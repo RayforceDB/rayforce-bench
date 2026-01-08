@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from benchmarks.adapter import Adapter, AdapterResult, SetupError, TaskError
+from benchmarks.config import get_config
 
 
 # Type mapping from manifest types to Rayforce types
@@ -56,26 +57,30 @@ class RayforceAdapter(Adapter):
     def __init__(
         self,
         binary_path: str | Path | None = None,
-        use_ipc: bool = False,
-        host: str = "localhost",
-        port: int = 5110,
+        use_ipc: bool | None = None,
+        host: str | None = None,
+        port: int | None = None,
     ):
         """Initialize Rayforce adapter.
         
         Args:
-            binary_path: Path to rayforce binary (default: 'rayforce' in PATH).
+            binary_path: Path to rayforce binary (default: from config).
             use_ipc: If True, connect to running Rayforce server via IPC.
             host: IPC server host.
             port: IPC server port.
         """
-        self.binary_path = Path(binary_path) if binary_path else Path("rayforce")
-        self.use_ipc = use_ipc
-        self.host = host
-        self.port = port
+        config = get_config()
+        rf_config = config.rayforce
+        
+        self.binary_path = Path(binary_path or rf_config.get("binary", "rayforce"))
+        self.use_ipc = use_ipc if use_ipc is not None else rf_config.get("use_ipc", False)
+        self.host = host or rf_config.get("host", "localhost")
+        self.port = port or rf_config.get("port", 5110)
         
         self._schema: dict[str, Any] = {}
         self._table_name: str = ""
         self._csv_paths: list[Path] = []
+        self._tables: dict[str, Path] = {}  # table_name -> csv_path mapping
         self._tasks = self._build_task_registry()
         
         # IPC handle (if using IPC mode)
@@ -126,11 +131,14 @@ class RayforceAdapter(Adapter):
     def load_csv(self, csv_paths: list[Path], table_name: str) -> None:
         """Store CSV paths for loading in run().
         
-        Rayforce loads CSV at query time using the csv function.
+        Rayforce loads CSV at query time using the read-csv function.
         We store paths here for use in queries.
         """
         self._csv_paths = csv_paths
         self._table_name = table_name
+        # Store in tables mapping for multi-table support (joins)
+        if csv_paths:
+            self._tables[table_name] = csv_paths[0]
     
     def run(self, task: str, params: dict[str, Any]) -> AdapterResult:
         """Execute a benchmark task."""
@@ -190,49 +198,99 @@ class RayforceAdapter(Adapter):
             row_count = result.len if IS_VECTOR(result) else 1
             drop_obj(result)
         """
+        import tempfile
+        import os
+        
         start_ns = time.perf_counter_ns()
         
         try:
-            # Build full script with data loading
+            # Build full script with data loading and timing
             csv_path = str(self._csv_paths[0]) if self._csv_paths else ""
             schema_str = self._build_schema_str()
             
-            full_expr = f"""
-(set {self._table_name} (csv {schema_str} "{csv_path}"))
-{expr}
-"""
+            # Build table loading statements for all registered tables
+            load_statements = []
+            if self._tables:
+                # Multi-table mode (for joins)
+                for tbl_name, tbl_path in self._tables.items():
+                    load_statements.append(f'(set {tbl_name} (read-csv {schema_str} "{tbl_path}"))')
+            else:
+                # Single table mode
+                load_statements.append(f'(set {self._table_name} (read-csv {schema_str} "{csv_path}"))')
             
-            # Execute via subprocess (temporary approach)
-            result = subprocess.run(
-                [str(self.binary_path), "-e", full_expr],
-                capture_output=True,
-                text=True,
-                timeout=300,  # 5 minute timeout
-            )
+            load_script = "\n".join(load_statements)
             
-            end_ns = time.perf_counter_ns()
+            # Use timeit to get accurate timing from Rayforce itself
+            full_script = f'''{load_script}
+(set _timing (timeit {expr}))
+(set _result {expr})
+(set _count (count _result))
+(print "TIMING_MS:")
+(println _timing)
+(print "ROW_COUNT:")
+(println _count)
+'''
             
-            if result.returncode != 0:
-                return AdapterResult(
-                    execution_time_ns=end_ns - start_ns,
-                    row_count=0,
-                    success=False,
-                    error_message=result.stderr.strip(),
+            # Write script to temp file (rayforce requires file input)
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.rfl', delete=False) as f:
+                f.write(full_script)
+                script_path = f.name
+            
+            try:
+                # Execute via subprocess with stdin closed to prevent REPL waiting
+                result = subprocess.run(
+                    [str(self.binary_path), "-f", script_path],
+                    capture_output=True,
+                    text=True,
+                    stdin=subprocess.DEVNULL,  # Close stdin to prevent REPL
+                    timeout=300,  # 5 minute timeout
                 )
-            
-            # Parse output to get row count
-            # TODO: Better result parsing - for now, estimate from output
-            output = result.stdout.strip()
-            row_count = output.count("\n") + 1 if output else 0
-            
-            # Simple checksum from output
-            checksum = int(hashlib.md5(output.encode()).hexdigest()[:8], 16)
-            
-            return AdapterResult(
-                execution_time_ns=end_ns - start_ns,
-                row_count=row_count,
-                checksum=checksum,
-            )
+                
+                end_ns = time.perf_counter_ns()
+                
+                if result.returncode != 0:
+                    return AdapterResult(
+                        execution_time_ns=end_ns - start_ns,
+                        row_count=0,
+                        success=False,
+                        error_message=result.stderr.strip() or result.stdout.strip(),
+                    )
+                
+                # Parse output for timing and row count
+                output = result.stdout.strip()
+                timing_ms = None
+                row_count = 0
+                
+                for line in output.split('\n'):
+                    if line.startswith('TIMING_MS:'):
+                        try:
+                            timing_ms = float(line.split(':')[1].strip())
+                        except (ValueError, IndexError):
+                            pass
+                    elif line.startswith('ROW_COUNT:'):
+                        try:
+                            row_count = int(line.split(':')[1].strip())
+                        except (ValueError, IndexError):
+                            pass
+                
+                # Use Rayforce's timing if available
+                if timing_ms is not None:
+                    execution_ns = int(timing_ms * 1_000_000)
+                else:
+                    execution_ns = end_ns - start_ns
+                
+                # Simple checksum from output
+                checksum = int(hashlib.md5(output.encode()).hexdigest()[:8], 16)
+                
+                return AdapterResult(
+                    execution_time_ns=execution_ns,
+                    row_count=row_count,
+                    checksum=checksum,
+                    query=expr,
+                )
+            finally:
+                # Clean up temp file
+                os.unlink(script_path)
             
         except subprocess.TimeoutExpired:
             return AdapterResult(
@@ -240,6 +298,7 @@ class RayforceAdapter(Adapter):
                 row_count=0,
                 success=False,
                 error_message="Execution timeout",
+                query=expr,
             )
         except Exception as e:
             return AdapterResult(
@@ -247,6 +306,7 @@ class RayforceAdapter(Adapter):
                 row_count=0,
                 success=False,
                 error_message=str(e),
+                query=expr if 'expr' in locals() else None,
             )
     
     # =========================================================================
@@ -293,7 +353,7 @@ class RayforceAdapter(Adapter):
     def _task_groupby_q7(self, params: dict[str, Any]) -> AdapterResult:
         """Q7: sum(v3), count by id1-id6"""
         table = params.get("table", self._table_name)
-        expr = f"""(select {{v3: (sum v3) count: (map count v3) from: {table} by: {{id1: id1 id2: id2 id3: id3 id4: id4 id5: id5 id6: id6}}}})"""
+        expr = f"""(select {{v3: (sum v3) cnt: (count v3) from: {table} by: {{id1: id1 id2: id2 id3: id3 id4: id4 id5: id5 id6: id6}}}})"""
         return self._execute_expr(expr)
     
     # =========================================================================
@@ -305,14 +365,14 @@ class RayforceAdapter(Adapter):
         """Inner join on id1, id2"""
         left_table = params.get("left_table", "x")
         right_table = params.get("right_table", "y")
-        expr = f"(ij [id1 id2] {left_table} {right_table})"
+        expr = f"(inner-join [id1 id2] {left_table} {right_table})"
         return self._execute_expr(expr)
     
     def _task_left_join(self, params: dict[str, Any]) -> AdapterResult:
         """Left join on id1, id2"""
         left_table = params.get("left_table", "x")
         right_table = params.get("right_table", "y")
-        expr = f"(lj [id1 id2] {left_table} {right_table})"
+        expr = f"(left-join [id1 id2] {left_table} {right_table})"
         return self._execute_expr(expr)
     
     def _task_eval(self, params: dict[str, Any]) -> AdapterResult:
