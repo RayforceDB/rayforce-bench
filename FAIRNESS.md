@@ -40,14 +40,15 @@ rows = result.fetchall()
 row_count = len(rows)
 ```
 
-### Polars (Embedded Python)
+### Polars (Embedded Python with Lazy Evaluation)
 
 ```
 Timing includes:
-✓ Expression evaluation
-✓ Query execution (group_by, join, etc.)
+✓ Query plan construction (group_by, agg, join calls)
+✓ Query optimization (predicate pushdown, projection)
+✓ Query execution via collect() (native Rust execution)
+✓ Parallel processing across all CPU cores
 ✓ Result materialization (DataFrame creation)
-✓ LazyFrame collect() if using lazy mode
 
 Timing excludes:
 ✗ CSV loading (done once before benchmarks)
@@ -56,20 +57,32 @@ Timing excludes:
 
 Implementation:
 ```python
-# Data loaded before timing
+# Data loaded before timing, lazy view created
 df = pl.read_csv(...)
+lf = df.lazy()  # Create lazy view for query optimization
 
-# Query execution - timed
+# Time BOTH query plan construction AND execution
+# This matches DuckDB/Rayforce/KDB+ which include parsing+planning
 start = time.perf_counter_ns()
-result = df.group_by("id1").agg(pl.sum("v1"))
-# Force evaluation if lazy
-if isinstance(result, pl.LazyFrame):
-    result = result.collect()
+query = lf.group_by("id1").agg(pl.sum("v1"))  # Plan construction
+result = query.collect()  # Execution
 end = time.perf_counter_ns()
 
 # Validation AFTER timing
 row_count = len(result)
 ```
+
+**Why include query plan construction?**
+- DuckDB's `execute()` includes parsing + planning
+- Rayforce's `timeit` includes parsing + planning  
+- KDB+'s `\t` includes parsing + planning
+- For fair comparison, Polars must include plan construction too
+
+**Why Lazy Evaluation?**
+- Query plan is optimized (predicate pushdown, projection)
+- `collect()` triggers native Rust parallel execution
+- Polars uses all available CPU cores via Rayon thread pool
+- Environment variable `POLARS_MAX_THREADS` controls parallelism
 
 ### Rayforce (Subprocess with `timeit`)
 

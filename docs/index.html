@@ -686,15 +686,15 @@
             <div class="hero-meta">
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    h2oai_groupby_1e7
+                    groupby_10m
                 </span>
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                    G1_1e7_1e2_0_0
+                    G1_10m
                 </span>
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    January 08, 2026 at 19:57
+                    January 08, 2026 at 22:20
                 </span>
             </div>
         </div>
@@ -703,22 +703,22 @@
     <div class="perf-cards">
         
             <div class="perf-card">
-                <div class="metric">2.6x</div>
-                <div class="label">Faster groupby_q6</div>
+                <div class="metric">8.5x</div>
+                <div class="label">Faster groupby_q1</div>
                 <div class="sublabel">vs. competitor</div>
             </div>
         
 
             <div class="perf-card">
-                <div class="metric">2.0x</div>
+                <div class="metric">7.0x</div>
                 <div class="label">Faster groupby_q3</div>
                 <div class="sublabel">vs. competitor</div>
             </div>
         
 
             <div class="perf-card">
-                <div class="metric">1.6x</div>
-                <div class="label">Faster groupby_q5</div>
+                <div class="metric">7.0x</div>
+                <div class="label">Faster groupby_q6</div>
                 <div class="sublabel">vs. competitor</div>
             </div>
         
@@ -756,143 +756,213 @@
                 </thead>
                 <tbody>
                     
-            <tr class="">
-                <td><strong>groupby_q1</strong></td>
-                <td>duckdb</td>
-                <td class="best-value mono">6.877</td>
-                <td class="mono">6.776</td>
-                <td class="mono">7.062</td>
-                <td class="mono">14,540</td>
-                <td class="valid">✓</td>
-            </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q2</strong></td>
-                <td>duckdb</td>
-                <td class="best-value mono">19.584</td>
-                <td class="mono">19.439</td>
-                <td class="mono">20.158</td>
-                <td class="mono">510,617</td>
-                <td class="valid">✓</td>
-            </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q3</strong></td>
-                <td>duckdb</td>
-                <td class=" mono">54.439</td>
-                <td class="mono">54.212</td>
-                <td class="mono">54.803</td>
-                <td class="mono">1,836,902</td>
-                <td class="valid">✓</td>
-            </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q4</strong></td>
-                <td>duckdb</td>
-                <td class="best-value mono">6.080</td>
-                <td class="mono">5.657</td>
-                <td class="mono">6.905</td>
-                <td class="mono">16,446</td>
-                <td class="valid">✓</td>
-            </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q5</strong></td>
-                <td>duckdb</td>
-                <td class=" mono">42.592</td>
-                <td class="mono">41.490</td>
-                <td class="mono">44.856</td>
-                <td class="mono">2,347,858</td>
-                <td class="valid">✓</td>
-            </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q6</strong></td>
-                <td>duckdb</td>
-                <td class=" mono">58.731</td>
-                <td class="mono">58.212</td>
-                <td class="mono">59.156</td>
-                <td class="mono">1,702,669</td>
-                <td class="valid">✓</td>
-            </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q7</strong></td>
-                <td>duckdb</td>
-                <td class="best-value mono">83.419</td>
-                <td class="mono">82.074</td>
-                <td class="mono">84.325</td>
-                <td class="mono">119,876,495</td>
-                <td class="valid">✓</td>
-            </tr>
-        
             <tr class="rayforce-row">
                 <td><strong>groupby_q1</strong></td>
                 <td>rayforce</td>
-                <td class=" mono">12.050</td>
-                <td class="mono">12.030</td>
-                <td class="mono">12.284</td>
-                <td class="mono">8,299</td>
+                <td class="best-value mono">8.840</td>
+                <td class="mono">8.690</td>
+                <td class="mono">8.966</td>
+                <td class="mono">357,466</td>
                 <td class="valid">✓</td>
             </tr>
         
             <tr class="rayforce-row">
                 <td><strong>groupby_q2</strong></td>
                 <td>rayforce</td>
-                <td class=" mono">21.550</td>
-                <td class="mono">21.210</td>
-                <td class="mono">22.216</td>
-                <td class="mono">464,037</td>
+                <td class=" mono">159.590</td>
+                <td class="mono">156.520</td>
+                <td class="mono">159.698</td>
+                <td class="mono">39,584,059</td>
                 <td class="valid">✓</td>
             </tr>
         
             <tr class="rayforce-row">
                 <td><strong>groupby_q3</strong></td>
                 <td>rayforce</td>
-                <td class="best-value mono">27.030</td>
-                <td class="mono">26.900</td>
-                <td class="mono">28.137</td>
-                <td class="mono">3,699,593</td>
+                <td class=" mono">12.510</td>
+                <td class="mono">12.480</td>
+                <td class="mono">13.239</td>
+                <td class="mono">252,598</td>
                 <td class="valid">✓</td>
             </tr>
         
             <tr class="rayforce-row">
                 <td><strong>groupby_q4</strong></td>
                 <td>rayforce</td>
-                <td class=" mono">16.180</td>
-                <td class="mono">16.140</td>
-                <td class="mono">16.207</td>
-                <td class="mono">6,180</td>
+                <td class=" mono">17.600</td>
+                <td class="mono">17.360</td>
+                <td class="mono">17.960</td>
+                <td class="mono">179,545</td>
                 <td class="valid">✓</td>
             </tr>
         
             <tr class="rayforce-row">
                 <td><strong>groupby_q5</strong></td>
                 <td>rayforce</td>
-                <td class="best-value mono">27.130</td>
-                <td class="mono">26.660</td>
-                <td class="mono">27.454</td>
-                <td class="mono">3,685,957</td>
+                <td class=" mono">13.840</td>
+                <td class="mono">13.790</td>
+                <td class="mono">13.840</td>
+                <td class="mono">228,324</td>
                 <td class="valid">✓</td>
             </tr>
         
             <tr class="rayforce-row">
                 <td><strong>groupby_q6</strong></td>
                 <td>rayforce</td>
-                <td class="best-value mono">22.360</td>
-                <td class="mono">21.570</td>
-                <td class="mono">22.369</td>
-                <td class="mono">4,472,272</td>
+                <td class="best-value mono">11.090</td>
+                <td class="mono">10.940</td>
+                <td class="mono">11.135</td>
+                <td class="mono">284,941</td>
                 <td class="valid">✓</td>
             </tr>
         
             <tr class="rayforce-row">
                 <td><strong>groupby_q7</strong></td>
                 <td>rayforce</td>
-                <td class=" mono">1474.360</td>
-                <td class="mono">1474.360</td>
-                <td class="mono">1474.360</td>
-                <td class="mono">6,782,604</td>
+                <td class=" mono">252.270</td>
+                <td class="mono">249.850</td>
+                <td class="mono">288.108</td>
+                <td class="mono">39,640,068</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q1</strong></td>
+                <td>duckdb</td>
+                <td class=" mono">11.068</td>
+                <td class="mono">9.531</td>
+                <td class="mono">12.514</td>
+                <td class="mono">285,512</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q2</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">45.706</td>
+                <td class="mono">44.171</td>
+                <td class="mono">46.335</td>
+                <td class="mono">138,213,652</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q3</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">12.003</td>
+                <td class="mono">11.203</td>
+                <td class="mono">12.403</td>
+                <td class="mono">263,261</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q4</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">9.586</td>
+                <td class="mono">7.594</td>
+                <td class="mono">11.278</td>
+                <td class="mono">329,633</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q5</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">7.339</td>
+                <td class="mono">6.244</td>
+                <td class="mono">9.312</td>
+                <td class="mono">430,604</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q6</strong></td>
+                <td>duckdb</td>
+                <td class=" mono">14.041</td>
+                <td class="mono">9.784</td>
+                <td class="mono">15.576</td>
+                <td class="mono">225,051</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q7</strong></td>
+                <td>duckdb</td>
+                <td class="best-value mono">70.650</td>
+                <td class="mono">70.246</td>
+                <td class="mono">71.841</td>
+                <td class="mono">141,542,398</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q1</strong></td>
+                <td>polars</td>
+                <td class=" mono">75.124</td>
+                <td class="mono">61.994</td>
+                <td class="mono">75.630</td>
+                <td class="mono">42,064</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q2</strong></td>
+                <td>polars</td>
+                <td class=" mono">494.973</td>
+                <td class="mono">484.988</td>
+                <td class="mono">498.223</td>
+                <td class="mono">12,762,769</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q3</strong></td>
+                <td>polars</td>
+                <td class=" mono">87.197</td>
+                <td class="mono">72.251</td>
+                <td class="mono">100.860</td>
+                <td class="mono">36,240</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q4</strong></td>
+                <td>polars</td>
+                <td class=" mono">57.393</td>
+                <td class="mono">47.149</td>
+                <td class="mono">61.220</td>
+                <td class="mono">55,059</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q5</strong></td>
+                <td>polars</td>
+                <td class=" mono">50.608</td>
+                <td class="mono">48.584</td>
+                <td class="mono">50.936</td>
+                <td class="mono">62,440</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q6</strong></td>
+                <td>polars</td>
+                <td class=" mono">78.083</td>
+                <td class="mono">72.200</td>
+                <td class="mono">79.612</td>
+                <td class="mono">40,470</td>
+                <td class="valid">✓</td>
+            </tr>
+        
+            <tr class="">
+                <td><strong>groupby_q7</strong></td>
+                <td>polars</td>
+                <td class=" mono">760.494</td>
+                <td class="mono">754.291</td>
+                <td class="mono">771.391</td>
+                <td class="mono">13,149,341</td>
                 <td class="valid">✓</td>
             </tr>
         
@@ -976,7 +1046,7 @@
     
     <script>
         // Chart data
-        const chartData = {"comparison": {"adapters": ["duckdb", "rayforce"], "tasks": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7"], "values": [{"adapter": "duckdb", "task": "groupby_q1", "median_ms": 6.877406}, {"adapter": "duckdb", "task": "groupby_q2", "median_ms": 19.584163}, {"adapter": "duckdb", "task": "groupby_q3", "median_ms": 54.439492}, {"adapter": "duckdb", "task": "groupby_q4", "median_ms": 6.080398}, {"adapter": "duckdb", "task": "groupby_q5", "median_ms": 42.592008}, {"adapter": "duckdb", "task": "groupby_q6", "median_ms": 58.731323}, {"adapter": "duckdb", "task": "groupby_q7", "median_ms": 83.419189}, {"adapter": "rayforce", "task": "groupby_q1", "median_ms": 12.05}, {"adapter": "rayforce", "task": "groupby_q2", "median_ms": 21.55}, {"adapter": "rayforce", "task": "groupby_q3", "median_ms": 27.03}, {"adapter": "rayforce", "task": "groupby_q4", "median_ms": 16.18}, {"adapter": "rayforce", "task": "groupby_q5", "median_ms": 27.13}, {"adapter": "rayforce", "task": "groupby_q6", "median_ms": 22.36}, {"adapter": "rayforce", "task": "groupby_q7", "median_ms": 1474.36}]}, "tasks": {"groupby_q1": [{"adapter": "duckdb", "values": [6.877406, 7.082709, 6.776413], "boxplot": [6.776413, 6.776413, 6.877406, 7.082709, 7.082709]}, {"adapter": "rayforce", "values": [12.31, 12.03, 12.05], "boxplot": [12.03, 12.03, 12.05, 12.31, 12.31]}], "groupby_q2": [{"adapter": "duckdb", "values": [20.221522, 19.439208, 19.584163], "boxplot": [19.439208, 19.439208, 19.584163, 20.221522, 20.221522]}, {"adapter": "rayforce", "values": [21.55, 22.29, 21.21], "boxplot": [21.21, 21.21, 21.55, 22.29, 22.29]}], "groupby_q3": [{"adapter": "duckdb", "values": [54.211576, 54.843428, 54.439492], "boxplot": [54.211576, 54.211576, 54.439492, 54.843428, 54.843428]}, {"adapter": "rayforce", "values": [28.26, 26.9, 27.03], "boxplot": [26.9, 26.9, 27.03, 28.26, 28.26]}], "groupby_q4": [{"adapter": "duckdb", "values": [6.996755, 6.080398, 5.656814], "boxplot": [5.656814, 5.656814, 6.080398, 6.996755, 6.996755]}, {"adapter": "rayforce", "values": [16.21, 16.14, 16.18], "boxplot": [16.14, 16.14, 16.18, 16.21, 16.21]}], "groupby_q5": [{"adapter": "duckdb", "values": [41.489561, 42.592008, 45.107842], "boxplot": [41.489561, 41.489561, 42.592008, 45.107842, 45.107842]}, {"adapter": "rayforce", "values": [26.66, 27.49, 27.13], "boxplot": [26.66, 26.66, 27.13, 27.49, 27.49]}], "groupby_q6": [{"adapter": "duckdb", "values": [58.211519, 58.731323, 59.203459], "boxplot": [58.211519, 58.211519, 58.731323, 59.203459, 59.203459]}, {"adapter": "rayforce", "values": [21.57, 22.37, 22.36], "boxplot": [21.57, 21.57, 22.36, 22.37, 22.37]}], "groupby_q7": [{"adapter": "duckdb", "values": [84.42604, 83.419189, 82.074075], "boxplot": [82.074075, 82.074075, 83.419189, 84.42604, 84.42604]}, {"adapter": "rayforce", "values": [1474.36], "boxplot": [1474.36, 1474.36, 1474.36, 1474.36, 1474.36]}]}};
+        const chartData = {"comparison": {"adapters": ["rayforce", "duckdb", "polars"], "tasks": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7"], "values": [{"adapter": "rayforce", "task": "groupby_q1", "median_ms": 8.84}, {"adapter": "rayforce", "task": "groupby_q2", "median_ms": 159.59}, {"adapter": "rayforce", "task": "groupby_q3", "median_ms": 12.51}, {"adapter": "rayforce", "task": "groupby_q4", "median_ms": 17.6}, {"adapter": "rayforce", "task": "groupby_q5", "median_ms": 13.84}, {"adapter": "rayforce", "task": "groupby_q6", "median_ms": 11.09}, {"adapter": "rayforce", "task": "groupby_q7", "median_ms": 252.27}, {"adapter": "duckdb", "task": "groupby_q1", "median_ms": 11.067851}, {"adapter": "duckdb", "task": "groupby_q2", "median_ms": 45.706194}, {"adapter": "duckdb", "task": "groupby_q3", "median_ms": 12.00331}, {"adapter": "duckdb", "task": "groupby_q4", "median_ms": 9.586427}, {"adapter": "duckdb", "task": "groupby_q5", "median_ms": 7.338533}, {"adapter": "duckdb", "task": "groupby_q6", "median_ms": 14.041257}, {"adapter": "duckdb", "task": "groupby_q7", "median_ms": 70.650209}, {"adapter": "polars", "task": "groupby_q1", "median_ms": 75.124218}, {"adapter": "polars", "task": "groupby_q2", "median_ms": 494.972534}, {"adapter": "polars", "task": "groupby_q3", "median_ms": 87.196738}, {"adapter": "polars", "task": "groupby_q4", "median_ms": 57.392911}, {"adapter": "polars", "task": "groupby_q5", "median_ms": 50.608447}, {"adapter": "polars", "task": "groupby_q6", "median_ms": 78.08339}, {"adapter": "polars", "task": "groupby_q7", "median_ms": 760.494376}]}, "tasks": {"groupby_q1": [{"adapter": "rayforce", "values": [8.98, 8.69, 8.84], "boxplot": [8.69, 8.69, 8.84, 8.98, 8.98]}, {"adapter": "duckdb", "values": [9.530669, 11.067851, 12.674665], "boxplot": [9.530669, 9.530669, 11.067851, 12.674665, 12.674665]}, {"adapter": "polars", "values": [61.993631, 75.686613, 75.124218], "boxplot": [61.993631, 61.993631, 75.124218, 75.686613, 75.686613]}], "groupby_q2": [{"adapter": "rayforce", "values": [156.52, 159.59, 159.71], "boxplot": [156.52, 156.52, 159.59, 159.71, 159.71]}, {"adapter": "duckdb", "values": [44.171251, 45.706194, 46.405122], "boxplot": [44.171251, 44.171251, 45.706194, 46.405122, 46.405122]}, {"adapter": "polars", "values": [498.584465, 494.972534, 484.987955], "boxplot": [484.987955, 484.987955, 494.972534, 498.584465, 498.584465]}], "groupby_q3": [{"adapter": "rayforce", "values": [13.32, 12.51, 12.48], "boxplot": [12.48, 12.48, 12.51, 13.32, 13.32]}, {"adapter": "duckdb", "values": [11.202571, 12.00331, 12.447903], "boxplot": [11.202571, 11.202571, 12.00331, 12.447903, 12.447903]}, {"adapter": "polars", "values": [87.196738, 102.378139, 72.250701], "boxplot": [72.250701, 72.250701, 87.196738, 102.378139, 102.378139]}], "groupby_q4": [{"adapter": "rayforce", "values": [17.6, 17.36, 18.0], "boxplot": [17.36, 17.36, 17.6, 18.0, 18.0]}, {"adapter": "duckdb", "values": [11.466154, 9.586427, 7.594472], "boxplot": [7.594472, 7.594472, 9.586427, 11.466154, 11.466154]}, {"adapter": "polars", "values": [61.645089, 47.148758, 57.392911], "boxplot": [47.148758, 47.148758, 57.392911, 61.645089, 61.645089]}], "groupby_q5": [{"adapter": "rayforce", "values": [13.84, 13.84, 13.79], "boxplot": [13.79, 13.79, 13.84, 13.84, 13.84]}, {"adapter": "duckdb", "values": [6.243679, 7.338533, 9.531523], "boxplot": [6.243679, 6.243679, 7.338533, 9.531523, 9.531523]}, {"adapter": "polars", "values": [50.608447, 48.584241, 50.972623], "boxplot": [48.584241, 48.584241, 50.608447, 50.972623, 50.972623]}], "groupby_q6": [{"adapter": "rayforce", "values": [11.14, 10.94, 11.09], "boxplot": [10.94, 10.94, 11.09, 11.14, 11.14]}, {"adapter": "duckdb", "values": [14.041257, 15.746382, 9.784249], "boxplot": [9.784249, 9.784249, 14.041257, 15.746382, 15.746382]}, {"adapter": "polars", "values": [79.782217, 72.200386, 78.08339], "boxplot": [72.200386, 72.200386, 78.08339, 79.782217, 79.782217]}], "groupby_q7": [{"adapter": "rayforce", "values": [292.09, 249.85, 252.27], "boxplot": [249.85, 249.85, 252.27, 292.09, 292.09]}, {"adapter": "duckdb", "values": [70.650209, 71.973716, 70.246235], "boxplot": [70.246235, 70.246235, 70.650209, 71.973716, 71.973716]}, {"adapter": "polars", "values": [760.494376, 754.290886, 772.601194], "boxplot": [754.290886, 754.290886, 760.494376, 772.601194, 772.601194]}]}};
         
         // Theme management - default to light
         const themeToggle = document.querySelector('.theme-toggle');

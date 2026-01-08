@@ -199,46 +199,48 @@ class DuckDBAdapter(Adapter):
     
     # =========================================================================
     # H2OAI Group By Queries (matching Rayforce benchmark queries)
+    # All queries return: [grouping_columns..., aggregated_values...]
+    # This matches Rayforce's select syntax where by: columns are included
     # =========================================================================
     
     def _task_groupby_q1(self, params: dict[str, Any]) -> AdapterResult:
-        """Q1: sum(v1) by id1"""
+        """Q1: sum(v1) by id1 -> returns [id1, v1]"""
         table = params.get("table", self._table_name)
         query = f"SELECT id1, SUM(v1) AS v1 FROM {table} GROUP BY id1"
         return self._execute_query(query)
     
     def _task_groupby_q2(self, params: dict[str, Any]) -> AdapterResult:
-        """Q2: sum(v1) by id1, id2"""
+        """Q2: sum(v1) by id1, id2 -> returns [id1, id2, v1]"""
         table = params.get("table", self._table_name)
         query = f"SELECT id1, id2, SUM(v1) AS v1 FROM {table} GROUP BY id1, id2"
         return self._execute_query(query)
     
     def _task_groupby_q3(self, params: dict[str, Any]) -> AdapterResult:
-        """Q3: sum(v1), avg(v3) by id3"""
+        """Q3: sum(v1), avg(v3) by id3 -> returns [id3, v1, v3]"""
         table = params.get("table", self._table_name)
         query = f"SELECT id3, SUM(v1) AS v1, AVG(v3) AS v3 FROM {table} GROUP BY id3"
         return self._execute_query(query)
     
     def _task_groupby_q4(self, params: dict[str, Any]) -> AdapterResult:
-        """Q4: avg(v1), avg(v2), avg(v3) by id4"""
+        """Q4: avg(v1), avg(v2), avg(v3) by id4 -> returns [id4, v1, v2, v3]"""
         table = params.get("table", self._table_name)
         query = f"SELECT id4, AVG(v1) AS v1, AVG(v2) AS v2, AVG(v3) AS v3 FROM {table} GROUP BY id4"
         return self._execute_query(query)
     
     def _task_groupby_q5(self, params: dict[str, Any]) -> AdapterResult:
-        """Q5: sum(v1), sum(v2), sum(v3) by id6"""
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 -> returns [id6, v1, v2, v3]"""
         table = params.get("table", self._table_name)
         query = f"SELECT id6, SUM(v1) AS v1, SUM(v2) AS v2, SUM(v3) AS v3 FROM {table} GROUP BY id6"
         return self._execute_query(query)
     
     def _task_groupby_q6(self, params: dict[str, Any]) -> AdapterResult:
-        """Q6: max(v1) - min(v2) by id3"""
+        """Q6: max(v1) - min(v2) by id3 -> returns [id3, range_v1_v2]"""
         table = params.get("table", self._table_name)
         query = f"SELECT id3, MAX(v1) - MIN(v2) AS range_v1_v2 FROM {table} GROUP BY id3"
         return self._execute_query(query)
     
     def _task_groupby_q7(self, params: dict[str, Any]) -> AdapterResult:
-        """Q7: sum(v3), count(*) by id1-id6"""
+        """Q7: sum(v3), count(*) by id1-id6 -> returns [id1, id2, id3, id4, id5, id6, v3, count]"""
         table = params.get("table", self._table_name)
         query = f"""
             SELECT id1, id2, id3, id4, id5, id6, 

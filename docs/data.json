@@ -1,112 +1,112 @@
 {
-  "suite_name": "h2oai_groupby_1e7",
-  "dataset_name": "G1_1e7_1e2_0_0",
-  "started_at": "2026-01-08T19:57:00.480415",
-  "finished_at": "2026-01-08T19:57:57.484716",
+  "suite_name": "groupby_10m",
+  "dataset_name": "G1_10m",
+  "started_at": "2026-01-08T22:18:53.988661",
+  "finished_at": "2026-01-08T22:20:11.139426",
   "task_results": [
     {
       "task_id": "groupby_q1",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        6877406,
-        7082709,
-        6776413
+        8980000,
+        8690000,
+        8840000
       ],
       "row_counts": [
-        100,
-        100,
-        100
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q2",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        20221522,
-        19439208,
-        19584163
+        156520000,
+        159590000,
+        159710000
       ],
       "row_counts": [
-        10000,
-        10000,
-        10000
+        6317220,
+        6317220,
+        6317220
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q3",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        54211576,
-        54843428,
-        54439492
+        13320000,
+        12510000,
+        12480000
       ],
       "row_counts": [
-        100000,
-        100000,
-        100000
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q4",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        6996755,
-        6080398,
-        5656814
+        17600000,
+        17360000,
+        18000000
       ],
       "row_counts": [
-        100,
-        100,
-        100
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q5",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        41489561,
-        42592008,
-        45107842
+        13840000,
+        13840000,
+        13790000
       ],
       "row_counts": [
-        100000,
-        100000,
-        100000
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q6",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        58211519,
-        58731323,
-        59203459
+        11140000,
+        10940000,
+        11090000
       ],
       "row_counts": [
-        100000,
-        100000,
-        100000
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q7",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "timings_ns": [
-        84426040,
-        83419189,
-        82074075
+        292090000,
+        249850000,
+        252270000
       ],
       "row_counts": [
         10000000,
@@ -118,107 +118,223 @@
     },
     {
       "task_id": "groupby_q1",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        12310000,
-        12030000,
-        12050000
+        9530669,
+        11067851,
+        12674665
       ],
       "row_counts": [
-        100,
-        100,
-        100
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q2",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        21550000,
-        22290000,
-        21210000
+        44171251,
+        45706194,
+        46405122
       ],
       "row_counts": [
-        10000,
-        10000,
-        10000
+        6317220,
+        6317220,
+        6317220
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q3",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        28260000,
-        26900000,
-        27030000
+        11202571,
+        12003310,
+        12447903
       ],
       "row_counts": [
-        100000,
-        100000,
-        100000
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q4",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        16210000,
-        16140000,
-        16180000
+        11466154,
+        9586427,
+        7594472
       ],
       "row_counts": [
-        100,
-        100,
-        100
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q5",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        26660000,
-        27490000,
-        27130000
+        6243679,
+        7338533,
+        9531523
       ],
       "row_counts": [
-        100000,
-        100000,
-        100000
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q6",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        21570000,
-        22370000,
-        22360000
+        14041257,
+        15746382,
+        9784249
       ],
       "row_counts": [
-        100000,
-        100000,
-        100000
+        3160,
+        3160,
+        3160
       ],
       "validation_passed": true,
       "cache_mode": "warm"
     },
     {
       "task_id": "groupby_q7",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "timings_ns": [
-        1474360000
+        70650209,
+        71973716,
+        70246235
       ],
       "row_counts": [
+        10000000,
+        10000000,
+        10000000
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q1",
+      "adapter_name": "polars",
+      "timings_ns": [
+        61993631,
+        75686613,
+        75124218
+      ],
+      "row_counts": [
+        3160,
+        3160,
+        3160
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q2",
+      "adapter_name": "polars",
+      "timings_ns": [
+        498584465,
+        494972534,
+        484987955
+      ],
+      "row_counts": [
+        6317220,
+        6317220,
+        6317220
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q3",
+      "adapter_name": "polars",
+      "timings_ns": [
+        87196738,
+        102378139,
+        72250701
+      ],
+      "row_counts": [
+        3160,
+        3160,
+        3160
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q4",
+      "adapter_name": "polars",
+      "timings_ns": [
+        61645089,
+        47148758,
+        57392911
+      ],
+      "row_counts": [
+        3160,
+        3160,
+        3160
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q5",
+      "adapter_name": "polars",
+      "timings_ns": [
+        50608447,
+        48584241,
+        50972623
+      ],
+      "row_counts": [
+        3160,
+        3160,
+        3160
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q6",
+      "adapter_name": "polars",
+      "timings_ns": [
+        79782217,
+        72200386,
+        78083390
+      ],
+      "row_counts": [
+        3160,
+        3160,
+        3160
+      ],
+      "validation_passed": true,
+      "cache_mode": "warm"
+    },
+    {
+      "task_id": "groupby_q7",
+      "adapter_name": "polars",
+      "timings_ns": [
+        760494376,
+        754290886,
+        772601194
+      ],
+      "row_counts": [
+        10000000,
+        10000000,
         10000000
       ],
       "validation_passed": true,
@@ -228,157 +344,234 @@
   "statistics": [
     {
       "task_id": "groupby_q1",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 6.776413,
-      "median_ms": 6.877406,
-      "p95_ms": 7.0621787000000005,
-      "max_ms": 7.082709,
-      "std_ms": 0.15608018637546567,
-      "rows_per_sec": 14540.365946113985
+      "min_ms": 8.69,
+      "median_ms": 8.84,
+      "p95_ms": 8.966,
+      "max_ms": 8.98,
+      "std_ms": 0.14502873278538106,
+      "rows_per_sec": 357466.06334841624
     },
     {
       "task_id": "groupby_q2",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 19.439208,
-      "median_ms": 19.584163,
-      "p95_ms": 20.157786100000003,
-      "max_ms": 20.221522,
-      "std_ms": 0.41618378182040344,
-      "rows_per_sec": 510616.66510843474
+      "min_ms": 156.52,
+      "median_ms": 159.59,
+      "p95_ms": 159.698,
+      "max_ms": 159.71,
+      "std_ms": 1.808102135758189,
+      "rows_per_sec": 39584059.15157591
     },
     {
       "task_id": "groupby_q3",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 54.211576,
-      "median_ms": 54.439492,
-      "p95_ms": 54.8030344,
-      "max_ms": 54.843428,
-      "std_ms": 0.31998618331005174,
-      "rows_per_sec": 1836901.7844619125
+      "min_ms": 12.48,
+      "median_ms": 12.51,
+      "p95_ms": 13.239,
+      "max_ms": 13.32,
+      "std_ms": 0.4765501022977543,
+      "rows_per_sec": 252597.92166266986
     },
     {
       "task_id": "groupby_q4",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 5.656814,
-      "median_ms": 6.080398,
-      "p95_ms": 6.9051193,
-      "max_ms": 6.996755,
-      "std_ms": 0.6849057648058846,
-      "rows_per_sec": 16446.291838132965
+      "min_ms": 17.36,
+      "median_ms": 17.6,
+      "p95_ms": 17.96,
+      "max_ms": 18.0,
+      "std_ms": 0.3233161507461906,
+      "rows_per_sec": 179545.45454545453
     },
     {
       "task_id": "groupby_q5",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 41.489561,
-      "median_ms": 42.592008,
-      "p95_ms": 44.8562586,
-      "max_ms": 45.107842,
-      "std_ms": 1.8545784560705414,
-      "rows_per_sec": 2347858.3118222556
+      "min_ms": 13.79,
+      "median_ms": 13.84,
+      "p95_ms": 13.84,
+      "max_ms": 13.84,
+      "std_ms": 0.0288675134594817,
+      "rows_per_sec": 228323.6994219653
     },
     {
       "task_id": "groupby_q6",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 58.211519,
-      "median_ms": 58.731323,
-      "p95_ms": 59.1562454,
-      "max_ms": 59.203459,
-      "std_ms": 0.4961608550513968,
-      "rows_per_sec": 1702668.9489014235
+      "min_ms": 10.94,
+      "median_ms": 11.09,
+      "p95_ms": 11.135000000000002,
+      "max_ms": 11.14,
+      "std_ms": 0.10408329997330712,
+      "rows_per_sec": 284941.388638413
     },
     {
       "task_id": "groupby_q7",
-      "adapter_name": "duckdb",
+      "adapter_name": "rayforce",
       "n_samples": 3,
-      "min_ms": 82.074075,
-      "median_ms": 83.419189,
-      "p95_ms": 84.32535490000001,
-      "max_ms": 84.42604,
-      "std_ms": 1.1800296585553867,
-      "rows_per_sec": 119876495.08316365
+      "min_ms": 249.85,
+      "median_ms": 252.27,
+      "p95_ms": 288.108,
+      "max_ms": 292.09,
+      "std_ms": 23.719564358000603,
+      "rows_per_sec": 39640068.18091727
     },
     {
       "task_id": "groupby_q1",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "n_samples": 3,
-      "min_ms": 12.03,
-      "median_ms": 12.05,
-      "p95_ms": 12.284,
-      "max_ms": 12.31,
-      "std_ms": 0.1562049935181334,
-      "rows_per_sec": 8298.755186721992
+      "min_ms": 9.530669,
+      "median_ms": 11.067851,
+      "p95_ms": 12.5139836,
+      "max_ms": 12.674665,
+      "std_ms": 1.5721265099505615,
+      "rows_per_sec": 285511.61377217673
     },
     {
       "task_id": "groupby_q2",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "n_samples": 3,
-      "min_ms": 21.21,
-      "median_ms": 21.55,
-      "p95_ms": 22.215999999999998,
-      "max_ms": 22.29,
-      "std_ms": 0.5522076903967676,
-      "rows_per_sec": 464037.12296983757
+      "min_ms": 44.171251,
+      "median_ms": 45.706194,
+      "p95_ms": 46.3352292,
+      "max_ms": 46.405122,
+      "std_ms": 1.1427109584283925,
+      "rows_per_sec": 138213652.1802712
     },
     {
       "task_id": "groupby_q3",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "n_samples": 3,
-      "min_ms": 26.9,
-      "median_ms": 27.03,
-      "p95_ms": 28.137,
-      "max_ms": 28.26,
-      "std_ms": 0.7504887296511087,
-      "rows_per_sec": 3699593.0447650757
+      "min_ms": 11.202571,
+      "median_ms": 12.00331,
+      "p95_ms": 12.4034437,
+      "max_ms": 12.447903,
+      "std_ms": 0.6310966212334946,
+      "rows_per_sec": 263260.7172521579
     },
     {
       "task_id": "groupby_q4",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "n_samples": 3,
-      "min_ms": 16.14,
-      "median_ms": 16.18,
-      "p95_ms": 16.207,
-      "max_ms": 16.21,
-      "std_ms": 0.035118845842842555,
-      "rows_per_sec": 6180.469715698393
+      "min_ms": 7.594472,
+      "median_ms": 9.586427,
+      "p95_ms": 11.278181299999998,
+      "max_ms": 11.466154,
+      "std_ms": 1.9361120760292605,
+      "rows_per_sec": 329632.71926026244
     },
     {
       "task_id": "groupby_q5",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "n_samples": 3,
-      "min_ms": 26.66,
-      "median_ms": 27.13,
-      "p95_ms": 27.453999999999997,
-      "max_ms": 27.49,
-      "std_ms": 0.4162130864513184,
-      "rows_per_sec": 3685956.505713233
+      "min_ms": 6.243679,
+      "median_ms": 7.338533,
+      "p95_ms": 9.312223999999999,
+      "max_ms": 9.531523,
+      "std_ms": 1.6742077026538054,
+      "rows_per_sec": 430603.7732609501
     },
     {
       "task_id": "groupby_q6",
-      "adapter_name": "rayforce",
+      "adapter_name": "duckdb",
       "n_samples": 3,
-      "min_ms": 21.57,
-      "median_ms": 22.36,
-      "p95_ms": 22.369,
-      "max_ms": 22.37,
-      "std_ms": 0.45902069670114004,
-      "rows_per_sec": 4472271.91413238
+      "min_ms": 9.784249,
+      "median_ms": 14.041257,
+      "p95_ms": 15.575869500000001,
+      "max_ms": 15.746382,
+      "std_ms": 3.070738192665785,
+      "rows_per_sec": 225051.07626760198
     },
     {
       "task_id": "groupby_q7",
-      "adapter_name": "rayforce",
-      "n_samples": 1,
-      "min_ms": 1474.36,
-      "median_ms": 1474.36,
-      "p95_ms": 1474.36,
-      "max_ms": 1474.36,
-      "std_ms": 0.0,
-      "rows_per_sec": 6782603.977318972
+      "adapter_name": "duckdb",
+      "n_samples": 3,
+      "min_ms": 70.246235,
+      "median_ms": 70.650209,
+      "p95_ms": 71.84136529999999,
+      "max_ms": 71.973716,
+      "std_ms": 0.9036090947865651,
+      "rows_per_sec": 141542397.98497978
+    },
+    {
+      "task_id": "groupby_q1",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 61.993631,
+      "median_ms": 75.124218,
+      "p95_ms": 75.6303735,
+      "max_ms": 75.686613,
+      "std_ms": 7.748401546479525,
+      "rows_per_sec": 42063.66580747636
+    },
+    {
+      "task_id": "groupby_q2",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 484.987955,
+      "median_ms": 494.972534,
+      "p95_ms": 498.2232719,
+      "max_ms": 498.584465,
+      "std_ms": 7.0427616214108175,
+      "rows_per_sec": 12762768.772135546
+    },
+    {
+      "task_id": "groupby_q3",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 72.250701,
+      "median_ms": 87.196738,
+      "p95_ms": 100.85999890000001,
+      "max_ms": 102.378139,
+      "std_ms": 15.063872226688671,
+      "rows_per_sec": 36239.88778112319
+    },
+    {
+      "task_id": "groupby_q4",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 47.148758,
+      "median_ms": 57.392911,
+      "p95_ms": 61.21987119999999,
+      "max_ms": 61.645089,
+      "std_ms": 7.451703394668161,
+      "rows_per_sec": 55059.06469877438
+    },
+    {
+      "task_id": "groupby_q5",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 48.584241,
+      "median_ms": 50.608447,
+      "p95_ms": 50.9362054,
+      "max_ms": 50.972623,
+      "std_ms": 1.286753192298093,
+      "rows_per_sec": 62440.169325883486
+    },
+    {
+      "task_id": "groupby_q6",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 72.200386,
+      "median_ms": 78.08339,
+      "p95_ms": 79.6123343,
+      "max_ms": 79.782217,
+      "std_ms": 3.9786913793462744,
+      "rows_per_sec": 40469.55440843437
+    },
+    {
+      "task_id": "groupby_q7",
+      "adapter_name": "polars",
+      "n_samples": 3,
+      "min_ms": 754.290886,
+      "median_ms": 760.494376,
+      "p95_ms": 771.3905121999999,
+      "max_ms": 772.601194,
+      "std_ms": 9.312408472213171,
+      "rows_per_sec": 13149341.159624828
     }
   ]
 }
