@@ -195,6 +195,11 @@ class RayforceAdapter(Adapter):
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
+            # Sort queries
+            "sort_single": self._task_sort_single,
+            "sort_multi": self._task_sort_multi,
+            # Window join queries
+            "window_join": self._task_window_join,
             # Generic expression execution
             "eval": self._task_eval,
         }
@@ -612,7 +617,51 @@ class RayforceAdapter(Adapter):
         right_table = params.get("right_table", "y")
         expr = f"(left-join [id1 id2] {left_table} {right_table})"
         return self._execute_expr(expr)
-    
+
+    # =========================================================================
+    # Sort Queries (Rayforce syntax)
+    # From Rayforce docs: (sort col t) or (asc col t)
+    # =========================================================================
+
+    def _task_sort_single(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by single column"""
+        table = params.get("table", self._table_name)
+        column = params.get("column", "id1")
+        descending = params.get("descending", False)
+        if descending:
+            expr = f"(desc {column} {table})"
+        else:
+            expr = f"(asc {column} {table})"
+        return self._execute_expr(expr)
+
+    def _task_sort_multi(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by multiple columns"""
+        table = params.get("table", self._table_name)
+        columns = params.get("columns", ["id1", "id2"])
+        # Rayforce multi-column sort: (asc [col1 col2] t)
+        cols_str = " ".join(columns)
+        expr = f"(asc [{cols_str}] {table})"
+        return self._execute_expr(expr)
+
+    # =========================================================================
+    # Window Join Queries (Rayforce syntax)
+    # From Rayforce docs: (window-join1 [Sym Ts] intervals trades quotes {aggs})
+    # =========================================================================
+
+    def _task_window_join(self, params: dict[str, Any]) -> AdapterResult:
+        """Window join (wj1) - join within time window with aggregations"""
+        trades_table = params.get("trades_table", "trades")
+        quotes_table = params.get("quotes_table", "quotes")
+        keys = params.get("keys", ["Sym", "Ts"])
+        window_ms = params.get("window_ms", 10000)  # +/- 10 seconds default
+
+        keys_str = " ".join(keys)
+        # Build intervals from trades timestamp
+        expr = f"""(do
+            (set _intervals (map-left + [-{window_ms} {window_ms}] (at {trades_table} 'Ts)))
+            (window-join1 [{keys_str}] _intervals {trades_table} {quotes_table} {{Bid: (min Bid) Ask: (max Ask)}}))"""
+        return self._execute_expr(expr)
+
     def _task_eval(self, params: dict[str, Any]) -> AdapterResult:
         """Execute arbitrary Rayforce expression."""
         expr = params.get("expr")

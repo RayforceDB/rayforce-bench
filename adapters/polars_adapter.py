@@ -98,6 +98,11 @@ class PolarsAdapter(Adapter):
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
+            # Sort queries
+            "sort_single": self._task_sort_single,
+            "sort_multi": self._task_sort_multi,
+            # Window join queries
+            "window_join": self._task_window_join,
             # Generic execution
             "sql": self._task_sql,
         }
@@ -468,15 +473,87 @@ class PolarsAdapter(Adapter):
         """Left join on id1, id2"""
         left_table = params.get("left_table", "x")
         right_table = params.get("right_table", "y")
-        
+
         left_lf = self._get_lazy_table(left_table)
         right_lf = self._get_lazy_table(right_table)
-        
+
         def query():
             return left_lf.join(right_lf, on=["id1", "id2"], how="left")
-        
+
         return self._execute_lazy(query, f'{left_table}.join({right_table}, on=["id1","id2"], how="left")')
-    
+
+    # =========================================================================
+    # Sort Queries (using lazy evaluation for optimal parallelism)
+    # =========================================================================
+
+    def _task_sort_single(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by single column"""
+        table_name = params.get("table", self._table_name)
+        column = params.get("column", "id1")
+        descending = params.get("descending", False)
+        lf = self._get_lazy_table(table_name)
+
+        def query():
+            return lf.sort(column, descending=descending)
+
+        return self._execute_lazy(query, f'lf.sort("{column}", descending={descending})')
+
+    def _task_sort_multi(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by multiple columns"""
+        table_name = params.get("table", self._table_name)
+        columns = params.get("columns", ["id1", "id2"])
+        lf = self._get_lazy_table(table_name)
+
+        def query():
+            return lf.sort(columns)
+
+        return self._execute_lazy(query, f'lf.sort({columns})')
+
+    # =========================================================================
+    # Window Join Queries (using join_asof for time-series joins)
+    # =========================================================================
+
+    def _task_window_join(self, params: dict[str, Any]) -> AdapterResult:
+        """Window join - join within time window with aggregations
+
+        Polars doesn't have a direct wj1 equivalent, so we use a range join
+        approach with group_by for aggregation.
+        """
+        import datetime
+
+        trades_table = params.get("trades_table", "trades")
+        quotes_table = params.get("quotes_table", "quotes")
+        window_ms = params.get("window_ms", 10000)  # +/- 10 seconds default
+
+        trades_lf = self._get_lazy_table(trades_table)
+        quotes_lf = self._get_lazy_table(quotes_table)
+
+        def query():
+            # Add window boundaries to trades
+            trades_with_window = trades_lf.with_columns([
+                (pl.col("Ts") - datetime.timedelta(milliseconds=window_ms)).alias("_window_start"),
+                (pl.col("Ts") + datetime.timedelta(milliseconds=window_ms)).alias("_window_end"),
+            ])
+
+            # Cross join on Sym, filter by time window, then aggregate
+            # This is expensive but semantically correct
+            result = (
+                trades_with_window
+                .join(quotes_lf, on="Sym", how="left")
+                .filter(
+                    (pl.col("Ts_right") >= pl.col("_window_start")) &
+                    (pl.col("Ts_right") <= pl.col("_window_end"))
+                )
+                .group_by(["Sym", "Ts", "Price"])
+                .agg([
+                    pl.min("Bid").alias("Bid"),
+                    pl.max("Ask").alias("Ask"),
+                ])
+            )
+            return result
+
+        return self._execute_lazy(query, 'window_join(trades, quotes)')
+
     def _task_sql(self, params: dict[str, Any]) -> AdapterResult:
         """Execute arbitrary SQL query."""
         query = params.get("query")

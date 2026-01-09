@@ -70,6 +70,11 @@ class KDBAdapter(Adapter):
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
+            # Sort queries
+            "sort_single": self._task_sort_single,
+            "sort_multi": self._task_sort_multi,
+            # Window join queries
+            "window_join": self._task_window_join,
             # Generic q execution
             "eval": self._task_eval,
         }
@@ -343,7 +348,48 @@ count r
         # lj = left join, need to key the right table first
         expr = f"{left_table} lj `id1`id2 xkey {right_table}"
         return self._execute_q(expr)
-    
+
+    # =========================================================================
+    # Sort Queries (q syntax)
+    # xasc = ascending sort, xdesc = descending sort
+    # =========================================================================
+
+    def _task_sort_single(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by single column"""
+        table = params.get("table", self._table_name)
+        column = params.get("column", "id1")
+        descending = params.get("descending", False)
+        if descending:
+            expr = f"`{column} xdesc {table}"
+        else:
+            expr = f"`{column} xasc {table}"
+        return self._execute_q(expr)
+
+    def _task_sort_multi(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by multiple columns"""
+        table = params.get("table", self._table_name)
+        columns = params.get("columns", ["id1", "id2"])
+        # q multi-column sort: `col1`col2 xasc t
+        cols_str = "`" + "`".join(columns)
+        expr = f"{cols_str} xasc {table}"
+        return self._execute_q(expr)
+
+    # =========================================================================
+    # Window Join Queries (q syntax)
+    # wj1 = window join with prevailing values
+    # =========================================================================
+
+    def _task_window_join(self, params: dict[str, Any]) -> AdapterResult:
+        """Window join (wj1) - join within time window with aggregations"""
+        trades_table = params.get("trades_table", "trades")
+        quotes_table = params.get("quotes_table", "quotes")
+        window_ms = params.get("window_ms", 10000)  # +/- 10 seconds default
+
+        # q window join: wj1[w;`Sym`Ts;trades;(quotes;(min;`Bid);(max;`Ask))]
+        # w is a 2-row matrix of [start_times; end_times]
+        expr = f"wj1[(-{window_ms};{window_ms})+\\:{trades_table}.Ts;`Sym`Ts;{trades_table};(`Sym`Ts xasc {quotes_table};(min;`Bid);(max;`Ask))]"
+        return self._execute_q(expr)
+
     def _task_eval(self, params: dict[str, Any]) -> AdapterResult:
         """Execute arbitrary q expression."""
         expr = params.get("expr")

@@ -1,0 +1,43 @@
+{
+  "name": "h2oai_join_1e7",
+  "description": "H2OAI Join benchmark: 10M rows x table, join on id1, id2",
+  "format": "h2oai_join",
+  "version": "1.0.0",
+
+  "tables": {
+    "x": {
+      "table_name": "x",
+      "row_count": 10000000,
+      "columns": [
+        {"name": "id1", "type": "I64"},
+        {"name": "id2", "type": "I64"},
+        {"name": "id3", "type": "I64"},
+        {"name": "id4", "type": "SYMBOL"},
+        {"name": "id5", "type": "SYMBOL"},
+        {"name": "id6", "type": "SYMBOL"},
+        {"name": "v1", "type": "F64"}
+      ],
+      "files": ["J1_1e7_NA_0_0.csv"]
+    },
+    "y": {
+      "table_name": "y",
+      "row_count": 10000000,
+      "columns": [
+        {"name": "id1", "type": "I64"},
+        {"name": "id2", "type": "I64"},
+        {"name": "id3", "type": "I64"},
+        {"name": "id4", "type": "SYMBOL"},
+        {"name": "id5", "type": "SYMBOL"},
+        {"name": "id6", "type": "SYMBOL"},
+        {"name": "v2", "type": "F64"}
+      ],
+      "files": ["J1_1e7_1e7_0_0.csv"]
+    }
+  },
+
+  "generation": {
+    "tool": "Rscript _data/join-datagen.R 1e7 1e2 0 0",
+    "source": "https://h2oai.github.io/db-benchmark",
+    "description": "Standard H2OAI join benchmark with two 10M row tables"
+  }
+}

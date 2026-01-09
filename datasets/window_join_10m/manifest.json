@@ -1,0 +1,35 @@
+{
+  "name": "window_join_10m",
+  "description": "Window join benchmark: 10M trades, 20M quotes",
+  "format": "window_join",
+  "version": "1.0.0",
+
+  "tables": {
+    "trades": {
+      "table_name": "trades",
+      "row_count": 10000000,
+      "columns": [
+        {"name": "Sym", "type": "SYMBOL"},
+        {"name": "Ts", "type": "TIME"},
+        {"name": "Price", "type": "I64"}
+      ],
+      "files": ["trades.csv"]
+    },
+    "quotes": {
+      "table_name": "quotes",
+      "row_count": 20000000,
+      "columns": [
+        {"name": "Sym", "type": "SYMBOL"},
+        {"name": "Ts", "type": "TIME"},
+        {"name": "Bid", "type": "I64"},
+        {"name": "Ask", "type": "I64"}
+      ],
+      "files": ["quotes.csv"]
+    }
+  },
+
+  "generation": {
+    "tool": "scripts/generate_window_join.py",
+    "description": "Trades: 99% AAPL, 1% MSFT. Quotes: AAPL/MSFT/GOOG distribution"
+  }
+}

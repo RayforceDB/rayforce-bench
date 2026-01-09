@@ -77,6 +77,11 @@ class DuckDBAdapter(Adapter):
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
+            # Sort queries
+            "sort_single": self._task_sort_single,
+            "sort_multi": self._task_sort_multi,
+            # Window join queries
+            "window_join": self._task_window_join,
             # Generic SQL execution
             "sql": self._task_sql,
         }
@@ -307,13 +312,64 @@ class DuckDBAdapter(Adapter):
         left_table = params.get("left_table", "x")
         right_table = params.get("right_table", "y")
         query = f"""
-            SELECT * FROM {left_table} 
-            LEFT JOIN {right_table} 
-            ON {left_table}.id1 = {right_table}.id1 
+            SELECT * FROM {left_table}
+            LEFT JOIN {right_table}
+            ON {left_table}.id1 = {right_table}.id1
             AND {left_table}.id2 = {right_table}.id2
         """
         return self._execute_query(query)
-    
+
+    # =========================================================================
+    # Sort Queries (SQL syntax)
+    # =========================================================================
+
+    def _task_sort_single(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by single column"""
+        table = params.get("table", self._table_name)
+        column = params.get("column", "id1")
+        descending = params.get("descending", False)
+        order = "DESC" if descending else "ASC"
+        query = f"SELECT * FROM {table} ORDER BY {column} {order}"
+        return self._execute_query(query)
+
+    def _task_sort_multi(self, params: dict[str, Any]) -> AdapterResult:
+        """Sort by multiple columns"""
+        table = params.get("table", self._table_name)
+        columns = params.get("columns", ["id1", "id2"])
+        order_by = ", ".join(columns)
+        query = f"SELECT * FROM {table} ORDER BY {order_by}"
+        return self._execute_query(query)
+
+    # =========================================================================
+    # Window Join Queries (SQL ASOF JOIN)
+    # DuckDB supports ASOF JOIN for time-series window joins
+    # =========================================================================
+
+    def _task_window_join(self, params: dict[str, Any]) -> AdapterResult:
+        """Window join using ASOF JOIN - join within time window with aggregations
+
+        Note: DuckDB's ASOF JOIN is point-in-time, not a true window aggregation.
+        For a fair comparison, we use a range join with aggregation.
+        """
+        trades_table = params.get("trades_table", "trades")
+        quotes_table = params.get("quotes_table", "quotes")
+        window_ms = params.get("window_ms", 10000)  # +/- 10 seconds default
+
+        # Use range join with aggregation for true window join semantics
+        query = f"""
+            SELECT
+                t.*,
+                MIN(q.Bid) as Bid,
+                MAX(q.Ask) as Ask
+            FROM {trades_table} t
+            LEFT JOIN {quotes_table} q
+                ON t.Sym = q.Sym
+                AND q.Ts BETWEEN t.Ts - INTERVAL '{window_ms} milliseconds'
+                            AND t.Ts + INTERVAL '{window_ms} milliseconds'
+            GROUP BY ALL
+        """
+        return self._execute_query(query)
+
     def _task_sql(self, params: dict[str, Any]) -> AdapterResult:
         """Execute arbitrary SQL query."""
         query = params.get("query")
