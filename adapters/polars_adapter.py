@@ -92,6 +92,9 @@ class PolarsAdapter(Adapter):
             "groupby_q5": self._task_groupby_q5,
             "groupby_q6": self._task_groupby_q6,
             "groupby_q7": self._task_groupby_q7,
+            "groupby_q8": self._task_groupby_q8,
+            "groupby_q9": self._task_groupby_q9,
+            "groupby_q10": self._task_groupby_q10,
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
@@ -393,6 +396,55 @@ class PolarsAdapter(Adapter):
             ])
         
         return self._execute_lazy(query, 'lf.group_by([id1-id6]).agg([sum(v3), len()])')
+    
+    def _task_groupby_q8(self, params: dict[str, Any]) -> AdapterResult:
+        """Q8: Range filter + aggregation: sum(v3) by id2 where v1 >= 3"""
+        table_name = params.get("table", self._table_name)
+        lf = self._get_lazy_table(table_name)
+        
+        def query():
+            return (
+                lf.filter(pl.col("v1") >= 3)
+                .group_by("id2")
+                .agg(pl.sum("v3").alias("v3"))
+            )
+        
+        return self._execute_lazy(query, 'lf.filter(v1>=3).group_by("id2").agg(sum(v3))')
+    
+    def _task_groupby_q9(self, params: dict[str, Any]) -> AdapterResult:
+        """Q9: Compound filter + multi-agg: sum(v1,v2,v3) by id3 where v1>=2 AND v2<=8"""
+        table_name = params.get("table", self._table_name)
+        lf = self._get_lazy_table(table_name)
+        
+        def query():
+            return (
+                lf.filter((pl.col("v1") >= 2) & (pl.col("v2") <= 8))
+                .group_by("id3")
+                .agg([
+                    pl.sum("v1").alias("v1"),
+                    pl.sum("v2").alias("v2"),
+                    pl.sum("v3").alias("v3"),
+                ])
+            )
+        
+        return self._execute_lazy(query, 'lf.filter(v1>=2 & v2<=8).group_by("id3").agg([sum(v1,v2,v3)])')
+    
+    def _task_groupby_q10(self, params: dict[str, Any]) -> AdapterResult:
+        """Q10: Filter + group: sum(v1), sum(v2) by id1-id4 where v3>0"""
+        table_name = params.get("table", self._table_name)
+        lf = self._get_lazy_table(table_name)
+        
+        def query():
+            return (
+                lf.filter(pl.col("v3") > 0)
+                .group_by(["id1", "id2", "id3", "id4"])
+                .agg([
+                    pl.sum("v1").alias("v1"),
+                    pl.sum("v2").alias("v2"),
+                ])
+            )
+        
+        return self._execute_lazy(query, 'lf.filter(v3>0).group_by([id1-id4]).agg([sum(v1), sum(v2)])')
     
     # =========================================================================
     # Join Queries (using lazy evaluation for optimal parallelism)

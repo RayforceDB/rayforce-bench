@@ -32,17 +32,21 @@ class KDBAdapter(Adapter):
     def __init__(
         self,
         binary_path: str | Path | None = None,
+        threads: int | None = None,
     ):
         """Initialize KDB adapter.
-        
+
         Args:
             binary_path: Path to q binary (default: from config or 'q')
+            threads: Number of secondary threads (-s flag). Default 3 for 4-core license.
         """
         config = get_config()
         kdb_config = config.kdb
-        
+
         self.binary_path = Path(binary_path or kdb_config.get("binary", "q"))
-        
+        # KDB+ -s flag sets secondary threads. 3 secondary + 1 main = 4 total cores
+        self.threads = threads if threads is not None else kdb_config.get("threads", 3)
+
         self._schema: dict[str, Any] = {}
         self._table_name: str = ""
         self._csv_paths: list[Path] = []
@@ -60,6 +64,9 @@ class KDBAdapter(Adapter):
             "groupby_q5": self._task_groupby_q5,
             "groupby_q6": self._task_groupby_q6,
             "groupby_q7": self._task_groupby_q7,
+            "groupby_q8": self._task_groupby_q8,
+            "groupby_q9": self._task_groupby_q9,
+            "groupby_q10": self._task_groupby_q10,
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
@@ -85,7 +92,7 @@ class KDBAdapter(Adapter):
         # Try to get version
         try:
             result = subprocess.run(
-                [str(self.binary_path), "-q"],
+                [str(self.binary_path), "-s", str(self.threads), "-q"],
                 input="\\\\",  # Exit immediately
                 capture_output=True,
                 text=True,
@@ -122,6 +129,8 @@ class KDBAdapter(Adapter):
             "kdb_version": self.version,
             "mode": "subprocess",
             "binary_path": str(self.binary_path),
+            "threads": self.threads,  # Secondary threads (-s flag)
+            "total_cores": self.threads + 1,  # Secondary + main thread
         })
         return info
     
@@ -150,13 +159,8 @@ class KDBAdapter(Adapter):
     def _execute_q(self, expr: str) -> AdapterResult:
         """Execute a q expression and return result metadata.
         
-        Uses \t for timing which measures only the query execution,
-        similar to Rayforce's timeit function.
-        
-        Note: \t outputs timing directly to stdout (can't be assigned).
-        Output format:
-          <timing_ms>
-          <row_count>
+        Uses KDB's internal `\\t` for accurate query timing.
+        CSV is loaded before timing starts.
         """
         start_ns = time.perf_counter_ns()
         
@@ -175,16 +179,14 @@ class KDBAdapter(Adapter):
             load_script = "\n".join(load_lines)
             
             # Use \t for timing - outputs time in ms directly to stdout
-            # Then output row count on next line
             q_script = f"""{load_script}
 \\t r:{expr}
 count r
 \\\\
 """
             
-            # Execute via subprocess
             result = subprocess.run(
-                [str(self.binary_path), "-q"],  # -q for quiet mode
+                [str(self.binary_path), "-s", str(self.threads), "-q"],
                 input=q_script,
                 capture_output=True,
                 text=True,
@@ -193,7 +195,6 @@ count r
             
             end_ns = time.perf_counter_ns()
             
-            # Parse output
             output = result.stdout.strip()
             stderr = result.stderr.strip()
             
@@ -203,6 +204,7 @@ count r
                     row_count=0,
                     success=False,
                     error_message=stderr or output,
+                    query=expr,
                 )
             
             # Parse output: first line is timing (ms), second is row count
@@ -220,19 +222,18 @@ count r
                 except ValueError:
                     pass
             elif len(lines) == 1:
-                # Might just have timing or count
                 try:
                     timing_ms = int(lines[0])
                 except ValueError:
                     pass
             
-            # Use q's \t timing (in ms)
+            # Use KDB's \t result (measures query execution only)
             if timing_ms is not None:
                 execution_ns = timing_ms * 1_000_000
             else:
-                execution_ns = end_ns - start_ns
+                execution_ns = end_ns - start_ns  # Fallback to Python timing
             
-            checksum = int(hashlib.md5(output.encode()).hexdigest()[:8], 16)
+            checksum = int(hashlib.md5(output.encode()).hexdigest()[:8], 16) if output else None
             
             return AdapterResult(
                 execution_time_ns=execution_ns,
@@ -302,6 +303,25 @@ count r
         """Q7: sum(v3), count by id1-id6"""
         table = params.get("table", self._table_name)
         expr = f"select v3:sum v3,cnt:count i by id1,id2,id3,id4,id5,id6 from {table}"
+        return self._execute_q(expr)
+    
+    def _task_groupby_q8(self, params: dict[str, Any]) -> AdapterResult:
+        """Q8: Range filter + aggregation: sum(v3) by id2 where v1 >= 3"""
+        table = params.get("table", self._table_name)
+        expr = f"select v3:sum v3 by id2 from {table} where v1>=3"
+        return self._execute_q(expr)
+    
+    def _task_groupby_q9(self, params: dict[str, Any]) -> AdapterResult:
+        """Q9: Compound filter + multi-agg: sum(v1,v2,v3) by id3 where v1>=2 AND v2<=8"""
+        table = params.get("table", self._table_name)
+        expr = f"select v1:sum v1,v2:sum v2,v3:sum v3 by id3 from {table} where v1>=2,v2<=8"
+        return self._execute_q(expr)
+    
+    def _task_groupby_q10(self, params: dict[str, Any]) -> AdapterResult:
+        """Q10: Filter + group: sum(v1), sum(v2) by id1-id4 where v3>0"""
+        table = params.get("table", self._table_name)
+        # Filter then group
+        expr = f"select v1:sum v1,v2:sum v2 by id1,id2,id3,id4 from {table} where v3>0"
         return self._execute_q(expr)
     
     # =========================================================================

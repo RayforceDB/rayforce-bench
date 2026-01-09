@@ -71,6 +71,9 @@ class DuckDBAdapter(Adapter):
             "groupby_q5": self._task_groupby_q5,
             "groupby_q6": self._task_groupby_q6,
             "groupby_q7": self._task_groupby_q7,
+            "groupby_q8": self._task_groupby_q8,
+            "groupby_q9": self._task_groupby_q9,
+            "groupby_q10": self._task_groupby_q10,
             # Join queries
             "inner_join": self._task_inner_join,
             "left_join": self._task_left_join,
@@ -247,6 +250,39 @@ class DuckDBAdapter(Adapter):
                    SUM(v3) AS v3, COUNT(*) AS count 
             FROM {table} 
             GROUP BY id1, id2, id3, id4, id5, id6
+        """
+        return self._execute_query(query)
+    
+    def _task_groupby_q8(self, params: dict[str, Any]) -> AdapterResult:
+        """Q8: Range filter + aggregation: sum(v3) by id2 where v1 >= 3"""
+        table = params.get("table", self._table_name)
+        query = f"""
+            SELECT id2, SUM(v3) AS v3
+            FROM {table}
+            WHERE v1 >= 3
+            GROUP BY id2
+        """
+        return self._execute_query(query)
+    
+    def _task_groupby_q9(self, params: dict[str, Any]) -> AdapterResult:
+        """Q9: Compound filter + multi-agg: sum(v1,v2,v3) by id3 where v1>=2 AND v2<=8"""
+        table = params.get("table", self._table_name)
+        query = f"""
+            SELECT id3, SUM(v1) AS v1, SUM(v2) AS v2, SUM(v3) AS v3
+            FROM {table}
+            WHERE v1 >= 2 AND v2 <= 8
+            GROUP BY id3
+        """
+        return self._execute_query(query)
+    
+    def _task_groupby_q10(self, params: dict[str, Any]) -> AdapterResult:
+        """Q10: Filter + group: sum(v1), sum(v2) by id1-id4 where v3>0"""
+        table = params.get("table", self._table_name)
+        query = f"""
+            SELECT id1, id2, id3, id4, SUM(v1) AS v1, SUM(v2) AS v2
+            FROM {table}
+            WHERE v3 > 0
+            GROUP BY id1, id2, id3, id4
         """
         return self._execute_query(query)
     

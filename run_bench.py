@@ -195,6 +195,11 @@ Examples:
         default=5.0,
         help="Threshold %% for highlighting changes (default: 5.0)"
     )
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Continue running even if a task fails (default: stop on first error)"
+    )
     
     args = parser.parse_args()
     
@@ -225,7 +230,10 @@ Examples:
         return 1
     
     # Create runner
-    runner = BenchmarkRunner(verbose=not args.quiet)
+    runner = BenchmarkRunner(
+        verbose=not args.quiet,
+        stop_on_error=not args.continue_on_error,
+    )
     
     # Register adapters
     if args.adapters:
@@ -294,6 +302,8 @@ Examples:
             baseline_path,
             focus_adapter=args.focus_adapter,
             threshold_pct=args.threshold,
+            current_dataset=args.dataset.name,
+            current_suite=args.suite.stem,
         )
         print(comparison)
     

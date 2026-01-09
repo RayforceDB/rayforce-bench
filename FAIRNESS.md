@@ -91,12 +91,11 @@ Timing includes:
 ✓ Query parsing and planning
 ✓ Query execution  
 ✓ Result materialization (in Rayforce memory)
-✓ Memory cleanup (implicit when result goes out of scope in timeit)
 
 Timing excludes:
-✗ CSV loading (done before timeit in script)
-✗ Subprocess startup (happens before timing)
-✗ Result counting (done after timeit, re-runs query)
+✗ CSV loading (done before timeit)
+✗ Subprocess startup
+✗ Result counting (done after timeit)
 ```
 
 Implementation:
@@ -105,12 +104,11 @@ Implementation:
 (set t (read-csv [...] "data.csv"))
 
 ;; Query execution - timed by Rayforce's internal timeit
-;; timeit returns execution time in milliseconds
 (set _timing (timeit (select {...})))
 
 ;; Count retrieval - NOT timed (re-runs query)
 (set _result (select {...}))
-(set _count (count _result))
+(println (count _result))
 ```
 
 ### KDB+/q (Subprocess with `\t`)
@@ -133,33 +131,34 @@ Implementation:
 t:("SSSJJJJJF";enlist",")0:`:data.csv
 
 / Query execution - timed by q's \t command
-/ \t returns time in milliseconds
-t:\t r:select v1:sum v1 by id1 from t
+\t r:select v1:sum v1 by id1 from t
 
-/ Output timing and count
--1"TIMING_MS:",string t;
--1"ROW_COUNT:",string count r;
+/ Row count output - NOT timed
+count r
 ```
-
-**Note:** KDB+'s `\t` timer is similar to Rayforce's `timeit` - it measures
-only the query execution, not data loading or result inspection.
 
 ## Process Model Comparison
 
-| Adapter   | Process Model         | Data Persistence | Timing Method        |
-|-----------|----------------------|------------------|----------------------|
+| Adapter   | Process Model         | Data Persistence | Timing Method            |
+|-----------|----------------------|------------------|--------------------------|
 | DuckDB    | Same process         | Warm for all     | `time.perf_counter_ns()` |
 | Polars    | Same process         | Warm for all     | `time.perf_counter_ns()` |
-| Rayforce  | New subprocess/iter  | OS-cached CSV    | `timeit` (internal)  |
-| KDB+      | New subprocess/iter  | OS-cached CSV    | `\t` (internal)      |
+| Rayforce  | New subprocess/iter  | OS-cached CSV    | `timeit` (internal)      |
+| KDB+      | New subprocess/iter  | OS-cached CSV    | `\t` (internal)          |
 
-### Why Subprocess Adapters Are Still Fair
+### Why This is Fair
 
-For subprocess-based adapters (Rayforce, KDB+):
+All timing methods measure the same thing: **query execution only**.
+
+- **DuckDB/Polars**: Python's `time.perf_counter_ns()` wraps the native query call
+- **Rayforce**: `timeit` measures query execution, returns time in ms
+- **KDB+**: `\t` measures query execution, outputs time in ms
+
+For subprocess-based adapters:
 1. CSV loading happens BEFORE timing starts
-2. The database's internal timer (`timeit`, `\t`) measures only query execution
+2. The database's internal timer measures only query execution
 3. Data is effectively "warm" after first load (OS file cache)
-4. Subprocess overhead is not counted in timing
+4. Subprocess startup overhead is not included in timing
 
 ## Threading Configuration
 

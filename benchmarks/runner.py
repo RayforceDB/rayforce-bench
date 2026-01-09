@@ -72,8 +72,9 @@ class BenchmarkResults:
 class BenchmarkRunner:
     """Executes benchmark suites against database adapters."""
     
-    def __init__(self, verbose: bool = True):
+    def __init__(self, verbose: bool = True, stop_on_error: bool = True):
         self.verbose = verbose
+        self.stop_on_error = stop_on_error
         self._adapters: dict[str, Adapter] = {}
     
     def register_adapter(self, adapter: Adapter) -> None:
@@ -249,9 +250,15 @@ class BenchmarkRunner:
             if cache_mode == "cold":
                 adapter.clear_cache()
             try:
-                adapter.run(task_id, params)
+                result = adapter.run(task_id, params)
+                if not result.success:
+                    self._handle_error(
+                        adapter.name, task_id, 
+                        result.query, result.error_message,
+                        is_warmup=True
+                    )
             except Exception as e:
-                self._log(f"    Warmup {i+1} failed: {e}")
+                self._handle_error(adapter.name, task_id, None, str(e), is_warmup=True)
         
         # Measured iterations
         for i in range(iterations):
@@ -261,20 +268,25 @@ class BenchmarkRunner:
             try:
                 result = adapter.run(task_id, params)
                 
+                # Store query from first result (even if failed)
+                if task_result.query is None and result.query:
+                    task_result.query = result.query
+                
                 if not result.success:
                     task_result.errors.append(result.error_message or "Unknown error")
+                    self._handle_error(
+                        adapter.name, task_id,
+                        result.query, result.error_message
+                    )
                     continue
                 
                 task_result.timings_ns.append(result.execution_time_ns)
                 task_result.row_counts.append(result.row_count)
                 task_result.checksums.append(result.checksum)
                 
-                # Store query from first successful result
-                if task_result.query is None and result.query:
-                    task_result.query = result.query
-                
             except Exception as e:
                 task_result.errors.append(str(e))
+                self._handle_error(adapter.name, task_id, task_result.query, str(e))
         
         # Validate results
         if expected_rows is not None and task_result.row_counts:
@@ -337,3 +349,25 @@ class BenchmarkRunner:
         """Print message if verbose mode is enabled."""
         if self.verbose:
             print(msg)
+    
+    def _handle_error(
+        self,
+        adapter_name: str,
+        task_id: str,
+        query: str | None,
+        error_message: str | None,
+        is_warmup: bool = False,
+    ) -> None:
+        """Handle task execution error - log and optionally raise."""
+        phase = "WARMUP" if is_warmup else "EXECUTION"
+        
+        print(f"\n{'='*60}")
+        print(f"ERROR [{phase}]: {adapter_name} / {task_id}")
+        print(f"{'='*60}")
+        if query:
+            print(f"Query:\n  {query}")
+        print(f"Error:\n  {error_message or 'Unknown error'}")
+        print(f"{'='*60}\n")
+        
+        if self.stop_on_error and not is_warmup:
+            raise TaskError(f"{adapter_name}/{task_id}: {error_message}")

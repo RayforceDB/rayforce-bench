@@ -118,6 +118,8 @@ def compare_results(
     baseline_path: Path,
     focus_adapter: str | None = None,
     threshold_pct: float = 5.0,
+    current_dataset: str | None = None,
+    current_suite: str | None = None,
 ) -> str:
     """Compare current results against baseline and format diff.
     
@@ -126,6 +128,8 @@ def compare_results(
         baseline_path: Path to baseline data.json
         focus_adapter: Adapter to highlight (default: all)
         threshold_pct: Threshold for highlighting changes (default: 5%)
+        current_dataset: Current dataset name (for validation)
+        current_suite: Current suite name (for validation)
         
     Returns:
         Formatted comparison string for stdout
@@ -134,6 +138,16 @@ def compare_results(
     
     if baseline is None:
         return f"{Colors.DIM}No baseline found at {baseline_path}. This run will become the baseline.{Colors.RESET}"
+    
+    # Check if baseline matches current dataset/suite
+    baseline_dataset = baseline.get("dataset_name")
+    baseline_suite = baseline.get("suite_name")
+    
+    if current_dataset and baseline_dataset and current_dataset != baseline_dataset:
+        return (
+            f"{Colors.DIM}Baseline dataset mismatch: current={current_dataset}, "
+            f"baseline={baseline_dataset}. Skipping comparison.{Colors.RESET}"
+        )
     
     baseline_times = extract_baseline_times(baseline)
     current_times = _extract_current_times(current_stats)

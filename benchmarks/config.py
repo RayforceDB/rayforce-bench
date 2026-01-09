@@ -17,10 +17,12 @@ import yaml
 # Environment variable mappings
 ENV_MAPPINGS = {
     "RAYFORCE_BINARY": ("rayforce", "binary"),
+    "RAYFORCE_THREADS": ("rayforce", "threads"),
     "RAYFORCE_USE_IPC": ("rayforce", "use_ipc"),
     "RAYFORCE_HOST": ("rayforce", "host"),
     "RAYFORCE_PORT": ("rayforce", "port"),
     "KDB_BINARY": ("kdb", "binary"),
+    "KDB_THREADS": ("kdb", "threads"),
     "KDB_USE_IPC": ("kdb", "use_ipc"),
     "KDB_HOST": ("kdb", "host"),
     "KDB_PORT": ("kdb", "port"),
