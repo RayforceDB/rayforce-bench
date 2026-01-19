@@ -53,7 +53,7 @@ class BenchmarkRunner:
     """Run benchmarks across multiple adapters."""
 
     BENCHMARKS = {
-        "groupby": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5"],
+        "groupby": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6"],
         "join": ["join_inner", "join_left"],
         "sort": ["sort_single", "sort_multi"],
     }
@@ -222,7 +222,13 @@ def print_comparison(results: list[BenchmarkRun]) -> None:
             by_benchmark[run.benchmark] = {}
         by_benchmark[run.benchmark][run.adapter] = run
 
-    adapters = sorted(set(r.adapter for r in results))
+    # Put rayforce first, then sort the rest
+    all_adapters = set(r.adapter for r in results)
+    adapters = []
+    if "rayforce" in all_adapters:
+        adapters.append("rayforce")
+        all_adapters.remove("rayforce")
+    adapters.extend(sorted(all_adapters))
 
     print("\n" + "=" * 60)
     print("COMPARISON (median ms)")
@@ -235,27 +241,35 @@ def print_comparison(results: list[BenchmarkRun]) -> None:
     print(header)
     print("-" * 60)
 
+    # Track speedups relative to rayforce
+    speedups: dict[str, list[float]] = {a: [] for a in adapters}
+
     # Rows
     for bench_name, adapter_results in sorted(by_benchmark.items()):
         row = f"{bench_name:<15}"
-        times = []
+        rf_time = adapter_results.get("rayforce", None)
+        rf_ms = rf_time.median_ms if rf_time else None
+
         for adapter in adapters:
             if adapter in adapter_results:
                 t = adapter_results[adapter].median_ms
-                times.append((adapter, t))
                 row += f" {t:>12.2f}"
+                if rf_ms and rf_ms > 0:
+                    speedups[adapter].append(t / rf_ms)
             else:
                 row += f" {'N/A':>12}"
         print(row)
 
-        # Mark fastest
-        if times:
-            fastest = min(times, key=lambda x: x[1])
-            slowest = max(times, key=lambda x: x[1])
-            if len(times) > 1:
-                speedup = slowest[1] / fastest[1]
-                print(f"  → {fastest[0]} is {speedup:.1f}x faster than {slowest[0]}")
-
+    # Average speedup line
+    print("-" * 60)
+    row = f"{'(avg speedup)':<15}"
+    for adapter in adapters:
+        if speedups[adapter]:
+            avg = sum(speedups[adapter]) / len(speedups[adapter])
+            row += f" {avg:>11.2f}x"
+        else:
+            row += f" {'N/A':>12}"
+    print(row)
     print("=" * 60)
 
 

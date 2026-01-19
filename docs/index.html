@@ -87,7 +87,113 @@
             color: var(--text-primary);
             line-height: 1.6;
             transition: background-color var(--transition-normal), color var(--transition-normal);
+            position: relative;
+            min-height: 100vh;
         }
+
+        /* Animated Background - matching rayforce-py docs */
+        .page-background {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* Smooth gradient background */
+        .bg-gradient {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59, 130, 246, 0.12), transparent 50%),
+                radial-gradient(ellipse 60% 60% at 0% 50%, rgba(59, 130, 246, 0.08), transparent 50%),
+                radial-gradient(ellipse 60% 60% at 100% 80%, rgba(147, 197, 253, 0.06), transparent 50%),
+                linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, rgba(255, 255, 255, 0.95) 100%);
+        }
+
+        [data-theme="dark"] .bg-gradient {
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(233, 163, 32, 0.15), transparent 50%),
+                radial-gradient(ellipse 60% 60% at 0% 50%, rgba(233, 163, 32, 0.08), transparent 50%),
+                radial-gradient(ellipse 60% 60% at 100% 80%, rgba(10, 58, 92, 0.3), transparent 50%),
+                linear-gradient(180deg, rgba(4, 35, 59, 1) 0%, rgba(2, 24, 40, 1) 100%);
+        }
+
+        /* Scroll-based lazy loading animations */
+        .lazy-load {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .lazy-load.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .lazy-load-left {
+            opacity: 0;
+            transform: translateX(-40px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .lazy-load-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .lazy-load-right {
+            opacity: 0;
+            transform: translateX(40px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .lazy-load-right.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .lazy-load-scale {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        .lazy-load-scale.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Staggered animation delays for cards */
+        .perf-card:nth-child(1) { transition-delay: 0s; }
+        .perf-card:nth-child(2) { transition-delay: 0.1s; }
+        .perf-card:nth-child(3) { transition-delay: 0.2s; }
+        .perf-card:nth-child(4) { transition-delay: 0.3s; }
+
+        /* Table row animations */
+        .table-wrapper tbody tr {
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.2s ease;
+        }
+
+        .table-wrapper.visible tbody tr {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Staggered delays for first 30 rows */
+        .table-wrapper tbody tr:nth-child(1) { transition-delay: 0.02s; }
+        .table-wrapper tbody tr:nth-child(2) { transition-delay: 0.04s; }
+        .table-wrapper tbody tr:nth-child(3) { transition-delay: 0.06s; }
+        .table-wrapper tbody tr:nth-child(4) { transition-delay: 0.08s; }
+        .table-wrapper tbody tr:nth-child(5) { transition-delay: 0.1s; }
+        .table-wrapper tbody tr:nth-child(6) { transition-delay: 0.12s; }
+        .table-wrapper tbody tr:nth-child(7) { transition-delay: 0.14s; }
+        .table-wrapper tbody tr:nth-child(8) { transition-delay: 0.16s; }
+        .table-wrapper tbody tr:nth-child(9) { transition-delay: 0.18s; }
+        .table-wrapper tbody tr:nth-child(10) { transition-delay: 0.2s; }
+        .table-wrapper tbody tr:nth-child(n+11) { transition-delay: 0.22s; }
         
         a {
             color: inherit;
@@ -109,10 +215,16 @@
             left: 0;
             right: 0;
             height: var(--header-height);
-            background: var(--bg-primary);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-color);
             z-index: 1000;
             transition: background-color var(--transition-normal), border-color var(--transition-normal);
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(4, 35, 59, 0.85);
         }
         
         .header-container {
@@ -228,33 +340,17 @@
         .hero-gradient {
             position: absolute;
             inset: 0;
-            background: 
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(233, 160, 51, 0.15), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(4, 35, 59, 0.1), transparent),
-                radial-gradient(ellipse 40% 30% at 10% 60%, rgba(233, 160, 51, 0.08), transparent);
+            background:
+                radial-gradient(ellipse 100% 80% at 50% 0%, rgba(59, 130, 246, 0.08), transparent 60%);
         }
-        
+
         [data-theme="dark"] .hero-gradient {
-            background: 
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(233, 160, 51, 0.2), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(233, 160, 51, 0.1), transparent),
-                radial-gradient(ellipse 40% 30% at 10% 60%, rgba(10, 58, 92, 0.5), transparent);
+            background:
+                radial-gradient(ellipse 100% 80% at 50% 0%, rgba(233, 160, 51, 0.12), transparent 60%);
         }
-        
+
         .hero-grid {
-            position: absolute;
-            inset: 0;
-            background-image: 
-                linear-gradient(rgba(4, 35, 59, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(4, 35, 59, 0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
-            mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
-        }
-        
-        [data-theme="dark"] .hero-grid {
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            display: none; /* Using global background grid instead */
         }
         
         .hero-content {
@@ -479,7 +575,267 @@
         .mono {
             font-family: 'JetBrains Mono', monospace;
         }
-        
+
+        /* Comparison Panel */
+        .comparison-panel {
+            margin-bottom: 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .comparison-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .comparison-controls {
+            background: linear-gradient(135deg, rgba(233, 160, 51, 0.08) 0%, rgba(10, 58, 92, 0.3) 100%);
+        }
+
+        .comparison-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .comparison-selects {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .comparison-selects select {
+            padding: 12px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            min-width: 160px;
+        }
+
+        .comparison-selects select:hover {
+            border-color: var(--accent-golden);
+        }
+
+        .comparison-selects select:focus {
+            outline: none;
+            border-color: var(--accent-golden);
+            box-shadow: 0 0 0 4px rgba(233, 160, 51, 0.15);
+        }
+
+        .compare-vs {
+            font-weight: 700;
+            color: var(--accent-golden);
+            font-size: 1rem;
+            padding: 8px 16px;
+            background: rgba(233, 160, 51, 0.1);
+            border-radius: 8px;
+        }
+
+        /* Comparison Results */
+        .comparison-results {
+            display: none;
+            padding: 24px;
+        }
+
+        .comparison-results.visible {
+            display: block;
+        }
+
+        .comparison-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .comparison-title {
+            font-size: 1.25rem;
+            font-weight: 300;
+            color: var(--text-primary);
+        }
+
+        .comparison-title span {
+            font-weight: 700;
+        }
+
+        .comparison-summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(233, 160, 51, 0.1);
+            border-radius: 50px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .comparison-summary .speedup-value {
+            font-size: 1.2rem;
+            color: var(--accent-golden);
+            font-weight: 700;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+
+        .comparison-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            transition: all var(--transition-normal);
+            text-align: center;
+            align-items: center;
+        }
+
+        .comparison-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
+            border-color: var(--accent-golden);
+        }
+
+        .comparison-task {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .comparison-speedup {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 8px 16px;
+            border-radius: 8px;
+            width: fit-content;
+        }
+
+        .comparison-speedup.faster {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.1) 100%);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .comparison-speedup.slower {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.1) 100%);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .comparison-speedup.equal {
+            background: var(--bg-tertiary);
+            color: var(--text-tertiary);
+            border: 1px solid var(--border-color);
+        }
+
+        .comparison-times {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ===================================
+           CTA Section
+           =================================== */
+
+        .cta-section {
+            padding: 80px 24px;
+            text-align: center;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-top: 1px solid var(--border-color);
+            margin-top: 60px;
+        }
+
+        [data-theme="dark"] .cta-section {
+            background: linear-gradient(135deg, rgba(233, 160, 51, 0.05) 0%, rgba(10, 58, 92, 0.2) 100%);
+        }
+
+        .cta-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .cta-section h2 {
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 300;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .cta-section p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all var(--transition-normal);
+        }
+
+        .cta-button.primary {
+            background: var(--accent-golden);
+            color: var(--primary-navy);
+            box-shadow: 0 4px 20px rgba(233, 160, 51, 0.3);
+        }
+
+        .cta-button.primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(233, 160, 51, 0.4);
+        }
+
+        .cta-button.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .cta-button.secondary:hover {
+            border-color: var(--accent-golden);
+            transform: translateY(-3px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        [data-theme="dark"] .cta-button.secondary {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
         /* ===================================
            Task Tabs - like project cards
            =================================== */
@@ -644,6 +1000,11 @@
     </style>
 </head>
 <body>
+    <!-- Smooth Gradient Background -->
+    <div class="page-background">
+        <div class="bg-gradient"></div>
+    </div>
+
     <header class="header">
         <div class="header-container">
             <a href="https://rayforcedb.github.io" class="logo-link" target="_blank">
@@ -685,64 +1046,79 @@
             </p>
             <div class="hero-meta">
                 <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    groupby
-                </span>
-                <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                    G1_1e7_1e2_0_0
-                </span>
-                <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    January 19, 2026 at 12:45
+                    January 20, 2026 at 12:00
                 </span>
             </div>
         </div>
     </section>
     
     <div class="perf-cards">
-        
-            <div class="perf-card">
-                <div class="metric">1</div>
+
+            <div class="perf-card lazy-load-scale">
+                <div class="metric">5</div>
                 <div class="label">Databases</div>
                 <div class="sublabel">compared</div>
             </div>
-        
 
-            <div class="perf-card">
-                <div class="metric">7</div>
+
+            <div class="perf-card lazy-load-scale">
+                <div class="metric">6</div>
                 <div class="label">Queries</div>
                 <div class="sublabel">benchmarked</div>
             </div>
-        
 
-            <div class="perf-card">
-                <div class="metric">7</div>
+
+            <div class="perf-card lazy-load-scale">
+                <div class="metric">30</div>
                 <div class="label">Data Points</div>
                 <div class="sublabel">collected</div>
             </div>
-        
+
     </div>
     
     <main class="container">
         <section class="section">
-            <div class="section-header">
+            <div class="section-header lazy-load">
                 <h2>Overview Comparison</h2>
                 <span class="section-badge">Median Time</span>
             </div>
-            <div class="chart-card">
+            <div class="chart-card lazy-load">
                 <div id="main-chart" class="chart-container"></div>
             </div>
         </section>
-        
+
         <section class="section">
-            <div class="section-header">
+            <div class="section-header lazy-load">
                 <h2>Detailed Results</h2>
                 <span class="section-badge">All Tasks</span>
             </div>
             
-        <div class="table-wrapper">
-            <table>
+        <div class="comparison-panel">
+            <div class="comparison-controls">
+                <span class="comparison-label">Compare Databases</span>
+                <div class="comparison-selects">
+                    <select id="db-compare-1" onchange="updateComparison()">
+                        <option value="rayforce">Rayforce</option>
+                        <option value="duckdb">DuckDB</option>
+                        <option value="polars">Polars</option>
+                        <option value="questdb">QuestDB</option>
+                        <option value="timescale">TimescaleDB</option>
+                    </select>
+                    <span class="compare-vs">vs</span>
+                    <select id="db-compare-2" onchange="updateComparison()">
+                        <option value="duckdb">DuckDB</option>
+                        <option value="rayforce">Rayforce</option>
+                        <option value="polars">Polars</option>
+                        <option value="questdb">QuestDB</option>
+                        <option value="timescale">TimescaleDB</option>
+                    </select>
+                </div>
+            </div>
+            <div id="comparison-results" class="comparison-results"></div>
+        </div>
+        <div class="table-wrapper lazy-load">
+            <table id="results-table">
                 <thead>
                     <tr>
                         <th>Task</th>
@@ -751,81 +1127,249 @@
                         <th>Min (ms)</th>
                         <th>P95 (ms)</th>
                         <th>Rows/sec</th>
-                        <th>Valid</th>
                     </tr>
                 </thead>
                 <tbody>
-                    
-            <tr class="">
+            <tr class="rayforce-row">
                 <td><strong>groupby_q1</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">10.230</td>
-                <td class="mono">8.655</td>
-                <td class="mono">12.997</td>
-                <td class="mono">9,776</td>
-                <td class="valid">✓</td>
+                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
+                <td class="best-value mono">0.553</td>
+                <td class="mono">0.512</td>
+                <td class="mono">0.670</td>
+                <td class="mono">18,083,183</td>
             </tr>
-        
-            <tr class="">
+            <tr>
+                <td><strong>groupby_q1</strong></td>
+                <td style="color: #1565C0;">duckdb</td>
+                <td class="mono">0.741</td>
+                <td class="mono">0.711</td>
+                <td class="mono">0.867</td>
+                <td class="mono">13,495,276</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q1</strong></td>
+                <td style="color: #E91E63;">polars</td>
+                <td class="mono">1.425</td>
+                <td class="mono">1.356</td>
+                <td class="mono">1.720</td>
+                <td class="mono">7,017,544</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q1</strong></td>
+                <td style="color: #6366F1;">questdb</td>
+                <td class="mono">10.128</td>
+                <td class="mono">7.874</td>
+                <td class="mono">15.559</td>
+                <td class="mono">987,361</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q1</strong></td>
+                <td style="color: #14B8A6;">timescale</td>
+                <td class="mono">21.849</td>
+                <td class="mono">21.192</td>
+                <td class="mono">21.932</td>
+                <td class="mono">457,683</td>
+            </tr>
+            <tr class="rayforce-row">
                 <td><strong>groupby_q2</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">27.592</td>
-                <td class="mono">26.498</td>
-                <td class="mono">36.148</td>
-                <td class="mono">362,418</td>
-                <td class="valid">✓</td>
+                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
+                <td class="best-value mono">1.241</td>
+                <td class="mono">1.177</td>
+                <td class="mono">1.435</td>
+                <td class="mono">8,058,018</td>
             </tr>
-        
-            <tr class="">
+            <tr>
+                <td><strong>groupby_q2</strong></td>
+                <td style="color: #1565C0;">duckdb</td>
+                <td class="mono">3.532</td>
+                <td class="mono">3.289</td>
+                <td class="mono">3.808</td>
+                <td class="mono">2,831,257</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q2</strong></td>
+                <td style="color: #E91E63;">polars</td>
+                <td class="mono">8.240</td>
+                <td class="mono">7.886</td>
+                <td class="mono">9.151</td>
+                <td class="mono">1,213,592</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q2</strong></td>
+                <td style="color: #6366F1;">questdb</td>
+                <td class="mono">15.224</td>
+                <td class="mono">14.388</td>
+                <td class="mono">18.281</td>
+                <td class="mono">656,856</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q2</strong></td>
+                <td style="color: #14B8A6;">timescale</td>
+                <td class="mono">35.773</td>
+                <td class="mono">35.501</td>
+                <td class="mono">36.117</td>
+                <td class="mono">279,548</td>
+            </tr>
+            <tr class="rayforce-row">
                 <td><strong>groupby_q3</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">124.680</td>
-                <td class="mono">118.727</td>
-                <td class="mono">146.190</td>
-                <td class="mono">802,056</td>
-                <td class="valid">✓</td>
+                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
+                <td class="best-value mono">0.772</td>
+                <td class="mono">0.740</td>
+                <td class="mono">0.942</td>
+                <td class="mono">12,953,368</td>
             </tr>
-        
-            <tr class="">
+            <tr>
+                <td><strong>groupby_q3</strong></td>
+                <td style="color: #1565C0;">duckdb</td>
+                <td class="mono">0.929</td>
+                <td class="mono">0.906</td>
+                <td class="mono">0.992</td>
+                <td class="mono">10,764,263</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q3</strong></td>
+                <td style="color: #E91E63;">polars</td>
+                <td class="mono">2.002</td>
+                <td class="mono">1.919</td>
+                <td class="mono">2.299</td>
+                <td class="mono">4,995,211</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q3</strong></td>
+                <td style="color: #6366F1;">questdb</td>
+                <td class="mono">5.003</td>
+                <td class="mono">3.798</td>
+                <td class="mono">9.707</td>
+                <td class="mono">1,998,801</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q3</strong></td>
+                <td style="color: #14B8A6;">timescale</td>
+                <td class="mono">28.234</td>
+                <td class="mono">24.785</td>
+                <td class="mono">30.096</td>
+                <td class="mono">354,186</td>
+            </tr>
+            <tr class="rayforce-row">
                 <td><strong>groupby_q4</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">8.142</td>
-                <td class="mono">7.657</td>
-                <td class="mono">9.736</td>
-                <td class="mono">12,283</td>
-                <td class="valid">✓</td>
+                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
+                <td class="best-value mono">1.124</td>
+                <td class="mono">1.059</td>
+                <td class="mono">1.234</td>
+                <td class="mono">8,896,797</td>
             </tr>
-        
-            <tr class="">
+            <tr>
+                <td><strong>groupby_q4</strong></td>
+                <td style="color: #1565C0;">duckdb</td>
+                <td class="mono">1.268</td>
+                <td class="mono">1.130</td>
+                <td class="mono">1.390</td>
+                <td class="mono">7,886,435</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q4</strong></td>
+                <td style="color: #E91E63;">polars</td>
+                <td class="mono">2.293</td>
+                <td class="mono">2.181</td>
+                <td class="mono">2.576</td>
+                <td class="mono">4,361,187</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q4</strong></td>
+                <td style="color: #6366F1;">questdb</td>
+                <td class="mono">6.881</td>
+                <td class="mono">5.769</td>
+                <td class="mono">7.477</td>
+                <td class="mono">1,453,277</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q4</strong></td>
+                <td style="color: #14B8A6;">timescale</td>
+                <td class="mono">38.984</td>
+                <td class="mono">34.552</td>
+                <td class="mono">48.022</td>
+                <td class="mono">256,514</td>
+            </tr>
+            <tr class="rayforce-row">
                 <td><strong>groupby_q5</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">179.732</td>
-                <td class="mono">174.215</td>
-                <td class="mono">194.139</td>
-                <td class="mono">556,384</td>
-                <td class="valid">✓</td>
+                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
+                <td class="best-value mono">0.895</td>
+                <td class="mono">0.855</td>
+                <td class="mono">1.005</td>
+                <td class="mono">11,173,184</td>
             </tr>
-        
-            <tr class="">
+            <tr>
+                <td><strong>groupby_q5</strong></td>
+                <td style="color: #1565C0;">duckdb</td>
+                <td class="mono">1.213</td>
+                <td class="mono">1.102</td>
+                <td class="mono">1.427</td>
+                <td class="mono">8,244,994</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q5</strong></td>
+                <td style="color: #E91E63;">polars</td>
+                <td class="mono">2.233</td>
+                <td class="mono">2.183</td>
+                <td class="mono">2.615</td>
+                <td class="mono">4,478,314</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q5</strong></td>
+                <td style="color: #6366F1;">questdb</td>
+                <td class="mono">5.591</td>
+                <td class="mono">5.182</td>
+                <td class="mono">16.943</td>
+                <td class="mono">1,788,589</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q5</strong></td>
+                <td style="color: #14B8A6;">timescale</td>
+                <td class="mono">31.870</td>
+                <td class="mono">30.004</td>
+                <td class="mono">37.483</td>
+                <td class="mono">313,775</td>
+            </tr>
+            <tr class="rayforce-row">
                 <td><strong>groupby_q6</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">97.163</td>
-                <td class="mono">90.361</td>
-                <td class="mono">106.742</td>
-                <td class="mono">1,029,203</td>
-                <td class="valid">✓</td>
+                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
+                <td class="best-value mono">0.730</td>
+                <td class="mono">0.702</td>
+                <td class="mono">0.793</td>
+                <td class="mono">13,698,630</td>
             </tr>
-        
-            <tr class="">
-                <td><strong>groupby_q7</strong></td>
-                <td>questdb</td>
-                <td class="best-value mono">4269.235</td>
-                <td class="mono">4251.366</td>
-                <td class="mono">4284.989</td>
-                <td class="mono">2,342,340</td>
-                <td class="valid">✓</td>
+            <tr>
+                <td><strong>groupby_q6</strong></td>
+                <td style="color: #1565C0;">duckdb</td>
+                <td class="mono">1.719</td>
+                <td class="mono">1.486</td>
+                <td class="mono">1.883</td>
+                <td class="mono">5,817,336</td>
             </tr>
-        
+            <tr>
+                <td><strong>groupby_q6</strong></td>
+                <td style="color: #6366F1;">questdb</td>
+                <td class="mono">4.192</td>
+                <td class="mono">2.958</td>
+                <td class="mono">12.765</td>
+                <td class="mono">2,385,486</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q6</strong></td>
+                <td style="color: #E91E63;">polars</td>
+                <td class="mono">4.376</td>
+                <td class="mono">4.214</td>
+                <td class="mono">4.775</td>
+                <td class="mono">2,285,208</td>
+            </tr>
+            <tr>
+                <td><strong>groupby_q6</strong></td>
+                <td style="color: #14B8A6;">timescale</td>
+                <td class="mono">31.747</td>
+                <td class="mono">29.875</td>
+                <td class="mono">34.189</td>
+                <td class="mono">315,091</td>
+            </tr>
                 </tbody>
             </table>
         </div>
@@ -833,61 +1377,77 @@
         </section>
         
         <section class="section">
-            <div class="section-header">
+            <div class="section-header lazy-load">
                 <h2>Task Breakdown</h2>
                 <span class="section-badge">Per-Query</span>
             </div>
-            
-        <div class="task-tabs">
-            <button class="task-tab active" onclick="showTask(0)">groupby_q1</button><button class="task-tab " onclick="showTask(1)">groupby_q2</button><button class="task-tab " onclick="showTask(2)">groupby_q3</button><button class="task-tab " onclick="showTask(3)">groupby_q4</button><button class="task-tab " onclick="showTask(4)">groupby_q5</button><button class="task-tab " onclick="showTask(5)">groupby_q6</button><button class="task-tab " onclick="showTask(6)">groupby_q7</button>
+
+        <div class="task-tabs lazy-load">
+            <button class="task-tab active" onclick="showTask(0)">groupby_q1</button>
+            <button class="task-tab" onclick="showTask(1)">groupby_q2</button>
+            <button class="task-tab" onclick="showTask(2)">groupby_q3</button>
+            <button class="task-tab" onclick="showTask(3)">groupby_q4</button>
+            <button class="task-tab" onclick="showTask(4)">groupby_q5</button>
+            <button class="task-tab" onclick="showTask(5)">groupby_q6</button>
         </div>
-        
+
             <div class="task-panel active">
                 <div class="chart-card">
                     <div id="task-chart-0" class="chart-container" style="height: 300px;"></div>
                 </div>
             </div>
-        
-            <div class="task-panel ">
+
+            <div class="task-panel">
                 <div class="chart-card">
                     <div id="task-chart-1" class="chart-container" style="height: 300px;"></div>
                 </div>
             </div>
-        
-            <div class="task-panel ">
+
+            <div class="task-panel">
                 <div class="chart-card">
                     <div id="task-chart-2" class="chart-container" style="height: 300px;"></div>
                 </div>
             </div>
-        
-            <div class="task-panel ">
+
+            <div class="task-panel">
                 <div class="chart-card">
                     <div id="task-chart-3" class="chart-container" style="height: 300px;"></div>
                 </div>
             </div>
-        
-            <div class="task-panel ">
+
+            <div class="task-panel">
                 <div class="chart-card">
                     <div id="task-chart-4" class="chart-container" style="height: 300px;"></div>
                 </div>
             </div>
-        
-            <div class="task-panel ">
+
+            <div class="task-panel">
                 <div class="chart-card">
                     <div id="task-chart-5" class="chart-container" style="height: 300px;"></div>
                 </div>
             </div>
-        
-            <div class="task-panel ">
-                <div class="chart-card">
-                    <div id="task-chart-6" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-        
-    
+
         </section>
     </main>
-    
+
+    <!-- Get Started CTA Section -->
+    <section class="cta-section lazy-load">
+        <div class="cta-content">
+            <h2>Ready to experience <span class="highlight">blazing-fast</span> performance?</h2>
+            <p>Start building with RayforceDB today and see the difference for yourself.</p>
+            <div class="cta-buttons">
+                <a href="https://rayforcedb.com" target="_blank" class="cta-button primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    Get Started
+                </a>
+                <a href="https://github.com/RayforceDB/rayforce" target="_blank" class="cta-button secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-brand">
@@ -906,7 +1466,7 @@
     
     <script>
         // Chart data
-        const chartData = {"comparison": {"adapters": ["duckdb", "polars", "rayforce"], "tasks": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5"], "values": [{"adapter": "rayforce", "task": "groupby_q1", "median_ms": 0.864}, {"adapter": "rayforce", "task": "groupby_q2", "median_ms": 1.599999}, {"adapter": "rayforce", "task": "groupby_q3", "median_ms": 0.853}, {"adapter": "rayforce", "task": "groupby_q4", "median_ms": 1.087999}, {"adapter": "rayforce", "task": "groupby_q5", "median_ms": 0.916999}, {"adapter": "polars", "task": "groupby_q1", "median_ms": 1.720833}, {"adapter": "polars", "task": "groupby_q2", "median_ms": 8.126292}, {"adapter": "polars", "task": "groupby_q3", "median_ms": 2.034667}, {"adapter": "polars", "task": "groupby_q4", "median_ms": 2.485125}, {"adapter": "polars", "task": "groupby_q5", "median_ms": 2.489542}, {"adapter": "duckdb", "task": "groupby_q1", "median_ms": 0.764708}, {"adapter": "duckdb", "task": "groupby_q2", "median_ms": 3.560209}, {"adapter": "duckdb", "task": "groupby_q3", "median_ms": 0.90525}, {"adapter": "duckdb", "task": "groupby_q4", "median_ms": 1.100959}, {"adapter": "duckdb", "task": "groupby_q5", "median_ms": 1.222125}]}, "tasks": {"groupby_q1": [{"adapter": "duckdb", "values": [0.808875, 0.764708, 0.776875, 0.727917, 0.699583], "boxplot": [0.699583, 0.727917, 0.764708, 0.776875, 0.808875]}, {"adapter": "polars", "values": [1.720833, 1.756292, 1.816666, 1.614209, 1.41825], "boxplot": [1.41825, 1.614209, 1.720833, 1.756292, 1.816666]}, {"adapter": "rayforce", "values": [0.936, 0.910999, 0.864, 0.769, 0.794999], "boxplot": [0.769, 0.794999, 0.864, 0.910999, 0.936]}], "groupby_q2": [{"adapter": "duckdb", "values": [3.928417, 3.927667, 3.560209, 3.4385, 3.291709], "boxplot": [3.291709, 3.4385, 3.560209, 3.927667, 3.928417]}, {"adapter": "polars", "values": [9.470458, 7.939458, 9.007583, 7.96475, 8.126292], "boxplot": [7.939458, 7.96475, 8.126292, 9.007583, 9.470458]}, {"adapter": "rayforce", "values": [1.825, 2.001999, 1.585, 1.599999, 1.551], "boxplot": [1.551, 1.585, 1.599999, 1.825, 2.001999]}], "groupby_q3": [{"adapter": "duckdb", "values": [0.893042, 0.905416, 0.90525, 0.881792, 0.964333], "boxplot": [0.881792, 0.893042, 0.90525, 0.905416, 0.964333]}, {"adapter": "polars", "values": [1.739417, 2.034667, 2.072792, 1.977792, 2.229625], "boxplot": [1.739417, 1.977792, 2.034667, 2.072792, 2.229625]}, {"adapter": "rayforce", "values": [0.902999, 0.952, 0.853, 0.791999, 0.761], "boxplot": [0.761, 0.791999, 0.853, 0.902999, 0.952]}], "groupby_q4": [{"adapter": "duckdb", "values": [1.138458, 1.089, 1.068, 1.146917, 1.100959], "boxplot": [1.068, 1.089, 1.100959, 1.138458, 1.146917]}, {"adapter": "polars", "values": [2.502166, 2.45825, 2.485125, 2.403792, 2.699292], "boxplot": [2.403792, 2.45825, 2.485125, 2.502166, 2.699292]}, {"adapter": "rayforce", "values": [1.051, 1.184, 1.148, 1.087999, 1.061], "boxplot": [1.051, 1.061, 1.087999, 1.148, 1.184]}], "groupby_q5": [{"adapter": "duckdb", "values": [1.222125, 1.24475, 1.200292, 1.37425, 1.204125], "boxplot": [1.200292, 1.204125, 1.222125, 1.24475, 1.37425]}, {"adapter": "polars", "values": [2.489542, 2.370208, 2.50275, 6.249833, 2.349834], "boxplot": [2.349834, 2.370208, 2.489542, 2.50275, 6.249833]}, {"adapter": "rayforce", "values": [0.847, 0.845, 0.973, 0.932999, 0.916999], "boxplot": [0.845, 0.847, 0.916999, 0.932999, 0.973]}]}};
+        const chartData = {"comparison": {"adapters": ["duckdb", "polars", "questdb", "rayforce", "timescale"], "tasks": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6"], "values": [{"adapter": "rayforce", "task": "groupby_q1", "median_ms": 0.552999}, {"adapter": "rayforce", "task": "groupby_q2", "median_ms": 1.240999}, {"adapter": "rayforce", "task": "groupby_q3", "median_ms": 0.772}, {"adapter": "rayforce", "task": "groupby_q4", "median_ms": 1.124}, {"adapter": "rayforce", "task": "groupby_q5", "median_ms": 0.894999}, {"adapter": "rayforce", "task": "groupby_q6", "median_ms": 0.73}, {"adapter": "polars", "task": "groupby_q1", "median_ms": 1.425041}, {"adapter": "polars", "task": "groupby_q2", "median_ms": 8.240167}, {"adapter": "polars", "task": "groupby_q3", "median_ms": 2.001917}, {"adapter": "polars", "task": "groupby_q4", "median_ms": 2.293375}, {"adapter": "polars", "task": "groupby_q5", "median_ms": 2.232917}, {"adapter": "polars", "task": "groupby_q6", "median_ms": 4.375791}, {"adapter": "duckdb", "task": "groupby_q1", "median_ms": 0.740584}, {"adapter": "duckdb", "task": "groupby_q2", "median_ms": 3.532333}, {"adapter": "duckdb", "task": "groupby_q3", "median_ms": 0.928833}, {"adapter": "duckdb", "task": "groupby_q4", "median_ms": 1.268042}, {"adapter": "duckdb", "task": "groupby_q5", "median_ms": 1.212667}, {"adapter": "duckdb", "task": "groupby_q6", "median_ms": 1.719}, {"adapter": "questdb", "task": "groupby_q1", "median_ms": 10.127708}, {"adapter": "questdb", "task": "groupby_q2", "median_ms": 15.223959}, {"adapter": "questdb", "task": "groupby_q3", "median_ms": 5.002584}, {"adapter": "questdb", "task": "groupby_q4", "median_ms": 6.880875}, {"adapter": "questdb", "task": "groupby_q5", "median_ms": 5.5905}, {"adapter": "questdb", "task": "groupby_q6", "median_ms": 4.19225}, {"adapter": "timescale", "task": "groupby_q1", "median_ms": 21.848833}, {"adapter": "timescale", "task": "groupby_q2", "median_ms": 35.772584}, {"adapter": "timescale", "task": "groupby_q3", "median_ms": 28.233709}, {"adapter": "timescale", "task": "groupby_q4", "median_ms": 38.984292}, {"adapter": "timescale", "task": "groupby_q5", "median_ms": 31.869708}, {"adapter": "timescale", "task": "groupby_q6", "median_ms": 31.747}]}, "tasks": {"groupby_q1": [{"adapter": "duckdb", "values": [0.814083, 0.866791, 0.720167, 0.711042, 0.740584], "boxplot": [0.711042, 0.720167, 0.740584, 0.814083, 0.866791]}, {"adapter": "polars", "values": [1.607, 1.719792, 1.4195, 1.425041, 1.355666], "boxplot": [1.355666, 1.4195, 1.425041, 1.607, 1.719792]}, {"adapter": "questdb", "values": [10.127708, 7.882083, 11.281125, 15.559333, 7.873542], "boxplot": [7.873542, 7.882083, 10.127708, 11.281125, 15.559333]}, {"adapter": "rayforce", "values": [0.669999, 0.552999, 0.57, 0.512, 0.539999], "boxplot": [0.512, 0.539999, 0.552999, 0.57, 0.669999]}, {"adapter": "timescale", "values": [21.848833, 21.715875, 21.926208, 21.931833, 21.191833], "boxplot": [21.191833, 21.715875, 21.848833, 21.926208, 21.931833]}], "groupby_q2": [{"adapter": "duckdb", "values": [3.808292, 3.289375, 3.56025, 3.532333, 3.416375], "boxplot": [3.289375, 3.416375, 3.532333, 3.56025, 3.808292]}, {"adapter": "polars", "values": [8.568417, 9.1505, 8.072667, 8.240167, 7.886375], "boxplot": [7.886375, 8.072667, 8.240167, 8.568417, 9.1505]}, {"adapter": "questdb", "values": [16.317416, 15.223959, 18.28125, 14.387542, 14.45825], "boxplot": [14.387542, 14.45825, 15.223959, 16.317416, 18.28125]}, {"adapter": "rayforce", "values": [1.434999, 1.177, 1.240999, 1.347, 1.226], "boxplot": [1.177, 1.226, 1.240999, 1.347, 1.434999]}, {"adapter": "timescale", "values": [35.789042, 36.116917, 35.707958, 35.500833, 35.772584], "boxplot": [35.500833, 35.707958, 35.772584, 35.789042, 36.116917]}], "groupby_q3": [{"adapter": "duckdb", "values": [0.982917, 0.905666, 0.915667, 0.928833, 0.992417], "boxplot": [0.905666, 0.915667, 0.928833, 0.982917, 0.992417]}, {"adapter": "polars", "values": [2.299041, 2.001917, 1.989625, 1.918708, 2.126333], "boxplot": [1.918708, 1.989625, 2.001917, 2.126333, 2.299041]}, {"adapter": "questdb", "values": [9.706917, 5.190959, 5.002584, 3.797667, 4.089084], "boxplot": [3.797667, 4.089084, 5.002584, 5.190959, 9.706917]}, {"adapter": "rayforce", "values": [0.766, 0.772, 0.74, 0.775999, 0.942], "boxplot": [0.74, 0.766, 0.772, 0.775999, 0.942]}, {"adapter": "timescale", "values": [24.784542, 27.267958, 28.38075, 30.096208, 28.233709], "boxplot": [24.784542, 27.267958, 28.233709, 28.38075, 30.096208]}], "groupby_q4": [{"adapter": "duckdb", "values": [1.129541, 1.234542, 1.268042, 1.289042, 1.389542], "boxplot": [1.129541, 1.234542, 1.268042, 1.289042, 1.389542]}, {"adapter": "polars", "values": [2.575958, 2.293375, 2.181334, 2.264833, 2.322542], "boxplot": [2.181334, 2.264833, 2.293375, 2.322542, 2.575958]}, {"adapter": "questdb", "values": [6.247042, 5.768791, 7.160542, 6.880875, 7.47675], "boxplot": [5.768791, 6.247042, 6.880875, 7.160542, 7.47675]}, {"adapter": "rayforce", "values": [1.062, 1.059, 1.124, 1.216, 1.234], "boxplot": [1.059, 1.062, 1.124, 1.216, 1.234]}, {"adapter": "timescale", "values": [34.551791, 38.743, 38.984292, 48.021708, 42.765292], "boxplot": [34.551791, 38.743, 38.984292, 42.765292, 48.021708]}], "groupby_q5": [{"adapter": "duckdb", "values": [1.107958, 1.102291, 1.234833, 1.212667, 1.426625], "boxplot": [1.102291, 1.107958, 1.212667, 1.234833, 1.426625]}, {"adapter": "polars", "values": [2.365042, 2.614584, 2.211041, 2.182875, 2.232917], "boxplot": [2.182875, 2.211041, 2.232917, 2.365042, 2.614584]}, {"adapter": "questdb", "values": [16.943042, 7.459041, 5.5905, 5.277625, 5.182292], "boxplot": [5.182292, 5.277625, 5.5905, 7.459041, 16.943042]}, {"adapter": "rayforce", "values": [0.855, 0.894999, 0.87, 0.957, 1.004999], "boxplot": [0.855, 0.87, 0.894999, 0.957, 1.004999]}, {"adapter": "timescale", "values": [31.09675, 37.482625, 30.003708, 31.869708, 34.545209], "boxplot": [30.003708, 31.09675, 31.869708, 34.545209, 37.482625]}], "groupby_q6": [{"adapter": "duckdb", "values": [1.485708, 1.52025, 1.883459, 1.733667, 1.719], "boxplot": [1.485708, 1.52025, 1.719, 1.733667, 1.883459]}, {"adapter": "polars", "values": [4.375791, 4.7745, 4.369458, 4.5975, 4.213792], "boxplot": [4.213792, 4.369458, 4.375791, 4.5975, 4.7745]}, {"adapter": "questdb", "values": [12.765042, 4.19225, 4.967125, 4.019083, 2.957708], "boxplot": [2.957708, 4.019083, 4.19225, 4.967125, 12.765042]}, {"adapter": "rayforce", "values": [0.779999, 0.702, 0.72, 0.73, 0.792999], "boxplot": [0.702, 0.72, 0.73, 0.779999, 0.792999]}, {"adapter": "timescale", "values": [32.865209, 31.747, 29.874709, 29.969833, 34.189291], "boxplot": [29.874709, 29.969833, 31.747, 32.865209, 34.189291]}]}};
         
         // Theme management - default to light
         const themeToggle = document.querySelector('.theme-toggle');
@@ -930,18 +1490,33 @@
             setTheme(currentTheme !== 'dark');
         });
         
-        // Chart colors
+        // Chart colors - consistent colors for all adapters
         const adapterColors = {
             'rayforce': '#e9a033',
             'duckdb': '#1565C0',
+            'polars': '#E91E63',
+            'questdb': '#6366F1',
+            'timescale': '#14B8A6',
             'kdb': '#00897B',
             'clickhouse': '#FFCA28',
-            'polars': '#E91E63',
+            'pandas': '#150458',
+            'spark': '#E25A1C',
+            'datafusion': '#22C55E',
         };
-        
+
         function getAdapterColor(name) {
             const lower = name.toLowerCase();
-            return adapterColors[lower] || '#' + Math.floor(Math.random()*16777215).toString(16);
+            // Return predefined color or generate a deterministic color from name
+            if (adapterColors[lower]) {
+                return adapterColors[lower];
+            }
+            // Deterministic color based on string hash
+            let hash = 0;
+            for (let i = 0; i < lower.length; i++) {
+                hash = lower.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash % 360);
+            return `hsl(${hue}, 65%, 50%)`;
         }
         
         // ECharts theme
@@ -1072,37 +1647,45 @@
         
         function updateTaskChart(taskId, chart) {
             if (!chart || !chartData.tasks[taskId]) return;
-            
+
             const theme = getChartTheme();
             const data = chartData.tasks[taskId];
-            
-            const series = data.map(d => ({
-                name: d.adapter,
-                type: 'boxplot',
-                data: [d.boxplot],
-                itemStyle: { color: getAdapterColor(d.adapter), borderColor: getAdapterColor(d.adapter) }
-            }));
-            
+
+            // Sort data by median (middle value of boxplot)
+            const sortedData = [...data].sort((a, b) => a.boxplot[2] - b.boxplot[2]);
+
             const option = {
                 backgroundColor: theme.backgroundColor,
                 textStyle: { color: theme.textColor },
                 tooltip: {
-                    trigger: 'item',
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
                     borderColor: 'transparent',
                     textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        const p = params[0];
+                        const adapterData = sortedData[p.dataIndex];
+                        return `<div style="font-weight:600;margin-bottom:8px">${adapterData.adapter}</div>
+                            <div>Median: <strong>${adapterData.boxplot[2].toFixed(3)} ms</strong></div>
+                            <div>Min: ${adapterData.boxplot[0].toFixed(3)} ms</div>
+                            <div>Max: ${adapterData.boxplot[4].toFixed(3)} ms</div>
+                            <div>Q1: ${adapterData.boxplot[1].toFixed(3)} ms</div>
+                            <div>Q3: ${adapterData.boxplot[3].toFixed(3)} ms</div>`;
+                    }
                 },
                 grid: {
-                    left: '10%',
-                    right: '10%',
-                    bottom: '15%',
-                    top: '10%',
+                    left: '3%',
+                    right: '4%',
+                    bottom: '10%',
+                    top: '15%',
+                    containLabel: true
                 },
                 xAxis: {
                     type: 'category',
-                    data: data.map(d => d.adapter),
+                    data: sortedData.map(d => d.adapter),
                     axisLine: { lineStyle: { color: theme.axisLineColor } },
-                    axisLabel: { color: theme.textColor }
+                    axisLabel: { color: theme.textColor, fontWeight: 500 }
                 },
                 yAxis: {
                     type: 'value',
@@ -1110,11 +1693,32 @@
                     nameTextStyle: { color: theme.textColor },
                     axisLine: { lineStyle: { color: theme.axisLineColor } },
                     axisLabel: { color: theme.textColor },
-                    splitLine: { lineStyle: { color: theme.splitLineColor } }
+                    splitLine: { lineStyle: { color: theme.splitLineColor } },
+                    min: 0
                 },
-                series: series
+                series: [{
+                    name: 'Median Time',
+                    type: 'bar',
+                    data: sortedData.map(d => ({
+                        value: d.boxplot[2], // median
+                        itemStyle: {
+                            color: getAdapterColor(d.adapter),
+                            borderRadius: [4, 4, 0, 0]
+                        }
+                    })),
+                    barWidth: '60%',
+                    label: {
+                        show: true,
+                        position: 'top',
+                        formatter: function(params) {
+                            return params.value.toFixed(2) + ' ms';
+                        },
+                        color: theme.textColor,
+                        fontSize: 11
+                    }
+                }]
             };
-            
+
             chart.setOption(option);
         }
         
@@ -1141,10 +1745,137 @@
             });
         }
         
+        // Lazy Loading with IntersectionObserver
+        function initLazyLoading() {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px 0px -50px 0px',
+                threshold: 0.1
+            };
+
+            const lazyObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+
+                        // Resize charts when they become visible
+                        const chartContainer = entry.target.querySelector('.chart-container');
+                        if (chartContainer) {
+                            setTimeout(() => {
+                                if (mainChart && chartContainer.id === 'main-chart') {
+                                    mainChart.resize();
+                                }
+                                Object.values(taskCharts).forEach(chart => {
+                                    if (chart) chart.resize();
+                                });
+                            }, 100);
+                        }
+
+                        // Optionally stop observing after animation
+                        // lazyObserver.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            // Observe all lazy-load elements
+            document.querySelectorAll('.lazy-load, .lazy-load-left, .lazy-load-right, .lazy-load-scale').forEach(el => {
+                lazyObserver.observe(el);
+            });
+        }
+
+        // Comparison function
+        function updateComparison() {
+            const db1 = document.getElementById('db-compare-1').value;
+            const db2 = document.getElementById('db-compare-2').value;
+            const resultsDiv = document.getElementById('comparison-results');
+
+            if (db1 === db2) {
+                resultsDiv.classList.remove('visible');
+                return;
+            }
+
+            const data = chartData.comparison.values;
+            const tasks = chartData.comparison.tasks;
+
+            let comparisons = [];
+            let totalSpeedup = 0;
+            let count = 0;
+
+            tasks.forEach(task => {
+                const db1Data = data.find(d => d.adapter === db1 && d.task === task);
+                const db2Data = data.find(d => d.adapter === db2 && d.task === task);
+
+                if (db1Data && db2Data) {
+                    const speedup = db2Data.median_ms / db1Data.median_ms;
+                    comparisons.push({
+                        task: task,
+                        db1Time: db1Data.median_ms,
+                        db2Time: db2Data.median_ms,
+                        speedup: speedup
+                    });
+                    totalSpeedup += speedup;
+                    count++;
+                }
+            });
+
+            const avgSpeedup = count > 0 ? totalSpeedup / count : 1;
+            const db1Color = getAdapterColor(db1);
+            const db2Color = getAdapterColor(db2);
+
+            // Determine overall winner
+            const winnerText = avgSpeedup > 1.05
+                ? `<span style="color: ${db1Color}">${db1}</span> is faster`
+                : avgSpeedup < 0.95
+                    ? `<span style="color: ${db2Color}">${db2}</span> is faster`
+                    : 'Similar performance';
+
+            let html = `
+                <div class="comparison-header">
+                    <div class="comparison-title">
+                        <span style="color: ${db1Color}">${db1}</span>
+                        <span style="opacity: 0.5; margin: 0 8px;">vs</span>
+                        <span style="color: ${db2Color}">${db2}</span>
+                    </div>
+                    <div class="comparison-summary">
+                        <span class="speedup-value">${avgSpeedup.toFixed(2)}x</span>
+                        average · ${winnerText}
+                    </div>
+                </div>
+                <div class="comparison-grid">
+            `;
+
+            comparisons.forEach(comp => {
+                let speedupClass = 'equal';
+                let speedupText = '~1x';
+
+                if (comp.speedup > 1.05) {
+                    speedupClass = 'faster';
+                    speedupText = `${comp.speedup.toFixed(1)}x`;
+                } else if (comp.speedup < 0.95) {
+                    speedupClass = 'slower';
+                    speedupText = `${(1/comp.speedup).toFixed(1)}x`;
+                }
+
+                html += `
+                    <div class="comparison-item">
+                        <span class="comparison-task">${comp.task.replace('groupby_', 'Q')}</span>
+                        <span class="comparison-speedup ${speedupClass}">${speedupText}</span>
+                        <span class="comparison-times">${comp.db1Time.toFixed(2)}ms vs ${comp.db2Time.toFixed(2)}ms</span>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('visible');
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             initMainChart();
             initTaskCharts();
+            initLazyLoading();
+            updateComparison();
         });
     </script>
 </body>

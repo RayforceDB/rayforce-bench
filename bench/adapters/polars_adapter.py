@@ -79,6 +79,18 @@ class PolarsAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q5", time_ns, len(result))
 
+    def run_groupby_q6(self) -> BenchmarkResult:
+        """Q6: max(v1) - min(v2) group by id3"""
+        df = self._get_table()
+
+        def query():
+            return df.group_by("id3").agg(
+                (pl.max("v1") - pl.min("v2")).alias("range")
+            )
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q6", time_ns, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         left = self._get_table("left")

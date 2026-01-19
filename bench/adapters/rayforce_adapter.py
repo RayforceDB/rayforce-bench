@@ -111,7 +111,7 @@ class RayforceAdapter(Adapter):
         column_types = self._get_column_types(path)
 
         # Use rayforce native CSV loading with column types
-        rf_table = self._Table.from_csv(column_types, str(path)).select("*").execute()
+        rf_table = self._Table.from_csv(column_types, str(path))
         rf_table.save(symbol_name)
         self._table_names[table_name] = symbol_name
 
@@ -194,6 +194,12 @@ class RayforceAdapter(Adapter):
         t = self._get_symbol()
         query = f"(select {{v1: (sum v1) v2: (sum v2) v3: (sum v3) by: id3 from: {t}}})"
         return self._run_timed_query(query, "groupby_q5")
+
+    def run_groupby_q6(self) -> BenchmarkResult:
+        """Q6: max(v1) - min(v2) group by id3"""
+        t = self._get_symbol()
+        query = f"(select {{range: (- (max v1) (min v2)) by: id3 from: {t}}})"
+        return self._run_timed_query(query, "groupby_q6")
 
     def _load_table_from_csv(self, path: Path) -> object:
         """Load CSV file using rayforce native Table.from_csv."""

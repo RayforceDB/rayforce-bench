@@ -158,6 +158,18 @@ class TimescaleAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q5", time_ns, len(result))
 
+    def run_groupby_q6(self) -> BenchmarkResult:
+        """Q6: max(v1) - min(v2) group by id3"""
+        t = self._get_table()
+
+        def query():
+            with self._conn.cursor() as cur:
+                cur.execute(f"SELECT id3, MAX(v1) - MIN(v2) as range FROM {t} GROUP BY id3")
+                return cur.fetchall()
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q6", time_ns, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         import io
