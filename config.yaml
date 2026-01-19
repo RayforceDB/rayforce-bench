@@ -7,8 +7,6 @@
 rayforce:
   # Path to rayforce binary (or set RAYFORCE_BINARY env var)
   binary: "../rayforce/rayforce"
-  # Number of threads (4 = match KDB+ license limit for fair comparison)
-  threads: 4
   # Use IPC mode instead of subprocess (requires running server)
   use_ipc: false
   # IPC connection settings (when use_ipc: true)
@@ -19,8 +17,6 @@ rayforce:
 kdb:
   # Path to q binary (or set KDB_BINARY env var)
   binary: "q"
-  # Number of secondary threads (-s flag). 4 cores = 3 secondary + 1 main
-  threads: 3
   # Use IPC mode instead of subprocess
   use_ipc: false
   # IPC connection settings
@@ -29,15 +25,21 @@ kdb:
 
 # DuckDB configuration
 duckdb:
-  # Number of threads (4 = match KDB+ license limit for fair comparison)
-  threads: 4
   # Memory limit (e.g., "4GB", null = unlimited)
   memory_limit: null
 
-# Polars configuration
-polars:
-  # Number of threads (4 = match KDB+ license limit for fair comparison)
-  threads: 4
+# QuestDB configuration
+questdb:
+  # PostgreSQL wire protocol host
+  host: "localhost"
+  # PostgreSQL wire protocol port
+  port: 8812
+  # Database name
+  database: "qdb"
+  # Username
+  user: "admin"
+  # Password
+  password: "quest"
 
 # General settings
 general:

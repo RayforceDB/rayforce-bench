@@ -17,18 +17,19 @@ import yaml
 # Environment variable mappings
 ENV_MAPPINGS = {
     "RAYFORCE_BINARY": ("rayforce", "binary"),
-    "RAYFORCE_THREADS": ("rayforce", "threads"),
     "RAYFORCE_USE_IPC": ("rayforce", "use_ipc"),
     "RAYFORCE_HOST": ("rayforce", "host"),
     "RAYFORCE_PORT": ("rayforce", "port"),
     "KDB_BINARY": ("kdb", "binary"),
-    "KDB_THREADS": ("kdb", "threads"),
     "KDB_USE_IPC": ("kdb", "use_ipc"),
     "KDB_HOST": ("kdb", "host"),
     "KDB_PORT": ("kdb", "port"),
-    "DUCKDB_THREADS": ("duckdb", "threads"),
     "DUCKDB_MEMORY_LIMIT": ("duckdb", "memory_limit"),
-    "POLARS_THREADS": ("polars", "threads"),
+    "QUESTDB_HOST": ("questdb", "host"),
+    "QUESTDB_PORT": ("questdb", "port"),
+    "QUESTDB_DATABASE": ("questdb", "database"),
+    "QUESTDB_USER": ("questdb", "user"),
+    "QUESTDB_PASSWORD": ("questdb", "password"),
     "BENCH_REPORTS_DIR": ("general", "reports_dir"),
     "BENCH_DATASETS_DIR": ("general", "datasets_dir"),
     "BENCH_VERBOSE": ("general", "verbose"),
@@ -86,15 +87,15 @@ class Config:
                 # Ensure section exists
                 if section not in self._data:
                     self._data[section] = {}
-                
+
                 # Convert value types
-                if key == "port" or key == "threads":
+                if key == "port":
                     value = int(value) if value else None
                 elif key in ("use_ipc", "verbose"):
                     value = value.lower() in ("true", "1", "yes")
                 elif value == "":
                     value = None
-                
+
                 self._data[section][key] = value
     
     def get(self, section: str, key: str, default: Any = None) -> Any:
@@ -140,7 +141,12 @@ class Config:
     def polars(self) -> dict[str, Any]:
         """Polars configuration section."""
         return self.get_section("polars")
-    
+
+    @property
+    def questdb(self) -> dict[str, Any]:
+        """QuestDB configuration section."""
+        return self.get_section("questdb")
+
     @property
     def general(self) -> dict[str, Any]:
         """General configuration section."""

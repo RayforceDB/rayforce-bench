@@ -162,18 +162,18 @@ For subprocess-based adapters:
 
 ## Threading Configuration
 
-| Adapter   | Default Threading     | Override Option           |
-|-----------|----------------------|---------------------------|
-| DuckDB    | Multi-threaded (auto)| `--duckdb-threads N`      |
-| Polars    | Multi-threaded (auto)| `--polars-threads N`      |
-| Rayforce  | Configurable         | Via rayforce `-c` flag    |
-| KDB+      | Single-threaded      | N/A (q is single-threaded)|
+Each adapter uses its default threading model:
 
-For fair comparison, consider matching thread counts:
-```bash
-# Single-threaded comparison
-python run_bench.py --duckdb-threads 1 --polars-threads 1 ...
-```
+| Adapter   | Threading                                  |
+|-----------|--------------------------------------------|
+| DuckDB    | Multi-threaded (auto, uses all CPU cores)  |
+| Polars    | Multi-threaded (auto, uses all CPU cores)  |
+| Pandas    | Single-threaded (GIL-bound)                |
+| Rayforce  | Multi-threaded (auto)                      |
+| KDB+      | Single-threaded (q is single-threaded)     |
+| QuestDB   | Server-managed threading                   |
+
+Threading is managed internally by each database engine for optimal performance.
 
 ## Validation
 

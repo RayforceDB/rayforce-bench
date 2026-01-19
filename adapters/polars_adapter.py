@@ -8,12 +8,11 @@ Measures only native query execution time using perf_counter_ns.
 FAIRNESS:
 - Uses LazyFrame for query optimization (predicate pushdown, projection)
 - Times only the collect() call which triggers native Rust execution
-- Polars uses all available cores by default (configurable via n_threads)
+- Polars uses all available cores by default
 - No Python overhead in the timed section - just native DataFrame ops
 """
 
 import hashlib
-import os
 import time
 from pathlib import Path
 from typing import Any
@@ -21,7 +20,6 @@ from typing import Any
 import polars as pl
 
 from benchmarks.adapter import Adapter, AdapterResult, SetupError, TaskError
-from benchmarks.config import get_config
 
 
 # Type mapping from manifest types to Polars types
@@ -43,43 +41,26 @@ TYPE_MAP = {
 
 class PolarsAdapter(Adapter):
     """Polars in-process adapter.
-    
+
     Uses Polars DataFrame library for high-performance operations.
     All operations run in-process without IPC or network.
-    
+
     PARALLELISM:
     - Polars uses Rayon for parallel execution (Rust thread pool)
     - By default uses all available CPU cores
-    - Can be configured via POLARS_MAX_THREADS env var or n_threads param
     """
-    
+
     name = "polars"
     version = pl.__version__
     embedded = True
-    
-    def __init__(self, n_threads: int | None = None):
-        """Initialize Polars adapter.
-        
-        Args:
-            n_threads: Number of threads (None = auto, or from config).
-        """
-        config = get_config()
-        polars_config = config.polars if hasattr(config, 'polars') else {}
-        
-        self.n_threads = n_threads if n_threads is not None else polars_config.get("threads")
+
+    def __init__(self):
+        """Initialize Polars adapter."""
         self._tables: dict[str, pl.DataFrame] = {}
         self._lazy_tables: dict[str, pl.LazyFrame] = {}  # Lazy versions for optimized queries
         self._table_name: str = ""
         self._schema: dict[str, Any] = {}
         self._tasks = self._build_task_registry()
-        
-        # Configure thread pool
-        # Note: POLARS_MAX_THREADS env var is the canonical way to set this
-        if self.n_threads is not None:
-            os.environ["POLARS_MAX_THREADS"] = str(self.n_threads)
-        
-        # Get actual thread count for info
-        self._actual_threads = int(os.environ.get("POLARS_MAX_THREADS", os.cpu_count() or 1))
     
     def _build_task_registry(self) -> dict[str, callable]:
         """Build registry of task handlers."""
@@ -174,8 +155,6 @@ class PolarsAdapter(Adapter):
         info = super().get_info()
         info.update({
             "polars_version": pl.__version__,
-            "threads": self._actual_threads,
-            "configured_threads": self.n_threads,
         })
         return info
     

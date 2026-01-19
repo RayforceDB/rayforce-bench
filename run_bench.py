@@ -49,7 +49,19 @@ def get_available_adapters() -> dict[str, type]:
         adapters["polars"] = PolarsAdapter
     except ImportError as e:
         print(f"Warning: Polars adapter not available: {e}")
-    
+
+    try:
+        from adapters.pandas_adapter import PandasAdapter
+        adapters["pandas"] = PandasAdapter
+    except ImportError as e:
+        print(f"Warning: Pandas adapter not available: {e}")
+
+    try:
+        from adapters.questdb_adapter import QuestDBAdapter
+        adapters["questdb"] = QuestDBAdapter
+    except ImportError as e:
+        print(f"Warning: QuestDB adapter not available: {e}")
+
     return adapters
 
 
@@ -94,14 +106,14 @@ Examples:
     parser.add_argument(
         "--suite", "-s",
         type=Path,
-        default=Path("suites/example_full.yaml"),
-        help="Path to benchmark suite YAML file (default: suites/example_full.yaml)"
+        default=Path("suites/groupby.yaml"),
+        help="Path to benchmark suite YAML file (default: suites/groupby.yaml)"
     )
     parser.add_argument(
         "--dataset", "-d",
         type=Path,
-        default=Path("datasets/example_groupby"),
-        help="Path to dataset directory (default: datasets/example_groupby)"
+        default=Path("datasets/G1_1e7_1e2_0_0"),
+        help="Path to dataset directory (default: datasets/G1_1e7_1e2_0_0)"
     )
     parser.add_argument(
         "--adapters", "-a",
@@ -131,12 +143,6 @@ Examples:
         help="Skip HTML report generation"
     )
     parser.add_argument(
-        "--duckdb-threads",
-        type=int,
-        default=None,
-        help="Number of DuckDB threads (default: auto)"
-    )
-    parser.add_argument(
         "--duckdb-memory",
         type=str,
         default=None,
@@ -155,10 +161,16 @@ Examples:
         help="Path to kdb q binary (overrides config)"
     )
     parser.add_argument(
-        "--polars-threads",
+        "--questdb-host",
+        type=str,
+        default=None,
+        help="QuestDB host (default: localhost)"
+    )
+    parser.add_argument(
+        "--questdb-port",
         type=int,
         default=None,
-        help="Number of Polars threads (default: auto)"
+        help="QuestDB PostgreSQL wire port (default: 8812)"
     )
     parser.add_argument(
         "--config",
@@ -249,7 +261,6 @@ Examples:
         # Create adapter with CLI overrides (config is used as default)
         if name == "duckdb":
             adapter = available[name](
-                threads=args.duckdb_threads,
                 memory_limit=args.duckdb_memory,
             )
         elif name == "rayforce":
@@ -260,9 +271,10 @@ Examples:
             adapter = available[name](
                 binary_path=args.kdb_binary,
             )
-        elif name == "polars":
+        elif name == "questdb":
             adapter = available[name](
-                n_threads=args.polars_threads,
+                host=args.questdb_host,
+                port=args.questdb_port,
             )
         else:
             adapter = available[name]()

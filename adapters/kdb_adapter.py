@@ -20,32 +20,28 @@ from benchmarks.config import get_config
 
 class KDBAdapter(Adapter):
     """KDB+/q adapter using subprocess execution.
-    
+
     Uses q's \t command for timing, which measures only query execution
     (similar to Rayforce's timeit function).
     """
-    
+
     name = "kdb"
     version = "4.0"
     embedded = False
-    
+
     def __init__(
         self,
         binary_path: str | Path | None = None,
-        threads: int | None = None,
     ):
         """Initialize KDB adapter.
 
         Args:
             binary_path: Path to q binary (default: from config or 'q')
-            threads: Number of secondary threads (-s flag). Default 3 for 4-core license.
         """
         config = get_config()
         kdb_config = config.kdb
 
         self.binary_path = Path(binary_path or kdb_config.get("binary", "q"))
-        # KDB+ -s flag sets secondary threads. 3 secondary + 1 main = 4 total cores
-        self.threads = threads if threads is not None else kdb_config.get("threads", 3)
 
         self._schema: dict[str, Any] = {}
         self._table_name: str = ""
@@ -97,7 +93,7 @@ class KDBAdapter(Adapter):
         # Try to get version
         try:
             result = subprocess.run(
-                [str(self.binary_path), "-s", str(self.threads), "-q"],
+                [str(self.binary_path), "-q"],
                 input="\\\\",  # Exit immediately
                 capture_output=True,
                 text=True,
@@ -134,8 +130,6 @@ class KDBAdapter(Adapter):
             "kdb_version": self.version,
             "mode": "subprocess",
             "binary_path": str(self.binary_path),
-            "threads": self.threads,  # Secondary threads (-s flag)
-            "total_cores": self.threads + 1,  # Secondary + main thread
         })
         return info
     
@@ -191,7 +185,7 @@ count r
 """
             
             result = subprocess.run(
-                [str(self.binary_path), "-s", str(self.threads), "-q"],
+                [str(self.binary_path), "-q"],
                 input=q_script,
                 capture_output=True,
                 text=True,

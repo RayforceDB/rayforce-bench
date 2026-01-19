@@ -141,7 +141,6 @@ class RayforceAdapter(Adapter):
     def __init__(
         self,
         binary_path: str | Path | None = None,
-        threads: int | None = None,
         use_ipc: bool | None = None,
         host: str | None = None,
         port: int | None = None,
@@ -150,7 +149,6 @@ class RayforceAdapter(Adapter):
 
         Args:
             binary_path: Path to rayforce binary (default: from config).
-            threads: Number of threads (default: 4 to match KDB+ license limit).
             use_ipc: If True, use IPC mode with server (default: True for fairness).
             host: IPC server host.
             port: IPC server port.
@@ -159,8 +157,6 @@ class RayforceAdapter(Adapter):
         rf_config = config.rayforce
 
         self.binary_path = Path(binary_path or rf_config.get("binary", "rayforce"))
-        # Thread limit for fair comparison with KDB+ (4 core license)
-        self.threads = threads if threads is not None else rf_config.get("threads", 4)
         # Subprocess mode is default (IPC mode requires manual server setup)
         # Note: Subprocess mode is still FAIR because timeit measures only query, not CSV loading
         self.use_ipc = use_ipc if use_ipc is not None else rf_config.get("use_ipc", False)
@@ -233,10 +229,8 @@ class RayforceAdapter(Adapter):
         """Start rayforce server process for IPC mode."""
         import time as _time
 
-        # Start server with thread limit
+        # Start server
         cmd = [str(self.binary_path), "-p", str(self.port)]
-        if self.threads is not None:
-            cmd.extend(["-t", str(self.threads)])
 
         self._server_proc = subprocess.Popen(
             cmd,
@@ -330,7 +324,6 @@ class RayforceAdapter(Adapter):
             "rayforce_version": self.version,
             "mode": "ipc" if self.use_ipc else "subprocess",
             "binary_path": str(self.binary_path),
-            "threads": self.threads,
         })
         return info
     
@@ -428,9 +421,9 @@ class RayforceAdapter(Adapter):
             
             load_script = "\n".join(load_statements)
             
-            # Use timeit to get accurate timing from Rayforce itself
+            # Use timeit to get accurate timing from Rayforce itself (10 iterations)
             full_script = f'''{load_script}
-(set _timing (timeit {expr}))
+(set _timing (timeit 10 {expr}))
 (set _result {expr})
 (set _count (count _result))
 (print "TIMING_MS:")
@@ -444,10 +437,7 @@ class RayforceAdapter(Adapter):
                 script_path = f.name
             
             try:
-                cmd = [str(self.binary_path)]
-                if self.threads is not None:
-                    cmd.extend(["-t", str(self.threads)])
-                cmd.extend(["-f", script_path])
+                cmd = [str(self.binary_path), "-f", script_path]
 
                 result = subprocess.run(
                     cmd,
@@ -500,8 +490,9 @@ class RayforceAdapter(Adapter):
                             pass
                 
                 # Use Rayforce's timeit result (measures query execution only)
+                # timeit returns total time for 10 iterations, so divide by 10
                 if timing_ms is not None:
-                    execution_ns = int(timing_ms * 1_000_000)
+                    execution_ns = int(timing_ms * 1_000_000 / 10)
                 else:
                     execution_ns = end_ns - start_ns  # Fallback to Python timing
                 
@@ -620,7 +611,7 @@ class RayforceAdapter(Adapter):
 
     # =========================================================================
     # Sort Queries (Rayforce syntax)
-    # From Rayforce docs: (sort col t) or (asc col t)
+    # From Rayforce docs: (xasc [col] table) or (xdesc [col] table)
     # =========================================================================
 
     def _task_sort_single(self, params: dict[str, Any]) -> AdapterResult:
@@ -629,18 +620,18 @@ class RayforceAdapter(Adapter):
         column = params.get("column", "id1")
         descending = params.get("descending", False)
         if descending:
-            expr = f"(desc {column} {table})"
+            expr = f"(xdesc [{column}] {table})"
         else:
-            expr = f"(asc {column} {table})"
+            expr = f"(xasc [{column}] {table})"
         return self._execute_expr(expr)
 
     def _task_sort_multi(self, params: dict[str, Any]) -> AdapterResult:
         """Sort by multiple columns"""
         table = params.get("table", self._table_name)
         columns = params.get("columns", ["id1", "id2"])
-        # Rayforce multi-column sort: (asc [col1 col2] t)
+        # Rayforce multi-column sort: (xasc [col1 col2] table)
         cols_str = " ".join(columns)
-        expr = f"(asc [{cols_str}] {table})"
+        expr = f"(xasc [{cols_str}] {table})"
         return self._execute_expr(expr)
 
     # =========================================================================
