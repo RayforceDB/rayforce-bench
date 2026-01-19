@@ -2,7 +2,6 @@
 
 import subprocess
 import time
-import sys
 
 
 CONTAINERS = {
@@ -17,7 +16,7 @@ CONTAINERS = {
     "timescale": {
         "image": "timescale/timescaledb:latest-pg16",
         "name": "rayforce-bench-timescale",
-        "ports": {"5433": "5432"},  # Use 5433 to avoid conflict with local postgres
+        "ports": {"5433": "5432"},
         "env": {"POSTGRES_PASSWORD": "postgres"},
         "ready_check": ("localhost", 5433),
         "ready_timeout": 30,
@@ -32,11 +31,7 @@ CONTAINERS = {
 def is_docker_available() -> bool:
     """Check if Docker is available."""
     try:
-        result = subprocess.run(
-            ["docker", "info"],
-            capture_output=True,
-            timeout=5,
-        )
+        result = subprocess.run(["docker", "info"], capture_output=True, timeout=5)
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
@@ -78,72 +73,59 @@ def wait_for_port(host: str, port: int, timeout: int = 30) -> bool:
     return False
 
 
-def start_container(db_name: str) -> bool:
+def start_container(db_name: str, quiet: bool = False) -> bool:
     """Start a database container."""
     if db_name not in CONTAINERS:
-        print(f"  Unknown database: {db_name}")
         return False
 
     config = CONTAINERS[db_name]
     name = config["name"]
 
-    # Check if already running
     if is_container_running(name):
-        print(f"  ✓ {db_name}: already running")
         return True
 
-    # If container exists but stopped, start it
     if container_exists(name):
-        print(f"  Starting existing {db_name} container...")
         result = subprocess.run(["docker", "start", name], capture_output=True)
         if result.returncode != 0:
-            print(f"  ✗ Failed to start {db_name}")
+            if not quiet:
+                print(f"Failed to start {db_name}")
             return False
     else:
-        # Create and start new container
-        print(f"  Creating {db_name} container...")
         cmd = ["docker", "run", "-d", "--name", name]
-
         for host_port, container_port in config["ports"].items():
             cmd.extend(["-p", f"{host_port}:{container_port}"])
-
         for key, value in config.get("env", {}).items():
             cmd.extend(["-e", f"{key}={value}"])
-
         cmd.append(config["image"])
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"  ✗ Failed to create {db_name}: {result.stderr}")
+            if not quiet:
+                print(f"Failed to create {db_name}")
             return False
 
-    # Wait for readiness
     host, port = config["ready_check"]
-    print(f"  Waiting for {db_name} to be ready...")
     if not wait_for_port(host, port, config["ready_timeout"]):
-        print(f"  ✗ {db_name} failed to start (timeout)")
+        if not quiet:
+            print(f"{db_name} failed to start")
         return False
 
-    # Run post-start commands
     for cmd_template in config.get("post_start", []):
         cmd = cmd_template.format(name=name)
         subprocess.run(cmd, shell=True, capture_output=True)
         time.sleep(0.5)
 
-    print(f"  ✓ {db_name}: ready")
     return True
 
 
-def stop_container(db_name: str) -> bool:
+def stop_container(db_name: str, quiet: bool = False) -> bool:
     """Stop a database container."""
     if db_name not in CONTAINERS:
         return False
 
     name = CONTAINERS[db_name]["name"]
     if is_container_running(name):
-        print(f"  Stopping {db_name}...")
         subprocess.run(["docker", "stop", name], capture_output=True)
-        print(f"  ✓ {db_name}: stopped")
     return True
 
 
@@ -153,56 +135,42 @@ def remove_container(db_name: str) -> bool:
         return False
 
     name = CONTAINERS[db_name]["name"]
-    stop_container(db_name)
+    stop_container(db_name, quiet=True)
     if container_exists(name):
-        print(f"  Removing {db_name}...")
         subprocess.run(["docker", "rm", name], capture_output=True)
-        print(f"  ✓ {db_name}: removed")
     return True
 
 
-def start_required_infrastructure(adapters: list[str]) -> bool:
+def start_required_infrastructure(adapters: list[str], quiet: bool = False) -> bool:
     """Start infrastructure required for the given adapters."""
-    # Determine which databases need Docker
-    needs_docker = []
-    for adapter in adapters:
-        if adapter in CONTAINERS:
-            needs_docker.append(adapter)
+    needs_docker = [a for a in adapters if a in CONTAINERS]
 
     if not needs_docker:
         return True
 
-    print("\n=== Starting Infrastructure ===")
-
-    # Check Docker
     if not is_docker_available():
-        print("  ✗ Docker is not available. Install Docker to use questdb/timescale.")
-        print(f"  Skipping: {', '.join(needs_docker)}")
+        if not quiet:
+            print("Docker not available")
         return False
 
-    # Start required containers
     all_started = True
     for db in needs_docker:
-        if not start_container(db):
+        if not start_container(db, quiet=quiet):
             all_started = False
 
-    print()
     return all_started
 
 
-def stop_infrastructure(adapters: list[str] | None = None):
+def stop_infrastructure(adapters: list[str] | None = None, quiet: bool = False):
     """Stop infrastructure containers."""
-    print("\n=== Stopping Infrastructure ===")
-
     dbs = adapters if adapters else list(CONTAINERS.keys())
     for db in dbs:
         if db in CONTAINERS:
-            stop_container(db)
+            stop_container(db, quiet=quiet)
 
 
 def cleanup_infrastructure():
     """Remove all infrastructure containers."""
-    print("\n=== Cleaning Up Infrastructure ===")
     for db in CONTAINERS:
         remove_container(db)
 
@@ -223,12 +191,11 @@ if __name__ == "__main__":
     elif args.action == "cleanup":
         cleanup_infrastructure()
     elif args.action == "status":
-        print("\n=== Infrastructure Status ===")
         for db, config in CONTAINERS.items():
             name = config["name"]
             if is_container_running(name):
-                print(f"  ✓ {db}: running")
+                print(f"✓ {db}: running")
             elif container_exists(name):
-                print(f"  ○ {db}: stopped")
+                print(f"○ {db}: stopped")
             else:
-                print(f"  ✗ {db}: not created")
+                print(f"✗ {db}: not created")

@@ -18,13 +18,13 @@ class DuckDBAdapter(Adapter):
         self._table_names: dict[str, str] = {}
 
     def load_data(self, path: Path, table_name: str = "data") -> None:
-        """Load parquet data into DuckDB."""
+        """Load CSV data into DuckDB in-memory table."""
         if self._conn is None:
             self._conn = duckdb.connect()
 
-        # Create table from parquet file
+        # Create table from CSV file and materialize in memory
         sql_table_name = f"bench_{table_name}"
-        self._conn.execute(f"CREATE TABLE {sql_table_name} AS SELECT * FROM read_parquet('{path}')")
+        self._conn.execute(f"CREATE TABLE {sql_table_name} AS SELECT * FROM read_csv('{path}')")
         self._table_names[table_name] = sql_table_name
 
     def _get_table(self, name: str = "data") -> str:
@@ -94,8 +94,8 @@ class DuckDBAdapter(Adapter):
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         left = self._get_table("left")
-        # Load right table
-        self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_parquet('{right_path}')")
+        # Load right table and materialize in memory before timing
+        self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
 
         def query():
             return self._conn.execute(
@@ -109,8 +109,8 @@ class DuckDBAdapter(Adapter):
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on id1."""
         left = self._get_table("left")
-        # Load right table
-        self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_parquet('{right_path}')")
+        # Load right table and materialize in memory before timing
+        self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
 
         def query():
             return self._conn.execute(

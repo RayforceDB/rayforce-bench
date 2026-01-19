@@ -2,6 +2,7 @@
 """Benchmark runner CLI."""
 
 import argparse
+import gc
 import json
 import sys
 from dataclasses import dataclass
@@ -13,11 +14,9 @@ from .adapters import (
     Adapter,
     BenchmarkResult,
     DuckDBAdapter,
-    PandasAdapter,
     PolarsAdapter,
     QuestDBAdapter,
     RayforceAdapter,
-    RayforcePyAdapter,
     TimescaleAdapter,
 )
 from .report import generate_html_report
@@ -71,9 +70,7 @@ class BenchmarkRunner:
         self._adapters: dict[str, Adapter] = {}
 
         for name in adapters:
-            if name == "pandas":
-                self._adapters[name] = PandasAdapter()
-            elif name == "polars":
+            if name == "polars":
                 self._adapters[name] = PolarsAdapter()
             elif name == "duckdb":
                 self._adapters[name] = DuckDBAdapter()
@@ -83,8 +80,6 @@ class BenchmarkRunner:
                 self._adapters[name] = TimescaleAdapter()
             elif name == "rayforce":
                 self._adapters[name] = RayforceAdapter(local_path=rayforce_local)
-            elif name == "rayforce-py":
-                self._adapters[name] = RayforcePyAdapter(local_path=rayforce_local)
             else:
                 raise ValueError(f"Unknown adapter: {name}")
 
@@ -93,27 +88,29 @@ class BenchmarkRunner:
         results = []
 
         for name, adapter in self._adapters.items():
-            print(f"\n=== {name} ({adapter.version}) ===")
-            adapter.load_data(data_path / "data.parquet")
+            print(f"{name}", end="", flush=True)
+            adapter.load_data(data_path / "data.csv")
 
             for bench_name in self.BENCHMARKS["groupby"]:
                 method = getattr(adapter, f"run_{bench_name}")
                 run = self._run_benchmark(name, adapter, bench_name, method)
                 results.append(run)
-                self._print_result(run)
+                print(".", end="", flush=True)
 
             adapter.close()
+            gc.collect()
+            print()
 
         return results
 
     def run_join(self, data_path: Path) -> list[BenchmarkRun]:
         """Run join benchmarks."""
         results = []
-        left_path = data_path / "left.parquet"
-        right_path = data_path / "right.parquet"
+        left_path = data_path / "left.csv"
+        right_path = data_path / "right.csv"
 
         for name, adapter in self._adapters.items():
-            print(f"\n=== {name} ({adapter.version}) ===")
+            print(f"{name}", end="", flush=True)
             adapter.load_data(left_path, "left")
 
             for bench_name in self.BENCHMARKS["join"]:
@@ -123,9 +120,11 @@ class BenchmarkRunner:
                     lambda m=method: m(right_path)
                 )
                 results.append(run)
-                self._print_result(run)
+                print(".", end="", flush=True)
 
             adapter.close()
+            gc.collect()
+            print()
 
         return results
 
@@ -134,16 +133,18 @@ class BenchmarkRunner:
         results = []
 
         for name, adapter in self._adapters.items():
-            print(f"\n=== {name} ({adapter.version}) ===")
-            adapter.load_data(data_path / "data.parquet")
+            print(f"{name}", end="", flush=True)
+            adapter.load_data(data_path / "data.csv")
 
             for bench_name in self.BENCHMARKS["sort"]:
                 method = getattr(adapter, f"run_{bench_name}")
                 run = self._run_benchmark(name, adapter, bench_name, method)
                 results.append(run)
-                self._print_result(run)
+                print(".", end="", flush=True)
 
             adapter.close()
+            gc.collect()
+            print()
 
         return results
 
@@ -274,8 +275,8 @@ def main():
     parser.add_argument(
         "-a", "--adapters",
         nargs="+",
-        default=["pandas", "polars", "duckdb", "rayforce"],
-        help="Adapters: pandas, polars, duckdb, questdb, timescale, rayforce, rayforce-py",
+        default=["rayforce", "polars", "duckdb"],
+        help="Adapters: polars, duckdb, questdb, timescale, rayforce",
     )
     parser.add_argument(
         "--rayforce-local",
@@ -328,7 +329,7 @@ def main():
     # Check dependencies first
     from .adapters import print_dependency_status
     if args.check_deps:
-        print_dependency_status()
+        print_dependency_status(quiet=False)
         sys.exit(0)
 
     # Validate required args for actual benchmark runs
@@ -337,28 +338,25 @@ def main():
     if not args.data:
         parser.error("-d/--data is required")
 
-    if not print_dependency_status():
-        print("Install missing dependencies before running benchmarks.")
+    if not print_dependency_status(quiet=True):
         sys.exit(1)
 
     # Start required infrastructure (Docker containers)
     if not args.no_docker:
         from .infra import start_required_infrastructure
-        if not start_required_infrastructure(args.adapters):
-            # Remove adapters that couldn't start
+        if not start_required_infrastructure(args.adapters, quiet=True):
             from .infra import CONTAINERS, is_container_running
             failed = [a for a in args.adapters if a in CONTAINERS and not is_container_running(CONTAINERS[a]["name"])]
             if failed:
-                print(f"Removing unavailable adapters: {', '.join(failed)}")
                 args.adapters = [a for a in args.adapters if a not in failed]
                 if not args.adapters:
-                    print("No adapters available to benchmark.")
+                    print("No adapters available.")
                     sys.exit(1)
 
     data_path = Path(args.data)
 
     if not data_path.exists():
-        print(f"Error: Data path does not exist: {data_path}")
+        print(f"Error: {data_path} not found")
         sys.exit(1)
 
     runner = BenchmarkRunner(
@@ -371,15 +369,12 @@ def main():
     results = []
 
     if args.benchmark in ("groupby", "all"):
-        print("\n### GROUPBY BENCHMARKS ###")
         results.extend(runner.run_groupby(data_path))
 
     if args.benchmark in ("join", "all"):
-        print("\n### JOIN BENCHMARKS ###")
         results.extend(runner.run_join(data_path))
 
     if args.benchmark in ("sort", "all"):
-        print("\n### SORT BENCHMARKS ###")
         results.extend(runner.run_sort(data_path))
 
     print_comparison(results)
@@ -390,10 +385,9 @@ def main():
     if not args.no_html:
         generate_html_report(results, Path(args.html))
 
-    # Stop infrastructure if requested
     if args.stop_infra:
         from .infra import stop_infrastructure
-        stop_infrastructure(args.adapters)
+        stop_infrastructure(args.adapters, quiet=True)
 
 
 if __name__ == "__main__":

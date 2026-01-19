@@ -32,7 +32,9 @@ class RayforceAdapter(Adapter):
         self._local_path = Path(local_path) if local_path else None
         self._rayforce = None
         self._eval_str = None
-        self._load_parquet = None
+        self._Table = None
+        self._I64 = None
+        self._F64 = None
         self._table_names: dict[str, str] = {}  # Maps logical name to rayforce symbol
 
         self._setup_rayforce()
@@ -48,11 +50,13 @@ class RayforceAdapter(Adapter):
         """Use rayforce from PyPI."""
         try:
             import rayforce
-            from rayforce.plugins.parquet import load_parquet
+            from rayforce import Table, I64, F64
 
             self._rayforce = rayforce
             self._eval_str = rayforce.eval_str
-            self._load_parquet = load_parquet
+            self._Table = Table
+            self._I64 = I64
+            self._F64 = F64
             self.version = f"{rayforce.version} (pypi)"
         except ImportError as e:
             raise ImportError(
@@ -89,21 +93,42 @@ class RayforceAdapter(Adapter):
                 del sys.modules[mod]
 
         import rayforce
-        from rayforce.plugins.parquet import load_parquet
+        from rayforce import Table, I64, F64
 
         self._rayforce = rayforce
         self._eval_str = rayforce.eval_str
-        self._load_parquet = load_parquet
+        self._Table = Table
+        self._I64 = I64
+        self._F64 = F64
         self.version = f"{rayforce.version} (local: {self._local_path})"
         print(f"Using rayforce {self.version}")
 
     def load_data(self, path: Path, table_name: str = "data") -> None:
-        """Load data and save to rayforce runtime with a symbol name."""
-        table = self._load_parquet(str(path))
-        # Save table to rayforce runtime with a unique symbol name
+        """Load CSV data using rayforce native Table.from_csv."""
         symbol_name = f"_bench_{table_name}"
-        table.save(symbol_name)
+
+        # Determine column types from CSV header
+        column_types = self._get_column_types(path)
+
+        # Use rayforce native CSV loading with column types
+        rf_table = self._Table.from_csv(column_types, str(path)).select("*").execute()
+        rf_table.save(symbol_name)
         self._table_names[table_name] = symbol_name
+
+    def _get_column_types(self, path: Path) -> list:
+        """Get column types for CSV based on header."""
+        with open(path) as f:
+            header = f.readline().strip().split(",")
+
+        types = []
+        for col in header:
+            if col.startswith("id"):
+                types.append(self._I64)
+            elif col.startswith("v"):
+                types.append(self._F64)
+            else:
+                types.append(self._I64)
+        return types
 
     def _get_symbol(self, name: str = "data") -> str:
         """Get rayforce symbol name for a table."""
@@ -124,7 +149,7 @@ class RayforceAdapter(Adapter):
         timed_query = f"(timeit {query})"
         result = self._eval_str(timed_query)
 
-        # timeit returns time in milliseconds, convert to nanoseconds
+        # timeit returns time in milliseconds
         if hasattr(result, "value"):
             time_ms = result.value
         elif hasattr(result, "to_python"):
@@ -170,11 +195,16 @@ class RayforceAdapter(Adapter):
         query = f"(select {{v1: (sum v1) v2: (sum v2) v3: (sum v3) by: id3 from: {t}}})"
         return self._run_timed_query(query, "groupby_q5")
 
+    def _load_table_from_csv(self, path: Path) -> object:
+        """Load CSV file using rayforce native Table.from_csv."""
+        column_types = self._get_column_types(path)
+        return self._Table.from_csv(column_types, str(path))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         left_sym = self._get_symbol("left")
-        # Load right table
-        right_table = self._load_parquet(str(right_path))
+        # Load right table and materialize in memory before timing
+        right_table = self._load_table_from_csv(right_path)
         right_sym = "_bench_right_tmp"
         right_table.save(right_sym)
 
@@ -184,8 +214,8 @@ class RayforceAdapter(Adapter):
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on id1."""
         left_sym = self._get_symbol("left")
-        # Load right table
-        right_table = self._load_parquet(str(right_path))
+        # Load right table and materialize in memory before timing
+        right_table = self._load_table_from_csv(right_path)
         right_sym = "_bench_right_tmp"
         right_table.save(right_sym)
 

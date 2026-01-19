@@ -17,7 +17,8 @@ class PolarsAdapter(Adapter):
         self._tables: dict[str, pl.DataFrame] = {}
 
     def load_data(self, path: Path, table_name: str = "data") -> None:
-        self._tables[table_name] = pl.read_parquet(path)
+        # Load CSV and materialize in memory
+        self._tables[table_name] = pl.read_csv(path)
 
     def _get_table(self, name: str = "data") -> pl.DataFrame:
         if name not in self._tables:
@@ -81,7 +82,8 @@ class PolarsAdapter(Adapter):
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         left = self._get_table("left")
-        right = pl.read_parquet(right_path)
+        # Load right table and materialize in memory before timing
+        right = pl.read_csv(right_path)
 
         def query():
             return left.join(right, on="id1", how="inner")
@@ -92,7 +94,8 @@ class PolarsAdapter(Adapter):
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on id1."""
         left = self._get_table("left")
-        right = pl.read_parquet(right_path)
+        # Load right table and materialize in memory before timing
+        right = pl.read_csv(right_path)
 
         def query():
             return left.join(right, on="id1", how="left")

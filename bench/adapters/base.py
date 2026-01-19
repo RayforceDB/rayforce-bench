@@ -28,7 +28,7 @@ class Adapter(ABC):
     """Base class for benchmark adapters.
 
     Each adapter implements benchmarks for a specific engine
-    (pandas, polars, rayforce, etc.)
+    (polars, duckdb, rayforce, etc.)
     """
 
     name: str = "base"
@@ -36,10 +36,12 @@ class Adapter(ABC):
 
     @abstractmethod
     def load_data(self, path: Path, table_name: str = "data") -> None:
-        """Load data from parquet file.
+        """Load data from CSV file.
+
+        Data should be materialized in memory for accurate query timing.
 
         Args:
-            path: Path to parquet file
+            path: Path to CSV file
             table_name: Name to assign to the loaded table
         """
         pass

@@ -12,15 +12,16 @@ from .base import Adapter, BenchmarkResult
 class QuestDBAdapter(Adapter):
     """Benchmark adapter for QuestDB.
 
-    Uses PostgreSQL wire protocol to connect to QuestDB.
+    Uses PostgreSQL wire protocol for queries and ILP for fast data ingestion.
     Requires QuestDB to be running locally.
     """
 
     name = "questdb"
 
-    def __init__(self, host: str = "localhost", port: int = 8812):
+    def __init__(self, host: str = "localhost", pg_port: int = 8812, ilp_port: int = 9009):
         self._host = host
-        self._port = port
+        self._pg_port = pg_port
+        self._ilp_port = ilp_port
         self._conn = None
         self._table_names: dict[str, str] = {}
 
@@ -33,62 +34,60 @@ class QuestDBAdapter(Adapter):
                 "psycopg not installed. Install with: pip install psycopg[binary]"
             ) from e
 
+        try:
+            from questdb.ingress import Sender, ServerTimestamp
+            self._Sender = Sender
+            self._ServerTimestamp = ServerTimestamp
+        except ImportError as e:
+            raise ImportError(
+                "questdb not installed. Install with: pip install questdb"
+            ) from e
+
         self._connect()
 
     def _connect(self) -> None:
-        """Connect to QuestDB."""
+        """Connect to QuestDB via PostgreSQL wire protocol."""
         self._conn = self._psycopg.connect(
             host=self._host,
-            port=self._port,
+            port=self._pg_port,
             user="admin",
             password="quest",
             autocommit=True,
         )
 
     def load_data(self, path: Path, table_name: str = "data") -> None:
-        """Load parquet data into QuestDB."""
-        import pandas as pd
+        """Load CSV data into QuestDB using ILP (InfluxDB Line Protocol).
 
-        df = pd.read_parquet(path)
+        ILP is much faster than SQL INSERT (~100x speedup).
+        """
+        import polars as pl
+
+        df = pl.read_csv(path)
         sql_table_name = f"bench_{table_name}"
 
         # Drop table if exists
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {sql_table_name}")
 
-        # Create table and insert data
-        # QuestDB requires specific column types
-        columns = []
-        for col in df.columns:
-            if df[col].dtype == "int64":
-                columns.append(f"{col} LONG")
-            elif df[col].dtype == "float64":
-                columns.append(f"{col} DOUBLE")
-            else:
-                columns.append(f"{col} SYMBOL")
+        # Determine column types for ILP
+        int_cols = [name for name, dtype in df.schema.items() if dtype == pl.Int64]
+        float_cols = [name for name, dtype in df.schema.items() if dtype == pl.Float64]
+        str_cols = [name for name, dtype in df.schema.items() if dtype in (pl.Utf8, pl.String)]
 
-        create_sql = f"CREATE TABLE {sql_table_name} ({', '.join(columns)})"
-        with self._conn.cursor() as cur:
-            cur.execute(create_sql)
-
-        # Insert data in batches
-        batch_size = 10000
-        for i in range(0, len(df), batch_size):
-            batch = df.iloc[i:i + batch_size]
-            values = []
-            for _, row in batch.iterrows():
-                row_vals = []
-                for col in df.columns:
-                    val = row[col]
-                    if isinstance(val, str):
-                        row_vals.append(f"'{val}'")
-                    else:
-                        row_vals.append(str(val))
-                values.append(f"({', '.join(row_vals)})")
-
-            insert_sql = f"INSERT INTO {sql_table_name} VALUES {', '.join(values)}"
-            with self._conn.cursor() as cur:
-                cur.execute(insert_sql)
+        # Use ILP for fast ingestion
+        conf = f"tcp::addr={self._host}:{self._ilp_port};"
+        with self._Sender.from_conf(conf) as sender:
+            for row in df.iter_rows(named=True):
+                sender.row(
+                    sql_table_name,
+                    symbols={col: row[col] for col in str_cols},
+                    columns={
+                        **{col: row[col] for col in int_cols},
+                        **{col: row[col] for col in float_cols},
+                    },
+                    at=self._ServerTimestamp,
+                )
+            sender.flush()
 
         self._table_names[table_name] = sql_table_name
 

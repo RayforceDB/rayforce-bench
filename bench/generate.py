@@ -29,20 +29,10 @@ def cmd_groupby(args):
         null_pct=args.null_pct,
         seed=args.seed,
     )
-
-    print(f"Generating groupby data: {args.rows} rows, k={args.k}...")
     dataset = gen.generate()
-
     output_dir = Path(args.output) / dataset.name
-    formats = args.format.split(',')
-
-    print(f"Writing to {output_dir}...")
-    paths = dataset.write(output_dir, formats=formats)
-
-    print(f"Done! Generated:")
-    for table, table_paths in paths.items():
-        for fmt, path in table_paths.items():
-            print(f"  - {path}")
+    dataset.write(output_dir, formats=args.format.split(','))
+    print(f"groupby: {output_dir}")
 
 
 def cmd_join(args):
@@ -53,20 +43,10 @@ def cmd_join(args):
         null_pct=args.null_pct,
         seed=args.seed,
     )
-
-    print(f"Generating join data: {args.left_rows} x {args.right_rows}...")
     dataset = gen.generate()
-
     output_dir = Path(args.output) / dataset.name
-    formats = args.format.split(',')
-
-    print(f"Writing to {output_dir}...")
-    paths = dataset.write(output_dir, formats=formats)
-
-    print(f"Done! Generated:")
-    for table, table_paths in paths.items():
-        for fmt, path in table_paths.items():
-            print(f"  - {path}")
+    dataset.write(output_dir, formats=args.format.split(','))
+    print(f"join: {output_dir}")
 
 
 def cmd_sort(args):
@@ -77,20 +57,10 @@ def cmd_sort(args):
         null_pct=args.null_pct,
         seed=args.seed,
     )
-
-    print(f"Generating sort data: {args.rows} rows...")
     dataset = gen.generate()
-
     output_dir = Path(args.output) / dataset.name
-    formats = args.format.split(',')
-
-    print(f"Writing to {output_dir}...")
-    paths = dataset.write(output_dir, formats=formats)
-
-    print(f"Done! Generated:")
-    for table, table_paths in paths.items():
-        for fmt, path in table_paths.items():
-            print(f"  - {path}")
+    dataset.write(output_dir, formats=args.format.split(','))
+    print(f"sort: {output_dir}")
 
 
 def cmd_all(args):
@@ -98,34 +68,22 @@ def cmd_all(args):
     output_base = Path(args.output)
     formats = args.format.split(',')
     size = args.size
+    n = parse_size(size)
 
-    datasets = []
-
-    # GroupBy
-    print(f"\n=== Generating groupby ({size}) ===")
-    gen = GroupByGenerator(n_rows=parse_size(size), k=100, seed=args.seed)
+    gen = GroupByGenerator(n_rows=n, k=100, seed=args.seed)
     ds = gen.generate()
     ds.write(output_base / ds.name, formats=formats)
-    datasets.append(ds.name)
+    print(f"groupby: {output_base / ds.name}")
 
-    # Join
-    print(f"\n=== Generating join ({size} x {size}//10) ===")
-    n = parse_size(size)
     gen = JoinGenerator(n_rows_left=n, n_rows_right=n // 10, seed=args.seed)
     ds = gen.generate()
     ds.write(output_base / ds.name, formats=formats)
-    datasets.append(ds.name)
+    print(f"join: {output_base / ds.name}")
 
-    # Sort
-    print(f"\n=== Generating sort ({size}) ===")
-    gen = SortGenerator(n_rows=parse_size(size), seed=args.seed)
+    gen = SortGenerator(n_rows=n, seed=args.seed)
     ds = gen.generate()
     ds.write(output_base / ds.name, formats=formats)
-    datasets.append(ds.name)
-
-    print(f"\n=== Done! Generated {len(datasets)} datasets ===")
-    for name in datasets:
-        print(f"  - {output_base / name}")
+    print(f"sort: {output_base / ds.name}")
 
 
 def main():
@@ -139,8 +97,8 @@ def main():
     )
     parser.add_argument(
         '-f', '--format',
-        default='parquet',
-        help='Output format(s), comma-separated: parquet,csv (default: parquet)'
+        default='csv',
+        help='Output format(s), comma-separated: parquet,csv (default: csv)'
     )
     parser.add_argument(
         '--seed',

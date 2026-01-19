@@ -57,10 +57,11 @@ class TimescaleAdapter(Adapter):
         )
 
     def load_data(self, path: Path, table_name: str = "data") -> None:
-        """Load parquet data into TimescaleDB."""
-        import pandas as pd
+        """Load CSV data into TimescaleDB."""
+        import io
+        import polars as pl
 
-        df = pd.read_parquet(path)
+        df = pl.read_csv(path)
         sql_table_name = f"bench_{table_name}"
 
         # Drop table if exists
@@ -69,23 +70,25 @@ class TimescaleAdapter(Adapter):
 
         # Create table
         columns = []
-        for col in df.columns:
-            if df[col].dtype == "int64":
-                columns.append(f"{col} BIGINT")
-            elif df[col].dtype == "float64":
-                columns.append(f"{col} DOUBLE PRECISION")
+        for name, dtype in df.schema.items():
+            if dtype == pl.Int64:
+                columns.append(f"{name} BIGINT")
+            elif dtype == pl.Float64:
+                columns.append(f"{name} DOUBLE PRECISION")
             else:
-                columns.append(f"{col} TEXT")
+                columns.append(f"{name} TEXT")
 
         create_sql = f"CREATE TABLE {sql_table_name} ({', '.join(columns)})"
         with self._conn.cursor() as cur:
             cur.execute(create_sql)
 
-        # Use COPY for fast bulk insert
+        # Use COPY with CSV buffer for fast bulk insert
+        buffer = io.StringIO()
+        df.write_csv(buffer, include_header=False)
+        buffer.seek(0)
         with self._conn.cursor() as cur:
-            with cur.copy(f"COPY {sql_table_name} FROM STDIN") as copy:
-                for _, row in df.iterrows():
-                    copy.write_row(row.tolist())
+            with cur.copy(f"COPY {sql_table_name} FROM STDIN WITH CSV") as copy:
+                copy.write(buffer.read())
 
         self._table_names[table_name] = sql_table_name
 
@@ -157,31 +160,34 @@ class TimescaleAdapter(Adapter):
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
-        import pandas as pd
+        import io
+        import polars as pl
 
         left = self._get_table("left")
 
-        # Load right table
-        df = pd.read_parquet(right_path)
+        # Load right table and materialize in memory before timing
+        df = pl.read_csv(right_path)
         right_table = "bench_right_tmp"
 
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {right_table}")
 
         columns = []
-        for col in df.columns:
-            if df[col].dtype == "int64":
-                columns.append(f"{col} BIGINT")
-            elif df[col].dtype == "float64":
-                columns.append(f"{col} DOUBLE PRECISION")
+        for name, dtype in df.schema.items():
+            if dtype == pl.Int64:
+                columns.append(f"{name} BIGINT")
+            elif dtype == pl.Float64:
+                columns.append(f"{name} DOUBLE PRECISION")
             else:
-                columns.append(f"{col} TEXT")
+                columns.append(f"{name} TEXT")
 
+        buffer = io.StringIO()
+        df.write_csv(buffer, include_header=False)
+        buffer.seek(0)
         with self._conn.cursor() as cur:
             cur.execute(f"CREATE TABLE {right_table} ({', '.join(columns)})")
-            with cur.copy(f"COPY {right_table} FROM STDIN") as copy:
-                for _, row in df.iterrows():
-                    copy.write_row(row.tolist())
+            with cur.copy(f"COPY {right_table} FROM STDIN WITH CSV") as copy:
+                copy.write(buffer.read())
 
         def query():
             with self._conn.cursor() as cur:
@@ -197,31 +203,34 @@ class TimescaleAdapter(Adapter):
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on id1."""
-        import pandas as pd
+        import io
+        import polars as pl
 
         left = self._get_table("left")
 
-        # Load right table
-        df = pd.read_parquet(right_path)
+        # Load right table and materialize in memory before timing
+        df = pl.read_csv(right_path)
         right_table = "bench_right_tmp"
 
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {right_table}")
 
         columns = []
-        for col in df.columns:
-            if df[col].dtype == "int64":
-                columns.append(f"{col} BIGINT")
-            elif df[col].dtype == "float64":
-                columns.append(f"{col} DOUBLE PRECISION")
+        for name, dtype in df.schema.items():
+            if dtype == pl.Int64:
+                columns.append(f"{name} BIGINT")
+            elif dtype == pl.Float64:
+                columns.append(f"{name} DOUBLE PRECISION")
             else:
-                columns.append(f"{col} TEXT")
+                columns.append(f"{name} TEXT")
 
+        buffer = io.StringIO()
+        df.write_csv(buffer, include_header=False)
+        buffer.seek(0)
         with self._conn.cursor() as cur:
             cur.execute(f"CREATE TABLE {right_table} ({', '.join(columns)})")
-            with cur.copy(f"COPY {right_table} FROM STDIN") as copy:
-                for _, row in df.iterrows():
-                    copy.write_row(row.tolist())
+            with cur.copy(f"COPY {right_table} FROM STDIN WITH CSV") as copy:
+                copy.write(buffer.read())
 
         def query():
             with self._conn.cursor() as cur:
