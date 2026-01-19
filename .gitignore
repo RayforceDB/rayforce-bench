@@ -1,5 +1,8 @@
-# Python
 __pycache__/
+.claude/
+data/
+
+# Python
 *.py[cod]
 *$py.class
 *.so

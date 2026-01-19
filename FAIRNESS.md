@@ -1,194 +1,239 @@
 # Benchmark Fairness Methodology
 
-This document explains how we ensure fair comparisons between databases.
+This document explains how we ensure fair comparisons between databases and DataFrame libraries.
 
 ## Core Principle
 
 **We measure query execution time, not data transfer or serialization.**
 
-Each database should be measured on its ability to execute queries against data 
-that is already loaded into its memory. We explicitly exclude:
-- Data loading time (CSV parsing)
+Each system is measured on its ability to execute queries against data already loaded into memory. We explicitly exclude:
+- Data loading time (Parquet parsing)
 - Result serialization to Python
 - Network/IPC overhead
 
+## Timing Methodology
+
+### Warmup Phase
+
+Before measuring, each benchmark runs warmup iterations to ensure:
+- JIT compilation is complete (where applicable)
+- CPU caches are warm
+- Memory is allocated
+
+Default: 2 warmup iterations.
+
+### Measurement Phase
+
+Multiple iterations are run and we report:
+- **Median**: Primary metric (robust to outliers)
+- **Min**: Best-case performance
+- **Max**: Worst-case performance
+
+Default: 5 measured iterations.
+
 ## Per-Adapter Implementation
 
-### DuckDB (Embedded Python)
-
-```
-Timing includes:
-✓ Query parsing and planning
-✓ Query execution
-✓ Result materialization (in DuckDB memory)
-
-Timing excludes:
-✗ CSV loading (done once before benchmarks)
-✗ Result transfer to Python (fetchall() called AFTER timing)
-✗ Checksum computation
-```
-
-Implementation:
-```python
-# DuckDB execute() is NOT lazy - full query runs immediately
-start = time.perf_counter_ns()
-result = conn.execute(query)
-end = time.perf_counter_ns()
-
-# Fetch results AFTER timing (for validation only)
-rows = result.fetchall()
-row_count = len(rows)
-```
-
-### Polars (Embedded Python with Lazy Evaluation)
-
-```
-Timing includes:
-✓ Query plan construction (group_by, agg, join calls)
-✓ Query optimization (predicate pushdown, projection)
-✓ Query execution via collect() (native Rust execution)
-✓ Parallel processing across all CPU cores
-✓ Result materialization (DataFrame creation)
-
-Timing excludes:
-✗ CSV loading (done once before benchmarks)
-✗ Result inspection (head(), to_list() for checksum)
-```
-
-Implementation:
-```python
-# Data loaded before timing, lazy view created
-df = pl.read_csv(...)
-lf = df.lazy()  # Create lazy view for query optimization
-
-# Time BOTH query plan construction AND execution
-# This matches DuckDB/Rayforce/KDB+ which include parsing+planning
-start = time.perf_counter_ns()
-query = lf.group_by("id1").agg(pl.sum("v1"))  # Plan construction
-result = query.collect()  # Execution
-end = time.perf_counter_ns()
-
-# Validation AFTER timing
-row_count = len(result)
-```
-
-**Why include query plan construction?**
-- DuckDB's `execute()` includes parsing + planning
-- Rayforce's `timeit` includes parsing + planning  
-- KDB+'s `\t` includes parsing + planning
-- For fair comparison, Polars must include plan construction too
-
-**Why Lazy Evaluation?**
-- Query plan is optimized (predicate pushdown, projection)
-- `collect()` triggers native Rust parallel execution
-- Polars uses all available CPU cores via Rayon thread pool
-- Environment variable `POLARS_MAX_THREADS` controls parallelism
-
-### Rayforce (Subprocess with `timeit`)
-
-```
-Timing includes:
-✓ Query parsing and planning
-✓ Query execution  
-✓ Result materialization (in Rayforce memory)
-
-Timing excludes:
-✗ CSV loading (done before timeit)
-✗ Subprocess startup
-✗ Result counting (done after timeit)
-```
-
-Implementation:
-```lisp
-;; Data loading - NOT timed
-(set t (read-csv [...] "data.csv"))
-
-;; Query execution - timed by Rayforce's internal timeit
-(set _timing (timeit (select {...})))
-
-;; Count retrieval - NOT timed (re-runs query)
-(set _result (select {...}))
-(println (count _result))
-```
-
-### KDB+/q (Subprocess with `\t`)
+### Rayforce (Native `timeit`)
 
 ```
 Timing includes:
 ✓ Query parsing
 ✓ Query execution
-✓ Result materialization (in q memory)
+✓ Result materialization (in rayforce memory)
 
 Timing excludes:
-✗ CSV loading (done before \t)
-✗ Subprocess startup
-✗ Result counting (done after \t)
+✗ Parquet loading (done before benchmarks)
+✗ Result transfer to Python
+✗ Row count retrieval (separate query)
 ```
 
 Implementation:
-```q
-/ Data loading - NOT timed
-t:("SSSJJJJJF";enlist",")0:`:data.csv
+```python
+# Data loading - NOT timed
+table = load_parquet(path)
+table.save("_bench_data")
 
-/ Query execution - timed by q's \t command
-\t r:select v1:sum v1 by id1 from t
+# Query execution - timed by rayforce's internal timeit
+result = eval_str("(timeit (select {...}))")
+time_ms = result.value  # timeit returns milliseconds
 
-/ Row count output - NOT timed
-count r
+# Row count - NOT timed (separate query)
+rows = len(eval_str("(select {...})"))
 ```
 
-## Process Model Comparison
+**Why use `timeit`?**
+- Measures pure rayforce execution without Python overhead
+- Same timing mechanism used by rayforce developers
+- Most accurate representation of engine performance
 
-| Adapter   | Process Model         | Data Persistence | Timing Method            |
-|-----------|----------------------|------------------|--------------------------|
-| DuckDB    | Same process         | Warm for all     | `time.perf_counter_ns()` |
-| Polars    | Same process         | Warm for all     | `time.perf_counter_ns()` |
-| Rayforce  | New subprocess/iter  | OS-cached CSV    | `timeit` (internal)      |
-| KDB+      | New subprocess/iter  | OS-cached CSV    | `\t` (internal)          |
+### Polars (Python timing)
 
-### Why This is Fair
+```
+Timing includes:
+✓ Query construction (group_by, agg calls)
+✓ Query execution (native Rust)
+✓ Result materialization (DataFrame creation)
 
-All timing methods measure the same thing: **query execution only**.
+Timing excludes:
+✗ Parquet loading (done before benchmarks)
+✗ Result inspection (len() for row count)
+```
 
-- **DuckDB/Polars**: Python's `time.perf_counter_ns()` wraps the native query call
-- **Rayforce**: `timeit` measures query execution, returns time in ms
-- **KDB+**: `\t` measures query execution, outputs time in ms
+Implementation:
+```python
+# Data loading - NOT timed
+df = pl.read_parquet(path)
 
-For subprocess-based adapters:
-1. CSV loading happens BEFORE timing starts
-2. The database's internal timer measures only query execution
-3. Data is effectively "warm" after first load (OS file cache)
-4. Subprocess startup overhead is not included in timing
+# Query execution - timed
+start = time.perf_counter_ns()
+result = df.group_by("id1").agg(pl.sum("v1"))
+end = time.perf_counter_ns()
+
+# Row count - NOT included in timing
+rows = len(result)
+```
+
+### DuckDB (Python timing)
+
+```
+Timing includes:
+✓ SQL parsing
+✓ Query planning
+✓ Query execution
+✓ Result materialization (in DuckDB memory)
+
+Timing excludes:
+✗ Parquet loading (done before benchmarks)
+✗ Result fetch to Python (fetchall() after timing)
+```
+
+Implementation:
+```python
+# Data loading - NOT timed
+conn.execute("CREATE TABLE data AS SELECT * FROM 'data.parquet'")
+
+# Query execution - timed
+start = time.perf_counter_ns()
+result = conn.execute("SELECT id1, SUM(v1) FROM data GROUP BY id1")
+end = time.perf_counter_ns()
+
+# Fetch results - NOT timed
+rows = result.fetchall()
+```
+
+### Pandas (Python timing)
+
+```
+Timing includes:
+✓ GroupBy/merge operations
+✓ Aggregation computation
+✓ Result DataFrame creation
+
+Timing excludes:
+✗ Parquet loading (done before benchmarks)
+✗ Result inspection
+```
+
+Implementation:
+```python
+# Data loading - NOT timed
+df = pd.read_parquet(path)
+
+# Query execution - timed
+start = time.perf_counter_ns()
+result = df.groupby("id1")["v1"].sum().reset_index()
+end = time.perf_counter_ns()
+```
+
+### QuestDB / TimescaleDB (Server-based)
+
+```
+Timing includes:
+✓ SQL parsing (server-side)
+✓ Query execution (server-side)
+✓ Result transfer (network)
+✓ Result materialization
+
+Timing excludes:
+✗ Data loading (done before benchmarks)
+✗ Container startup (done before benchmarks)
+```
+
+**Note**: Server-based adapters include network overhead, which is unavoidable for their architecture. This is a known trade-off vs embedded databases.
+
+## Data Schema
+
+All benchmarks use consistent data schemas:
+
+### GroupBy Data
+```
+id1: int64  (K unique values, e.g., 1-100)
+id2: int64  (K unique values)
+id3: int64  (K unique values)
+v1:  float64 (normal distribution)
+v2:  float64 (normal distribution)
+v3:  float64 (normal distribution)
+```
+
+**Important**: Using `int64` for id columns is critical for performance. String-based ids would penalize hash-based systems unfairly.
+
+### Join Data
+```
+Left table:  id1 (int64), id2 (int64), v1 (float64)
+Right table: id1 (int64), id3 (int64), v2 (float64)
+```
 
 ## Threading Configuration
 
-Each adapter uses its default threading model:
+Each adapter uses its default/optimal threading model:
 
-| Adapter   | Threading                                  |
-|-----------|--------------------------------------------|
-| DuckDB    | Multi-threaded (auto, uses all CPU cores)  |
-| Polars    | Multi-threaded (auto, uses all CPU cores)  |
-| Pandas    | Single-threaded (GIL-bound)                |
-| Rayforce  | Multi-threaded (auto)                      |
-| KDB+      | Single-threaded (q is single-threaded)     |
-| QuestDB   | Server-managed threading                   |
+| Adapter | Threading |
+|---------|-----------|
+| Rayforce | Multi-threaded (automatic) |
+| Polars | Multi-threaded (Rayon, all cores) |
+| DuckDB | Multi-threaded (automatic) |
+| Pandas | Single-threaded (GIL-bound) |
+| QuestDB | Server-managed |
+| TimescaleDB | Server-managed |
 
-Threading is managed internally by each database engine for optimal performance.
+We do not artificially limit threading as this would not reflect real-world usage.
 
 ## Validation
 
-Each benchmark validates:
-1. **Row counts match** - Same number of result rows
-2. **Checksums match** (optional) - Result data is identical
-
-This prevents "fast but wrong" optimizations.
+Each benchmark validates results:
+1. **Row counts** - All adapters must return the same number of rows
+2. **Data correctness** - Spot-checked to ensure correct aggregations
 
 ## What We're Measuring
 
-✓ **Database engine performance** - Core query execution speed
-✓ **Algorithm efficiency** - Hash joins, group-by aggregations
-✓ **Memory management** - Result materialization
+**Included:**
+- Database/engine execution speed
+- Algorithm efficiency (hash joins, aggregations)
+- Memory management
+- Parallelization effectiveness
 
-✗ **Python binding overhead** - Different for each adapter
-✗ **IPC/serialization** - Not relevant for embedded use
-✗ **Disk I/O** - Data should be OS-cached during benchmarks
+**Excluded:**
+- Python binding overhead
+- Data loading/parsing
+- Result serialization
+- Network latency (except server-based)
+
+## Reproducibility
+
+To reproduce results:
+
+```bash
+# Use fixed random seed for data generation
+python -m bench.generate -o data groupby -n 1m -k 100 --seed 42
+
+# Run with sufficient iterations
+python -m bench.runner groupby -d data/groupby_1m_k100 -i 10 -w 3
+```
+
+Results may vary based on:
+- CPU model and core count
+- Available RAM
+- OS and kernel version
+- Background processes
+
+For best results, run benchmarks on an idle system.
