@@ -56,7 +56,7 @@ class BenchmarkRun:
 
 BENCHMARKS = {
     "groupby": ["groupby_q1", "groupby_q2", "groupby_q3",
-                "groupby_q4", "groupby_q5", "groupby_q6"],
+                "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7"],
     "join":    ["join_inner", "join_left"],
     "sort":    ["sort_single", "sort_multi"],
 }

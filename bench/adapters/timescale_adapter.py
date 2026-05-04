@@ -170,6 +170,22 @@ class TimescaleAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q6", time_ns, len(result))
 
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        t = self._get_table()
+
+        def query():
+            with self._conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT id1, id2, id3, id4, id5, id6, "
+                    f"SUM(v3) as v3, COUNT(v1) as cnt "
+                    f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6"
+                )
+                return cur.fetchall()
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q7", time_ns, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         import io

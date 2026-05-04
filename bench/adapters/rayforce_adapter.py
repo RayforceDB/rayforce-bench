@@ -60,6 +60,8 @@ class RayforceAdapter(Adapter):
             self._Table = Table
             self._I64 = I64
             self._F64 = F64
+            self._Symbol = getattr(rayforce, "Symbol", None)
+            self._STR = getattr(rayforce, "STR", None) or getattr(rayforce, "Str", None)
             self.version = f"{rayforce.version} (pypi)"
         except ImportError as e:
             raise ImportError(
@@ -103,6 +105,8 @@ class RayforceAdapter(Adapter):
         self._Table = Table
         self._I64 = I64
         self._F64 = F64
+        self._Symbol = getattr(rayforce, "Symbol", None)
+        self._STR = getattr(rayforce, "STR", None) or getattr(rayforce, "Str", None)
         self.version = f"{rayforce.version} (local: {self._local_path})"
         print(f"Using rayforce {self.version}")
 
@@ -119,16 +123,41 @@ class RayforceAdapter(Adapter):
         self._table_names[table_name] = symbol_name
 
     def _get_column_types(self, path: Path) -> list:
-        """Get column types for CSV based on header."""
+        """Get column types for canonical H2O CSVs.
+
+        groupby:  id1..id3 string-symbol, id4..id6 i64, v1/v2 i64, v3 f64
+        join:     id1..id3 i64,           id4..id6 string-symbol, v float
+        """
         with open(path) as f:
-            header = f.readline().strip().split(",")
+            header = [c.strip().strip('"') for c in f.readline().strip().split(",")]
+
+        sym = self._Symbol or self._STR
+        if sym is None:
+            raise RuntimeError(
+                "rayforce-py lacks Symbol/STR types; "
+                "canonical H2O schema requires string IDs. "
+                "Use --rayforce-mode rfl until the next rayforce-py release."
+            )
+
+        # Look at the first data row to disambiguate (groupby vs join layout).
+        with open(path) as f:
+            f.readline()
+            first_row = [c.strip().strip('"') for c in f.readline().strip().split(",")]
 
         types = []
-        for col in header:
+        for col, val in zip(header, first_row):
             if col.startswith("id"):
-                types.append(self._I64)
-            elif col.startswith("v"):
+                # Strings start with "id" prefix in our generator output.
+                types.append(sym if val.startswith("id") else self._I64)
+            elif col == "v3":
                 types.append(self._F64)
+            elif col.startswith("v"):
+                # join-side v is float; groupby v1/v2 are int. Sniff.
+                try:
+                    int(val)
+                    types.append(self._I64)
+                except ValueError:
+                    types.append(self._F64)
             else:
                 types.append(self._I64)
         return types
@@ -190,6 +219,15 @@ class RayforceAdapter(Adapter):
         t = self._get_symbol()
         query = f"(select {{range: (- (max v1) (min v2)) by: id3 from: {t}}})"
         return self._run_timed_query(query, "groupby_q6")
+
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        t = self._get_symbol()
+        query = (
+            f"(select {{from: {t} v3: (sum v3) cnt: (count v1) "
+            f"by: {{id1: id1 id2: id2 id3: id3 id4: id4 id5: id5 id6: id6}}}})"
+        )
+        return self._run_timed_query(query, "groupby_q7")
 
     def _load_table_from_csv(self, path: Path) -> object:
         """Load CSV file using rayforce native Table.from_csv."""

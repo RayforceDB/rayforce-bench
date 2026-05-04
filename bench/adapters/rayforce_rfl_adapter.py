@@ -28,9 +28,10 @@ DEFAULT_BIN = Path("~/rayforce/rayforce").expanduser()
 DEFAULT_HEADER = Path("~/rayforce/include/rayforce.h").expanduser()
 
 
-# Shared schema — must match what bench.generators.groupby produces.
-GROUPBY_SCHEMA = "[I64 I64 I64 F64 F64 F64]"
-JOIN_SCHEMA = "[I64 I64 I64 F64 F64 F64]"
+# Shared schema — must match what bench.generators.{groupby,join} produces.
+# Canonical H2O (rayforce SYMBOL = RAY_SYM, low-cardinality dictionary-encoded).
+GROUPBY_SCHEMA = "[SYMBOL SYMBOL SYMBOL I64 I64 I64 I64 I64 F64]"
+JOIN_SCHEMA    = "[I64 I64 I64 SYMBOL SYMBOL SYMBOL F64]"
 
 
 # (Body of the rayfall expression — wrapped in (timeit ...) for measurement
@@ -42,6 +43,10 @@ GROUPBY_QUERIES = {
     "groupby_q4": "(select {{from: {t} v1: (avg v1) v2: (avg v2) v3: (avg v3) by: id3}})",
     "groupby_q5": "(select {{from: {t} v1: (sum v1) v2: (sum v2) v3: (sum v3) by: id3}})",
     "groupby_q6": "(select {{from: {t} range: (- (max v1) (min v2)) by: id3}})",
+    "groupby_q7": (
+        "(select {{from: {t} v3: (sum v3) cnt: (count v1) "
+        "by: {{id1: id1 id2: id2 id3: id3 id4: id4 id5: id5 id6: id6}}}})"
+    ),
     "sort_single": "(xasc {t} [id1])",
     "sort_multi":  "(xasc {t} [id1 id2 id3])",
 }
@@ -99,6 +104,7 @@ class RayforceRflAdapter(Adapter):
     def run_groupby_q4(self): self._nyi("groupby_q4")
     def run_groupby_q5(self): self._nyi("groupby_q5")
     def run_groupby_q6(self): self._nyi("groupby_q6")
+    def run_groupby_q7(self): self._nyi("groupby_q7")
     def run_sort_single(self): self._nyi("sort_single")
     def run_sort_multi(self):  self._nyi("sort_multi")
     def run_join_inner(self, right_path):

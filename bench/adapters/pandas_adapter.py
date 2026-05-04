@@ -85,6 +85,16 @@ class PandasAdapter(Adapter):
         result, t = self._time_it(query)
         return BenchmarkResult("groupby_q6", t, len(result))
 
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        df = self._get()
+        result, t = self._time_it(
+            lambda: df.groupby(
+                ["id1", "id2", "id3", "id4", "id5", "id6"], as_index=False
+            ).agg(v3=("v3", "sum"), cnt=("v1", "count"))
+        )
+        return BenchmarkResult("groupby_q7", t, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         left = self._get("left")
         right = pd.read_csv(right_path)

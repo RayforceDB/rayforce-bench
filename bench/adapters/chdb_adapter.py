@@ -98,6 +98,14 @@ class ChdbAdapter(Adapter):
             "groupby_q6",
         )
 
+    def run_groupby_q7(self) -> BenchmarkResult:
+        t = self._get_table()
+        return self._time(
+            f"SELECT id1, id2, id3, id4, id5, id6, sum(v3), count(v1) "
+            f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6",
+            "groupby_q7",
+        )
+
     def _load_right(self, right_path: Path) -> str:
         sess = self._ensure_session()
         sess.query("DROP TABLE IF EXISTS bench_right_tmp")

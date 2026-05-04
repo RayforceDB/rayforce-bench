@@ -72,6 +72,11 @@ class Adapter(ABC):
         pass
 
     @abstractmethod
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O 6-key)."""
+        pass
+
+    @abstractmethod
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on id1."""
         pass
