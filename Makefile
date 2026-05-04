@@ -39,10 +39,10 @@ SORT_DTYPES ?= u8,i16,i32,i64,f64,str8,str16
 
 # Adapters
 ifdef ALL
-ADAPTERS := rayforce polars duckdb questdb timescale
+ADAPTERS := rayforce polars duckdb chdb datafusion pandas questdb timescale
 STOP_INFRA := --stop-infra
 else
-ADAPTERS := rayforce polars duckdb
+ADAPTERS := rayforce polars duckdb chdb datafusion pandas
 STOP_INFRA :=
 endif
 

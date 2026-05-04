@@ -16,16 +16,25 @@ from pathlib import Path
 
 def _make_adapter(name, args):
     if name == "polars":
-        from .adapters import PolarsAdapter
+        from .adapters.polars_adapter import PolarsAdapter
         return PolarsAdapter()
     if name == "duckdb":
-        from .adapters import DuckDBAdapter
+        from .adapters.duckdb_adapter import DuckDBAdapter
         return DuckDBAdapter()
+    if name == "pandas":
+        from .adapters.pandas_adapter import PandasAdapter
+        return PandasAdapter()
+    if name == "chdb":
+        from .adapters.chdb_adapter import ChdbAdapter
+        return ChdbAdapter()
+    if name == "datafusion":
+        from .adapters.datafusion_adapter import DataFusionAdapter
+        return DataFusionAdapter()
     if name == "rayforce":
         if args.rayforce_mode == "rfl":
             from .adapters.rayforce_rfl_adapter import RayforceRflAdapter
             return RayforceRflAdapter(binary=args.rayforce_bin)
-        from .adapters import RayforceAdapter
+        from .adapters.rayforce_adapter import RayforceAdapter
         return RayforceAdapter(local_path=args.rayforce_local)
     raise ValueError(f"Unsupported adapter for sort grid: {name}")
 

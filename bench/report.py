@@ -13,11 +13,14 @@ if TYPE_CHECKING:
 # Stable colors per engine — matches teide-bench palette so cross-repo
 # screenshots stay visually consistent.
 ENGINE_COLORS = {
-    "rayforce":  "#ff7f0e",
-    "duckdb":    "#1f77b4",
-    "polars":    "#2ca02c",
-    "questdb":   "#9467bd",
-    "timescale": "#d62728",
+    "rayforce":   "#ff7f0e",
+    "duckdb":     "#1f77b4",
+    "polars":     "#2ca02c",
+    "chdb":       "#e377c2",
+    "datafusion": "#17becf",
+    "pandas":     "#8c564b",
+    "questdb":    "#9467bd",
+    "timescale":  "#d62728",
 }
 
 

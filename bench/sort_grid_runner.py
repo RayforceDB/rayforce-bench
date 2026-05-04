@@ -24,7 +24,8 @@ from .swapcheck import SwapSample, warn_if_already_used, warn_if_grew
 
 
 WORKER_TIMEOUT_S = 600
-DEFAULT_GRID_ADAPTERS = ["rayforce", "duckdb", "polars"]
+DEFAULT_GRID_ADAPTERS = ["rayforce", "duckdb", "polars", "chdb",
+                         "datafusion", "pandas"]
 
 
 def parse_size(s: str) -> int:

@@ -30,13 +30,23 @@ Outputs:
 
 ## Adapters
 
-| Adapter | Type | Description |
-|---------|------|-------------|
-| `rayforce` | Embedded | RayforceDB — Python wrapper or native binary (see modes below) |
-| `polars` | Embedded | Polars DataFrame (Rust-based) |
-| `duckdb` | Embedded | DuckDB embedded SQL |
-| `questdb` | Server | QuestDB via PostgreSQL protocol |
-| `timescale` | Server | TimescaleDB (PostgreSQL) |
+Default `make bench` runs the embedded engines (no Docker required):
+
+| Adapter | Type | Why included |
+|---------|------|--------------|
+| `rayforce`   | Embedded columnar | The engine being benchmarked. |
+| `duckdb`     | Embedded SQL OLAP | De-facto leader for embedded analytics. |
+| `polars`     | Embedded DataFrame (Rust + Arrow) | Fastest mainstream DataFrame library. |
+| `chdb`       | Embedded ClickHouse | Lets us measure against ClickHouse without running a server. |
+| `datafusion` | Embedded SQL (Rust + Arrow) | Substrate for InfluxDB 3, GlareDB, ROAPI — measuring against it covers the Apache columnar ecosystem. |
+| `pandas`     | DataFrame (Python) | Slow baseline. Included so readers calibrated against pandas can map the rest of the chart. |
+
+`ALL=1` adds two server-based engines (require Docker):
+
+| Adapter | Type | Why included |
+|---------|------|--------------|
+| `questdb`   | Time-series | Specialized TSDB with SQL — relevant for the financial / market-data segment that's natural rayforce territory. |
+| `timescale` | Postgres extension | TSDB baseline. Not a true OLAP competitor; included for context only. |
 
 ### Rayforce execution modes
 

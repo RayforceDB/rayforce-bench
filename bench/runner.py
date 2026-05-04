@@ -246,7 +246,8 @@ def main():
                     help="Benchmark suite to run")
     ap.add_argument("-d", "--data", help="Path to dataset directory")
     ap.add_argument("-a", "--adapters", nargs="+",
-                    default=["rayforce", "polars", "duckdb"])
+                    default=["rayforce", "polars", "duckdb", "chdb",
+                             "datafusion", "pandas"])
     ap.add_argument("--rayforce-local",
                     help="Path to local rayforce-py for dev builds")
     ap.add_argument("--rayforce-branch",

@@ -6,6 +6,11 @@ psutil>=5.9.0
 # DataFrame libraries
 polars>=1.0.0
 duckdb>=0.9.0
+pandas>=2.0.0
+
+# Embedded analytical engines
+chdb>=2.0.0
+datafusion>=40.0.0
 
 # Rayforce
 rayforce-py>=0.5.4
