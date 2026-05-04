@@ -209,107 +209,149 @@ Options:
   --rayforce-bin PATH    Same as runner
 ```
 
-## Benchmarking with Local Rayforce Build
+## Benchmarking a development rayforce
 
-To benchmark a development build of rayforce-py:
+The `--rayforce-mode` flag picks how the rayforce adapter executes queries. Three orthogonal ways to point it at a dev build:
+
+### 1. Local rayforce-py checkout (`py` mode)
 
 ```bash
-# Method 1: Using make
-make bench-local RAYFORCE_LOCAL=~/rayforce-py
-
-# Method 2: Direct command
-python -m bench.runner groupby \
-    -d data/groupby_1m_k100 \
-    -a pandas polars duckdb rayforce \
+make bench LOCAL=1 RAYFORCE_LOCAL=~/rayforce-py
+# or directly:
+python -m bench.runner groupby -d data/groupby_10m_k100 \
+    -a rayforce duckdb polars \
     --rayforce-local ~/rayforce-py
-
-# Method 3: Install locally first, then benchmark
-cd ~/rayforce-py
-pip install -e .
-cd ~/rayforce-bench
-make bench
 ```
 
-The `--rayforce-local` option will:
-1. Build rayforce-py from the specified path
-2. Use the local build for benchmarks
-3. Show version as `X.Y.Z (local: /path/to/rayforce-py)`
+Builds the wrapper from the path, installs it into the venv, runs against it. Version label in reports becomes `rayforce@<branch> (<commit>) [dirty]`.
+
+### 2. rayforce-py git branch
+
+```bash
+python -m bench.runner groupby -d data/groupby_10m_k100 \
+    -a rayforce duckdb polars \
+    --rayforce-branch feature/sort
+```
+
+Clones `RayforceDB/rayforce-py.git` at that branch into `.deps/rayforce-py-branch-<name>/`, builds, and uses it. Re-running pulls fresh — useful for tracking a colleague's branch over time.
+
+### 3. Native binary + `.rfl` (`rfl` mode)
+
+```bash
+make bench RAYFORCE_MODE=rfl                                      # default ~/rayforce/rayforce
+make bench RAYFORCE_MODE=rfl RAYFORCE_BIN=/custom/path/rayforce
+```
+
+Generates a temporary `.rfl` script per (op, iteration set), invokes the binary, parses `(timeit ...)` output from stdout. Doesn't need rayforce-py installed at all — useful while the wrapper is pre-PyPI, or when you want to benchmark a C-core branch directly.
 
 ## Server-Based Adapters (Docker)
 
-QuestDB and TimescaleDB require Docker:
+QuestDB and TimescaleDB are off by default. Add `ALL=1` to opt in — the runner auto-starts containers via `bench/infra.py`:
 
 ```bash
-# Start containers
-make infra-start
-
-# Run benchmarks with all adapters
-make bench-all
-
-# Stop containers
-make infra-stop
-
-# Check container status
-make infra-status
-
-# Remove containers completely
-make infra-cleanup
+make bench ALL=1                # auto-start containers, run, leave them up
+make bench ALL=1 STOP_INFRA=1   # auto-start, run, stop on exit (in CI)
 ```
 
-Container configuration:
-- **QuestDB**: Port 8812 (PostgreSQL wire protocol)
-- **TimescaleDB**: Port 5433 (to avoid conflict with local PostgreSQL)
+Manual control:
+
+```bash
+python -m bench.infra start     # bring up rayforce-bench-{questdb,timescale}
+python -m bench.infra status    # show running / stopped / not-created
+python -m bench.infra stop      # stop containers (preserves state)
+python -m bench.infra cleanup   # stop and remove
+```
+
+Ports:
+- **QuestDB**: 8812 (PostgreSQL wire protocol), 9009 (ILP), 9000 (web UI).
+- **TimescaleDB**: 5433 host → 5432 container (avoids conflict with a local Postgres).
 
 ## Project Structure
 
 ```
 rayforce-bench/
 ├── bench/
-│   ├── adapters/           # Database adapters
-│   │   ├── base.py         # Abstract Adapter interface
-│   │   ├── pandas_adapter.py
-│   │   ├── polars_adapter.py
+│   ├── adapters/                # One file per engine
+│   │   ├── base.py              # Abstract Adapter + _time_it + run_full
 │   │   ├── duckdb_adapter.py
-│   │   ├── rayforce_adapter.py
+│   │   ├── polars_adapter.py
+│   │   ├── pandas_adapter.py
+│   │   ├── chdb_adapter.py      # embedded ClickHouse
+│   │   ├── datafusion_adapter.py
+│   │   ├── rayforce_adapter.py      # rayforce-py (PyPI / --rayforce-local / --rayforce-branch)
+│   │   ├── rayforce_rfl_adapter.py  # native binary + generated .rfl scripts
 │   │   ├── questdb_adapter.py
 │   │   └── timescale_adapter.py
-│   ├── generators/         # Data generators
-│   │   ├── groupby.py      # H2O-style groupby data
-│   │   ├── join.py         # Join benchmark data
-│   │   └── sort.py         # Sort benchmark data
-│   ├── runner.py           # Benchmark runner CLI
-│   ├── report.py           # HTML report generator
-│   ├── infra.py            # Docker infrastructure management
-│   └── generate.py         # Data generation CLI
-├── data/                   # Generated datasets (git-ignored)
-├── docs/                   # Generated reports (GitHub Pages)
-│   ├── index.html          # Interactive benchmark report
-│   └── data.json           # Raw benchmark data
+│   ├── generators/              # Canonical H2O.ai data
+│   │   ├── base.py              # GeneratedDataset, manifest with SHA256
+│   │   ├── groupby.py           # 9-col groupby (id1..3 string, id4..6 int)
+│   │   ├── join.py              # 7-col join (int keys + string sides)
+│   │   └── sort_grid.py         # typed sort columns × scaling lengths
+│   ├── runner.py                # H2O orchestrator (one --data path)
+│   ├── worker.py                # H2O child process (single op)
+│   ├── scaling_runner.py        # Sweep across sizes 10..N
+│   ├── sort_grid_runner.py      # Extended typed-sort grid
+│   ├── sort_grid_worker.py      # Sort-grid child process
+│   ├── report.py                # Boxplot + histogram + scaling/sort HTML
+│   ├── engine_source.py         # --rayforce-branch resolution + git labels
+│   ├── infra.py                 # Docker management for QuestDB / Timescale
+│   ├── swapcheck.py             # psutil.swap_memory monitor + warnings
+│   └── generate.py              # Data generation CLI
+├── data/                        # Generated datasets (git-ignored)
+├── docs/                        # GitHub Pages output
+│   ├── index.html               # Boxplot + comparison (single-size H2O)
+│   ├── histogram.html           # Plotly bar chart (single-size H2O)
+│   ├── scaling.html             # Interactive scaling chart (engine + op filters)
+│   ├── sort.html                # Extended sort grid scaling
+│   ├── data.json                # H2O run JSON
+│   ├── scaling_data.json        # Scaling sweep JSON
+│   └── sort_data.json           # Sort grid JSON
 ├── Makefile
 ├── requirements.txt
 ├── README.md
-└── FAIRNESS.md             # Benchmark methodology
+└── FAIRNESS.md                  # Methodology + per-engine timing details
 ```
 
 ## Data Format
 
-Datasets are stored as Parquet files with the following schemas:
+Canonical H2O.ai schemas — same as `~/rayforce/bench/h2o/*.rfl` and the canonical [H2O db-benchmark](https://h2oai.github.io/db-benchmark/). Files are CSV with a header row and a `manifest.json` carrying SHA256 of every emitted file.
 
-### GroupBy Dataset
-| Column | Type | Description |
-|--------|------|-------------|
-| id1 | int64 | Low cardinality key (K unique values) |
-| id2 | int64 | Low cardinality key (K unique values) |
-| id3 | int64 | Low cardinality key (K unique values) |
-| v1 | float64 | Value column (normal distribution) |
-| v2 | float64 | Value column (normal distribution) |
-| v3 | float64 | Value column (normal distribution) |
+### GroupBy Dataset (9 columns)
 
-### Join Dataset
-| Table | Columns | Description |
-|-------|---------|-------------|
-| left | id1, id2, v1 | Left table (larger) |
-| right | id1, id3, v2 | Right table (smaller) |
+| Column | Type    | Cardinality / Range          | Example         |
+|--------|---------|------------------------------|-----------------|
+| id1    | string  | K (e.g. 100)                 | `"id042"`       |
+| id2    | string  | K                            | `"id087"`       |
+| id3    | string  | max(n // K, K) = `n_high`    | `"id00012345"`  |
+| id4    | int64   | [1, K]                       | `73`            |
+| id5    | int64   | [1, K]                       | `12`            |
+| id6    | int64   | [1, n_high]                  | `45678`         |
+| v1     | int64   | [1, 5]                       | `3`             |
+| v2     | int64   | [1, 15]                      | `9`             |
+| v3     | float64 | [0, 100), 6 decimals         | `42.157394`     |
+
+### Join Dataset (7 columns × 2 tables)
+
+Two tables (`left.csv`, `right.csv`) of equal size. Schema is deliberately mirrored against the groupby table — int keys, string side columns — to stress different join paths.
+
+| Column | Type    | Example       |
+|--------|---------|---------------|
+| id1    | int64   | `42`          |
+| id2    | int64   | `87`          |
+| id3    | int64   | `12345`       |
+| id4    | string  | `"id042"`     |
+| id5    | string  | `"id087"`     |
+| id6    | string  | `"id12345"`   |
+| `v1` / `v2` | float64 | `42.157394` (`v1` on left, `v2` on right) |
+
+### Cross-machine verification
+
+```bash
+make data SIZE=10m
+cat data/groupby_10m_k100/manifest.json | jq '.tables.data.sha256.csv'
+```
+
+Two users with the same `(seed, n_rows, k)` must see the same hash. If they don't, the generator changed and benchmark numbers are no longer comparable.
 
 ## Fairness
 
