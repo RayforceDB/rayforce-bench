@@ -1,9 +1,12 @@
 """Rayforce native adapter for benchmarks.
 
-Measures pure rayforce core execution time using eval_str("(timeit ...)").
-No Python API overhead included in measurements.
+Measures end-to-end execution time with time.perf_counter_ns around
+eval_str() — same convention as the other adapters, so the comparison is
+fair. Does NOT use the engine's internal (timeit ...), which would hide
+Python-binding overhead and tilt results in rayforce's favor.
 """
 
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -137,32 +140,19 @@ class RayforceAdapter(Adapter):
         return self._table_names[name]
 
     def _run_timed_query(self, query: str, bench_name: str) -> BenchmarkResult:
-        """Run a query with timeit and return result.
+        """Execute a query and time it externally with perf_counter_ns.
 
         Args:
-            query: The rayforce query WITHOUT timeit wrapper
+            query: The rayforce query (rayfall expression as a string)
             bench_name: Name of the benchmark
 
         Returns:
             BenchmarkResult with timing in nanoseconds
         """
-        timed_query = f"(timeit {query})"
-        result = self._eval_str(timed_query)
-
-        # timeit returns time in milliseconds
-        if hasattr(result, "value"):
-            time_ms = result.value
-        elif hasattr(result, "to_python"):
-            time_ms = result.to_python()
-        else:
-            time_ms = float(result)
-
-        time_ns = int(time_ms * 1_000_000)  # milliseconds to nanoseconds
-
-        # Get row count by running query without timeit
-        result_table = self._eval_str(query)
-        rows = len(result_table)
-
+        start = time.perf_counter_ns()
+        result = self._eval_str(query)
+        time_ns = time.perf_counter_ns() - start
+        rows = len(result) if result is not None else 0
         return BenchmarkResult(bench_name, time_ns, rows)
 
     def run_groupby_q1(self) -> BenchmarkResult:
