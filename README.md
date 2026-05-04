@@ -18,15 +18,27 @@ git clone https://github.com/anthropics/rayforce-bench.git
 cd rayforce-bench
 
 make setup            # Install dependencies
-make data             # Generate H2O datasets (1M rows by default)
-make bench            # Run H2O groupby benchmarks
+make data             # Generate H2O datasets (10M rows by default)
+make bench            # Run H2O groupby benchmarks (q1..q7)
+make bench-scaling    # Run scaling sweep across sizes 10..1m → docs/scaling.html
 make bench-sort-ext   # Run extended typed-sort scaling grid (optional)
 ```
 
 Outputs:
-- `docs/index.html` — boxplot + comparison view (existing)
-- `docs/histogram.html` — Plotly bar chart (teide-bench style)
+- `docs/index.html` — boxplot + comparison view (per-iteration distribution)
+- `docs/histogram.html` — Plotly bar chart (single-size snapshot)
+- `docs/scaling.html` — interactive log-log scaling curve with engine + op filters
 - `docs/sort.html` — log-log scaling curve for the extended sort grid
+
+## Reproducibility
+
+All datasets use canonical [H2O.ai db-benchmark](https://h2oai.github.io/db-benchmark/)
+schemas and are generated deterministically (PCG64 random, stable since
+numpy 1.17). Every CSV emitted carries a `sha256` field in
+`manifest.json`, so two runs of `make data SIZE=10m` on different
+machines must produce byte-identical files. If they don't — the
+generator changed and benchmark numbers are no longer comparable across
+machines.
 
 ## Adapters
 
@@ -62,16 +74,36 @@ Default `make bench` runs the embedded engines (no Docker required):
 
 Based on [H2O.ai db-benchmark](https://h2oai.github.io/db-benchmark/):
 
-### GroupBy Queries
+### GroupBy Queries (canonical H2O, on a 9-column dataset)
 - **Q1**: `sum(v1) group by id1`
 - **Q2**: `sum(v1) group by id1, id2`
 - **Q3**: `sum(v1), mean(v3) group by id3`
 - **Q4**: `mean(v1), mean(v2), mean(v3) group by id3`
 - **Q5**: `sum(v1), sum(v2), sum(v3) group by id3`
+- **Q6**: `max(v1) - min(v2) group by id3`
+- **Q7**: `sum(v3), count(v1) group by id1, id2, id3, id4, id5, id6` (6-key)
+
+Schema: `id1..id3` are strings (cardinality K), `id4..id6` are int64
+(cardinality K, K, n_high), `v1`/`v2` int, `v3` float — same as
+`~/rayforce/bench/h2o/q*.rfl` and teide-bench.
 
 ### Join Queries
 - **Inner Join**: Join on `id1`
 - **Left Join**: Join on `id1`
+
+Schema: integer `id1..id3` keys + string `id4..id6` side columns + float
+value (`v1` left, `v2` right). Two equal-size tables.
+
+### Scaling sweep (`make bench-scaling`)
+
+Runs every adapter through every H2O op + the typed sort grid at every
+size in `SIZES` (default `10,100,1k,10k,100k,1m`). Adaptive iteration
+counts: tiny inputs run more iterations to beat the timer noise floor;
+huge inputs run fewer because each iteration is already slow.
+
+Output: `docs/scaling.html` with two checkbox groups (engines, ops) and
+preset buttons for groupby / join / sort H2O / sort typed. Toggle
+anything on/off to see the comparison you care about.
 
 ### Sort Queries (H2O standard, on the groupby dataset)
 - **Single Column** (`s1`): Sort by `id1`
