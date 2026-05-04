@@ -251,3 +251,284 @@ _DTYPE_DASH = {
 
 def _dash_for_dtype(dtype: str) -> str:
     return _DTYPE_DASH.get(dtype, "solid")
+
+
+# Group ops into colour buckets so the legend reads well.
+_OP_GROUPS = {
+    "groupby_q1": "groupby", "groupby_q2": "groupby", "groupby_q3": "groupby",
+    "groupby_q4": "groupby", "groupby_q5": "groupby", "groupby_q6": "groupby",
+    "groupby_q7": "groupby",
+    "join_inner": "join", "join_left": "join",
+    "sort_single": "sort", "sort_multi": "sort",
+    "sort_u8": "sort_typed", "sort_i16": "sort_typed",
+    "sort_i32": "sort_typed", "sort_i64": "sort_typed",
+    "sort_f64": "sort_typed", "sort_str8": "sort_typed",
+    "sort_str16": "sort_typed",
+}
+
+
+def generate_scaling_html(input_json: Path, output_path: Path,
+                          title: str = "Rayforce-bench scaling curve") -> None:
+    """Render an interactive log-log scaling chart with engine+op filters.
+
+    UI mirrors teide-bench/sort_bench_plot.py: checkbox groups for engines
+    and ops, each with All/None buttons, Plotly.react redraw on change.
+
+    Reads docs/scaling_data.json (produced by bench.scaling_runner) and
+    emits one trace per (adapter, op) pair: engine encoded by colour, op
+    encoded by line-dash and marker symbol.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = json.loads(Path(input_json).read_text())
+    rows = payload.get("results", [])
+    meta = payload.get("meta", {})
+
+    engines = sorted({r["adapter"] for r in rows})
+    ops = sorted({r["op"] for r in rows}, key=_op_sort_key)
+
+    # Group rows into (adapter, op) → [(size, median_ms), ...]
+    series = []
+    for adapter in engines:
+        for op in ops:
+            pts = sorted(
+                ((r["size"], r["median_ms"]) for r in rows
+                 if r["adapter"] == adapter and r["op"] == op
+                 and r["size"] > 0 and r["median_ms"] > 0),
+                key=lambda p: p[0],
+            )
+            if not pts:
+                continue
+            series.append({
+                "engine": adapter,
+                "op": op,
+                "x": [p[0] for p in pts],
+                "y": [p[1] for p in pts],
+            })
+
+    payload_dump = {
+        "series":   series,
+        "engines":  engines,
+        "ops":      ops,
+        "engine_colors": ENGINE_COLORS,
+        "op_dashes":     {op: _dash_for_op(op) for op in ops},
+        "op_markers":    {op: _marker_for_op(op) for op in ops},
+        "rayforce_label": meta.get("rayforce_label", ""),
+    }
+
+    html = _SCALING_TEMPLATE.replace("__TITLE__", title) \
+                            .replace("__PAYLOAD__", json.dumps(payload_dump))
+    output_path.write_text(html)
+    print(f"Scaling HTML saved: {output_path}")
+
+
+def _op_sort_key(op: str):
+    """Stable order: groupby first, then join, then sort, then sort_typed."""
+    bucket_order = {"groupby": 0, "join": 1, "sort": 2, "sort_typed": 3}
+    return (bucket_order.get(_OP_GROUPS.get(op, "z"), 9), op)
+
+
+_OP_DASH = {
+    "groupby_q1": "solid",   "groupby_q2": "dot",     "groupby_q3": "dash",
+    "groupby_q4": "longdash", "groupby_q5": "dashdot", "groupby_q6": "longdashdot",
+    "groupby_q7": "solid",
+    "join_inner": "solid",   "join_left": "dot",
+    "sort_single": "solid",  "sort_multi": "dash",
+    "sort_u8":  "dot",       "sort_i16":  "dash",     "sort_i32":  "longdash",
+    "sort_i64": "solid",     "sort_f64":  "dashdot",
+    "sort_str8":  "longdashdot", "sort_str16": "longdashdot",
+}
+
+
+def _dash_for_op(op: str) -> str:
+    return _OP_DASH.get(op, "solid")
+
+
+_OP_MARKER = {
+    "groupby_q1": "circle", "groupby_q2": "square", "groupby_q3": "diamond",
+    "groupby_q4": "triangle-up", "groupby_q5": "triangle-down",
+    "groupby_q6": "x", "groupby_q7": "star",
+    "join_inner": "circle-open", "join_left": "square-open",
+    "sort_single": "diamond-open", "sort_multi": "star-open",
+    "sort_u8": "circle", "sort_i16": "square", "sort_i32": "diamond",
+    "sort_i64": "triangle-up", "sort_f64": "x",
+    "sort_str8": "cross", "sort_str16": "hexagon",
+}
+
+
+def _marker_for_op(op: str) -> str:
+    return _OP_MARKER.get(op, "circle")
+
+
+_SCALING_TEMPLATE = r"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>__TITLE__</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         margin: 0; padding: 20px; background: #fafafa; }
+  h2 { margin: 0 0 6px 0; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .controls { display: flex; gap: 30px; flex-wrap: wrap; margin-bottom: 20px;
+              padding: 15px; background: white; border-radius: 8px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .control-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+  .control-group h3 { margin: 0 0 6px 0; font-size: 12px; color: #666;
+                       text-transform: uppercase; letter-spacing: 0.5px; }
+  .control-group label { font-size: 13px; cursor: pointer; display: flex;
+                          align-items: center; gap: 6px; }
+  .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 1px;
+             vertical-align: middle; }
+  .btn-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .btn-row button { font-size: 11px; padding: 2px 8px; cursor: pointer;
+                     border: 1px solid #ccc; border-radius: 3px; background: #f5f5f5; }
+  .btn-row button:hover { background: #e0e0e0; }
+  #chart { background: white; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 8px; }
+</style>
+</head><body>
+
+<h2>__TITLE__</h2>
+<div class="meta" id="meta"></div>
+
+<div class="controls">
+  <div class="control-group">
+    <h3>Engines</h3>
+    <div class="btn-row">
+      <button onclick="toggleAll('engine', true)">All</button>
+      <button onclick="toggleAll('engine', false)">None</button>
+    </div>
+    <div id="engine-checks"></div>
+  </div>
+  <div class="control-group">
+    <h3>Operations</h3>
+    <div class="btn-row">
+      <button onclick="toggleAll('op', true)">All</button>
+      <button onclick="toggleAll('op', false)">None</button>
+      <button onclick="presetOps('groupby')">Groupby</button>
+      <button onclick="presetOps('join')">Join</button>
+      <button onclick="presetOps('sort')">Sort H2O</button>
+      <button onclick="presetOps('sort_typed')">Sort typed</button>
+    </div>
+    <div id="op-checks"></div>
+  </div>
+</div>
+
+<div id="chart" style="height: 700px"></div>
+
+<script>
+const PAYLOAD = __PAYLOAD__;
+const SERIES = PAYLOAD.series;
+const ENGINES = PAYLOAD.engines;
+const OPS = PAYLOAD.ops;
+const ENGINE_COLORS = PAYLOAD.engine_colors;
+const OP_DASHES = PAYLOAD.op_dashes;
+const OP_MARKERS = PAYLOAD.op_markers;
+
+document.getElementById('meta').textContent =
+  PAYLOAD.rayforce_label ? "rayforce: " + PAYLOAD.rayforce_label : "";
+
+const OP_GROUPS = {
+  "groupby_q1": "groupby", "groupby_q2": "groupby", "groupby_q3": "groupby",
+  "groupby_q4": "groupby", "groupby_q5": "groupby", "groupby_q6": "groupby",
+  "groupby_q7": "groupby",
+  "join_inner": "join", "join_left": "join",
+  "sort_single": "sort", "sort_multi": "sort",
+  "sort_u8": "sort_typed", "sort_i16": "sort_typed",
+  "sort_i32": "sort_typed", "sort_i64": "sort_typed",
+  "sort_f64": "sort_typed", "sort_str8": "sort_typed",
+  "sort_str16": "sort_typed",
+};
+
+const enabled = { engine: {}, op: {} };
+ENGINES.forEach(e => enabled.engine[e] = true);
+// Default-on a useful starter set: groupby_q1 + sort_i64 + sort_str8.
+const DEFAULT_ON = new Set(["groupby_q1", "sort_i64", "sort_str8"]);
+OPS.forEach(o => enabled.op[o] = DEFAULT_ON.has(o));
+if (![...DEFAULT_ON].some(o => OPS.includes(o))) {
+  OPS.forEach(o => enabled.op[o] = true);
+}
+
+function buildChecks(containerId, items, category, swatchFn) {
+  const el = document.getElementById(containerId);
+  items.forEach(item => {
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!enabled[category][item];
+    cb.dataset.category = category;
+    cb.dataset.item = item;
+    cb.addEventListener('change', () => {
+      enabled[category][item] = cb.checked;
+      redraw();
+    });
+    label.appendChild(cb);
+    if (swatchFn) {
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = swatchFn(item);
+      label.appendChild(sw);
+    }
+    label.appendChild(document.createTextNode(' ' + item));
+    el.appendChild(label);
+  });
+}
+
+buildChecks('engine-checks', ENGINES, 'engine',
+  e => ENGINE_COLORS[e] || '#666');
+buildChecks('op-checks', OPS, 'op', null);
+
+function toggleAll(category, val) {
+  const items = category === 'engine' ? ENGINES : OPS;
+  items.forEach(item => enabled[category][item] = val);
+  document.querySelectorAll(`input[data-category="${category}"]`)
+    .forEach(cb => cb.checked = val);
+  redraw();
+}
+
+function presetOps(group) {
+  OPS.forEach(o => enabled.op[o] = (OP_GROUPS[o] === group));
+  document.querySelectorAll('input[data-category="op"]').forEach(cb => {
+    cb.checked = enabled.op[cb.dataset.item];
+  });
+  redraw();
+}
+
+function redraw() {
+  const filtered = SERIES.filter(s =>
+    enabled.engine[s.engine] && enabled.op[s.op]);
+
+  const traces = filtered.map(s => ({
+    x: s.x, y: s.y,
+    mode: 'lines+markers',
+    name: `${s.engine} / ${s.op}`,
+    legendgroup: s.engine,
+    line: {
+      color: ENGINE_COLORS[s.engine] || '#666',
+      dash: OP_DASHES[s.op] || 'solid',
+      width: 2,
+    },
+    marker: {
+      symbol: OP_MARKERS[s.op] || 'circle',
+      size: 7,
+    },
+    hovertemplate:
+      `<b>${s.engine} / ${s.op}</b><br>n=%{x:,}<br>%{y:.3f} ms<extra></extra>`,
+  }));
+
+  Plotly.react('chart', traces, {
+    xaxis: { type: 'log', title: 'Rows', exponentformat: 'power' },
+    yaxis: { type: 'log', title: 'Median time (ms)' },
+    template: 'plotly_white',
+    legend: { groupclick: 'togglegroup', font: { size: 10 } },
+    margin: { t: 30, r: 30 },
+    hovermode: 'closest',
+  }, { responsive: true });
+}
+
+redraw();
+</script>
+</body></html>
+"""
