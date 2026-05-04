@@ -81,7 +81,7 @@ class RayforceRflAdapter(Adapter):
 
     def load_data(self, path: Path, table_name: str = "data") -> None:
         # No actual load happens here — the .rfl script reads CSV at run time
-        # (read-csv outside (timeit ...) so it doesn't enter measurements).
+        # (.csv.read outside (timeit ...) so it doesn't enter measurements).
         if table_name in ("data", "left"):
             self._left = Path(path)
 
@@ -131,7 +131,7 @@ class RayforceRflAdapter(Adapter):
         warmup_lines = [query for _ in range(n_warmup)]
         timed_lines = [f"(println (timeit {query}))" for _ in range(n_iter)]
         lines = [
-            f'(set df (read-csv {GROUPBY_SCHEMA} "{self._left}"))',
+            f'(set df (.csv.read {GROUPBY_SCHEMA} "{self._left}"))',
             "(println (count df))",
             *warmup_lines,
             *timed_lines,
@@ -146,8 +146,8 @@ class RayforceRflAdapter(Adapter):
         warmup_lines = [query for _ in range(n_warmup)]
         timed_lines = [f"(println (timeit {query}))" for _ in range(n_iter)]
         lines = [
-            f'(set x (read-csv {JOIN_SCHEMA} "{self._left}"))',
-            f'(set y (read-csv {JOIN_SCHEMA} "{right_path}"))',
+            f'(set x (.csv.read {JOIN_SCHEMA} "{self._left}"))',
+            f'(set y (.csv.read {JOIN_SCHEMA} "{right_path}"))',
             "(println (count x))",
             *warmup_lines,
             *timed_lines,
@@ -206,7 +206,7 @@ class RayforceRflAdapter(Adapter):
         warmup_lines = [query for _ in range(n_warmup)]
         timed_lines = [f"(println (timeit {query}))" for _ in range(n_iter)]
         script = "\n".join([
-            f'(set t (read-csv [{rfl_type}] "{csv_path}"))',
+            f'(set t (.csv.read [{rfl_type}] "{csv_path}"))',
             "(println (count t))",
             *warmup_lines,
             *timed_lines,

@@ -1,24 +1,41 @@
 # Rayforce Benchmark
 #
 # Usage:
-#   make setup        Install dependencies
-#   make data         Generate data (SIZE=1m)
-#   make bench        Run benchmarks
-#   make clean        Clean up
+#   make setup            Install dependencies
+#   make data             Generate H2O data (SIZE=1m)
+#   make bench            Run H2O groupby benchmarks
+#   make bench-join       Run H2O join benchmarks
+#   make bench-sort       Run H2O sort benchmarks (s1, s6 on the groupby dataset)
+#   make bench-all        Run the full H2O suite (groupby + join + sort)
+#   make bench-sort-ext   Run extended sort grid (typed × scaling)
+#   make clean            Clean generated data
 #
 # Options:
-#   SIZE=1m|100k|10m  Data size (default: 1m)
-#   LOCAL=1           Use local rayforce build from ~/rayforce-py
-#   ALL=1             Include QuestDB & TimescaleDB (requires Docker)
+#   SIZE=1m|100k|10m       H2O dataset size (default: 1m)
+#   LOCAL=1                Use rayforce-py from $(RAYFORCE_LOCAL) (~/rayforce-py)
+#   ALL=1                  Include QuestDB & TimescaleDB (requires Docker)
+#   RAYFORCE_MODE=py|rfl   rayforce execution mode (default: py; rfl uses native binary)
+#   RAYFORCE_BIN=<path>    Path to rayforce binary for rfl mode (default ~/rayforce/rayforce)
+#   SORT_MAX=1m            Max length on the extended sort scaling curve
+#   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
 
-.PHONY: setup data bench clean help
+.PHONY: setup data bench bench-join bench-sort bench-all bench-sort-ext \
+        sort-grid-data clean help
 
 PYTHON ?= python
 DATA_DIR ?= data
 SIZE ?= 1m
 RAYFORCE_LOCAL ?= ~/rayforce-py
+RAYFORCE_MODE ?= py
+RAYFORCE_BIN ?=
 ITERATIONS ?= 5
 WARMUP ?= 2
+
+# Sort grid defaults
+SORT_MAX ?= 1m
+SORT_ITER ?= 3
+SORT_WARMUP ?= 1
+SORT_DTYPES ?= u8,i16,i32,i64,f64,str8,str16
 
 # Adapters
 ifdef ALL
@@ -36,34 +53,46 @@ else
 LOCAL_FLAG :=
 endif
 
-# Data paths based on size
+RAYFORCE_FLAGS := --rayforce-mode $(RAYFORCE_MODE) $(LOCAL_FLAG)
+ifneq ($(RAYFORCE_BIN),)
+RAYFORCE_FLAGS += --rayforce-bin $(RAYFORCE_BIN)
+endif
+
+# H2O data paths based on size. Generator names join datasets <left>x<right>.
 ifeq ($(SIZE),100k)
 GROUPBY_DATA := $(DATA_DIR)/groupby_100k_k100
-JOIN_DATA := $(DATA_DIR)/join_100k_10k
-SORT_DATA := $(DATA_DIR)/sort_100k_k100
+JOIN_DATA := $(DATA_DIR)/join_100kx10k
 JOIN_RIGHT := 10k
 else ifeq ($(SIZE),10m)
 GROUPBY_DATA := $(DATA_DIR)/groupby_10m_k100
-JOIN_DATA := $(DATA_DIR)/join_10m_1m
-SORT_DATA := $(DATA_DIR)/sort_10m_k100
+JOIN_DATA := $(DATA_DIR)/join_10mx1m
 JOIN_RIGHT := 1m
 else
 GROUPBY_DATA := $(DATA_DIR)/groupby_1m_k100
-JOIN_DATA := $(DATA_DIR)/join_1m_100k
-SORT_DATA := $(DATA_DIR)/sort_1m_k100
+JOIN_DATA := $(DATA_DIR)/join_1mx100k
 JOIN_RIGHT := 100k
 endif
 
+# H2O sort uses the groupby dataset (s1=id1, s6=id1+id2+id3) — same convention
+# as ~/rayforce/bench/h2o/{s1,s6}.rfl.
+SORT_DATA := $(GROUPBY_DATA)
+
 help:
-	@echo "make setup       Install dependencies"
-	@echo "make data        Generate data (SIZE=1m|100k|10m)"
-	@echo "make bench       Run benchmarks"
-	@echo "make clean       Clean generated data"
+	@echo "make setup            Install dependencies"
+	@echo "make data             Generate H2O datasets (SIZE=1m|100k|10m)"
+	@echo "make bench            Run H2O groupby benchmarks"
+	@echo "make bench-join       Run H2O join benchmarks"
+	@echo "make bench-sort       Run H2O sort (s1, s6 on groupby data)"
+	@echo "make bench-all        Run full H2O suite"
+	@echo "make bench-sort-ext   Run extended sort grid (typed scaling)"
+	@echo "make clean            Clean generated data"
 	@echo ""
 	@echo "Options:"
-	@echo "  SIZE=1m        Data size: 100k, 1m, 10m"
-	@echo "  LOCAL=1        Use local rayforce from ~/rayforce-py"
-	@echo "  ALL=1          Include QuestDB & TimescaleDB"
+	@echo "  SIZE=1m              Data size: 100k, 1m, 10m"
+	@echo "  LOCAL=1              Use rayforce-py from $(RAYFORCE_LOCAL)"
+	@echo "  ALL=1                Include QuestDB & TimescaleDB"
+	@echo "  RAYFORCE_MODE=rfl    Use native rayforce binary (no rayforce-py needed)"
+	@echo "  SORT_MAX=1m          Max length on extended sort grid (1k..100m)"
 
 setup:
 	@pip install -q -r requirements.txt
@@ -72,24 +101,39 @@ setup:
 data:
 	@$(PYTHON) -m bench.generate -o $(DATA_DIR) groupby -n $(SIZE) -k 100
 	@$(PYTHON) -m bench.generate -o $(DATA_DIR) join --left-rows $(SIZE) --right-rows $(JOIN_RIGHT)
-	@$(PYTHON) -m bench.generate -o $(DATA_DIR) sort -n $(SIZE) -k 100
 
 bench: _clean-cache
-	@$(PYTHON) -m bench.runner groupby -d $(GROUPBY_DATA) -a $(ADAPTERS) $(LOCAL_FLAG) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+	@$(PYTHON) -m bench.runner groupby -d $(GROUPBY_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 bench-join: _clean-cache
-	@$(PYTHON) -m bench.runner join -d $(JOIN_DATA) -a $(ADAPTERS) $(LOCAL_FLAG) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+	@$(PYTHON) -m bench.runner join -d $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 bench-sort: _clean-cache
-	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(LOCAL_FLAG) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 bench-all: _clean-cache
-	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) -a $(ADAPTERS) $(LOCAL_FLAG) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+
+# Extended sort grid: typed columns × scaling lengths (random pattern only).
+# QuestDB / Timescale are excluded — Docker overhead dwarfs the actual sort.
+bench-sort-ext: _clean-cache
+	@$(PYTHON) -m bench.sort_grid_runner \
+		--max $(SORT_MAX) \
+		--dtypes $(SORT_DTYPES) \
+		--data-dir $(DATA_DIR)/sort_grid \
+		-i $(SORT_ITER) -w $(SORT_WARMUP) \
+		$(RAYFORCE_FLAGS)
+
+# Generate sort-grid CSVs without running the bench (useful for sharing data).
+sort-grid-data:
+	@$(PYTHON) -m bench.sort_grid_runner --gen-only \
+		--max $(SORT_MAX) --dtypes $(SORT_DTYPES) \
+		--data-dir $(DATA_DIR)/sort_grid
 
 _clean-cache:
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
 clean:
-	@rm -rf $(DATA_DIR)/groupby_* $(DATA_DIR)/join_* $(DATA_DIR)/sort_*
+	@rm -rf $(DATA_DIR)/groupby_* $(DATA_DIR)/join_* $(DATA_DIR)/sort_grid
 	@rm -rf bench/__pycache__ bench/**/__pycache__
-	@rm -f docs/data.json
+	@rm -f docs/data.json docs/sort_data.json

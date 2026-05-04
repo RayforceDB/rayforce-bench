@@ -2,6 +2,11 @@
 
 Benchmarking framework for comparing RayforceDB against popular DataFrame libraries and databases.
 
+> **Branch `prototype`**: subprocess-isolated workers, swap-usage monitor,
+> uniform Python-level timing, dual-mode rayforce adapter (rayforce-py or
+> native binary + .rfl), and an extended typed sort grid. See **Roadmap**
+> below for what's next.
+
 ## Live Results
 
 **[View Benchmark Results](https://anthropics.github.io/rayforce-bench/)**
@@ -9,32 +14,39 @@ Benchmarking framework for comparing RayforceDB against popular DataFrame librar
 ## Quick Start
 
 ```bash
-# Clone the repository
 git clone https://github.com/anthropics/rayforce-bench.git
 cd rayforce-bench
 
-# Install dependencies
-make setup
-
-# Generate benchmark data (1M rows)
-make data
-
-# Run benchmarks
-make bench
+make setup            # Install dependencies
+make data             # Generate H2O datasets (1M rows by default)
+make bench            # Run H2O groupby benchmarks
+make bench-sort-ext   # Run extended typed-sort scaling grid (optional)
 ```
 
-Results are generated in `docs/index.html`.
+Outputs:
+- `docs/index.html` — boxplot + comparison view (existing)
+- `docs/histogram.html` — Plotly bar chart (teide-bench style)
+- `docs/sort.html` — log-log scaling curve for the extended sort grid
 
 ## Adapters
 
 | Adapter | Type | Description |
 |---------|------|-------------|
-| `rayforce` | Embedded | RayforceDB native execution via `timeit` |
+| `rayforce` | Embedded | RayforceDB — Python wrapper or native binary (see modes below) |
 | `polars` | Embedded | Polars DataFrame (Rust-based) |
 | `duckdb` | Embedded | DuckDB embedded SQL |
-| `pandas` | Embedded | Pandas DataFrame |
 | `questdb` | Server | QuestDB via PostgreSQL protocol |
 | `timescale` | Server | TimescaleDB (PostgreSQL) |
+
+### Rayforce execution modes
+
+- **`py` (default)** — uses the `rayforce-py` PyPI package. Requires
+  `pip install rayforce-py` (pending public release).
+- **`rfl`** — drives the native `rayforce` binary by generating temporary
+  `.rfl` scripts and parsing `(timeit ...)` output. Set via
+  `RAYFORCE_MODE=rfl` (Makefile) or `--rayforce-mode rfl` (CLI). Useful
+  while `rayforce-py` is not yet on PyPI, or to benchmark the C core
+  directly. The default binary path is `~/rayforce/rayforce`.
 
 ## Benchmarks
 
@@ -51,9 +63,28 @@ Based on [H2O.ai db-benchmark](https://h2oai.github.io/db-benchmark/):
 - **Inner Join**: Join on `id1`
 - **Left Join**: Join on `id1`
 
-### Sort Queries
-- **Single Column**: Sort by `id1`
-- **Multi Column**: Sort by `id1, id2, id3`
+### Sort Queries (H2O standard, on the groupby dataset)
+- **Single Column** (`s1`): Sort by `id1`
+- **Multi Column** (`s6`): Sort by `id1, id2, id3`
+
+### Extended Sort Grid (optional, `make bench-sort-ext`)
+
+A separate scaling-curve benchmark — random data only, but swept across
+multiple types and sizes:
+
+- **Patterns**: `random` (only)
+- **Dtypes**: `u8`, `i16`, `i32`, `i64`, `f64`, `str8`, `str16`
+- **Lengths**: 9 points per decade up to `SORT_MAX` (default `1m`,
+  configurable up to `100m` if you have the RAM)
+- **Iterations**: 3 measured + 1 warmup per point
+
+The `str8` / `str16` split deliberately straddles the `RAY_STR` SSO
+boundary at 12 bytes — `str8` stays inline in the column cell, `str16`
+spills to the string pool. The same effect applies to DuckDB VARCHAR
+(also 12-byte inline) and Polars Utf8 / Arrow StringView.
+
+QuestDB and TimescaleDB are excluded from the extended sort grid by
+default — Docker overhead and SQL setup cost dwarf the actual sort.
 
 ## Usage
 
@@ -95,19 +126,45 @@ python -m bench.runner all -d data/groupby_1m_k100 -a pandas polars duckdb rayfo
 python -m bench.runner <benchmark> [options]
 
 Arguments:
-  benchmark             groupby, join, sort, or all
+  benchmark              groupby, join, sort, or all
 
 Options:
-  -d, --data PATH       Path to dataset directory (required)
-  -a, --adapters LIST   Adapters to benchmark (default: pandas polars duckdb rayforce)
-  -i, --iterations N    Number of measured iterations (default: 5)
-  -w, --warmup N        Number of warmup iterations (default: 2)
-  --rayforce-local PATH Path to local rayforce-py repo for dev builds
-  --html PATH           Output HTML report path (default: docs/index.html)
-  --no-html             Skip HTML report generation
-  --no-docker           Don't auto-start Docker containers
-  --stop-infra          Stop Docker containers after benchmarks
-  --check-deps          Check dependencies and exit
+  -d, --data PATH        Path to dataset directory (required)
+  -a, --adapters LIST    Adapters to benchmark (default: rayforce polars duckdb)
+  -i, --iterations N     Number of measured iterations (default: 5)
+  -w, --warmup N         Number of warmup iterations (default: 2)
+  --rayforce-local PATH  Path to local rayforce-py repo for dev builds
+  --rayforce-branch X    Clone rayforce-py from this git branch and build it
+  --rayforce-mode py|rfl Rayforce execution mode (default: py)
+  --rayforce-bin PATH    Path to rayforce binary (rfl mode, default ~/rayforce/rayforce)
+  --html PATH            Output HTML report path (default: docs/index.html)
+  --no-html              Skip HTML report generation
+  --no-docker            Don't auto-start Docker containers
+  --stop-infra           Stop Docker containers after benchmarks
+  --check-deps           Check dependencies and exit
+
+Each (adapter, op) runs in its own subprocess for hard memory isolation
+(borrowed from teide-bench). Swap usage is sampled before and after each
+operation; the orchestrator warns when growth crosses 100 MB so you can
+trust whether a result reflects engine performance or disk paging.
+```
+
+### Extended Sort Grid CLI
+
+```
+python -m bench.sort_grid_runner [options]
+
+Options:
+  -a, --adapters LIST    Adapters (default: rayforce duckdb polars)
+  --dtypes LIST          Comma-separated dtypes (default: u8,i16,i32,i64,f64,str8,str16)
+  --max SIZE             Max length on the scaling curve (default: 1m)
+  --data-dir PATH        Where to read/generate per-dtype CSVs (default: data/sort_grid)
+  -i, --iterations N     Measured iterations per point (default: 3)
+  -w, --warmup N         Warmup iterations (default: 1)
+  -o, --output PATH      Output JSON (default: docs/sort_data.json)
+  --gen-only             Generate CSVs and exit
+  --rayforce-mode py|rfl Same as runner
+  --rayforce-bin PATH    Same as runner
 ```
 
 ## Benchmarking with Local Rayforce Build
@@ -217,10 +274,25 @@ Datasets are stored as Parquet files with the following schemas:
 See [FAIRNESS.md](FAIRNESS.md) for detailed methodology on how we ensure fair comparisons.
 
 Key principles:
-- Measure query execution time only (not data loading or result serialization)
-- Each adapter uses its native timing mechanism where possible
-- Data is pre-loaded into memory before timing starts
+- All adapters timed externally with `time.perf_counter_ns` around the
+  query call — no engine-internal `(timeit ...)` shortcuts
+- Each (adapter, op) runs in its own subprocess so memory pressure from
+  one engine can't contaminate another
+- Data is pre-loaded into memory (or pre-read in the `.rfl` script before
+  the timed block) so the timing reflects query execution, not CSV parse
 - Warmup iterations ensure JIT compilation and cache warming
+- Swap-usage monitor flags any run where the OS started paging — those
+  results are not reliable
+
+## Roadmap
+
+- **prototype branch** (current): H2O suite + extended sort grid + SSO
+  visibility + dual-mode rayforce + swap monitor.
+- **next**: ClickBench adapter — 43 queries on Yandex Metrica's
+  100M-row `hits.parquet`, the de-facto industrial benchmark for
+  analytical engines (https://benchmark.clickhouse.com/).
+- **after that**: TPC-H SF1/SF10 (DuckDB has dbgen built in), then JOB
+  (Join Order Benchmark on IMDB) for query-optimizer comparison.
 
 ## Contributing
 

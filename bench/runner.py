@@ -278,8 +278,9 @@ def main():
         ap.error("benchmark is required (groupby, join, sort, all)")
     if not args.data:
         ap.error("-d/--data is required")
-    if not print_dependency_status(quiet=True):
-        sys.exit(1)
+    # Soft check: warn about missing deps but only fail if a requested
+    # adapter is unavailable (the worker will surface a clean error then).
+    print_dependency_status(quiet=True)
 
     if not args.no_docker:
         from .infra import start_required_infrastructure, CONTAINERS, is_container_running
