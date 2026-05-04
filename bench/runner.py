@@ -1,39 +1,42 @@
 #!/usr/bin/env python3
-"""Benchmark runner CLI."""
+"""Benchmark orchestrator — spawns one subprocess per (adapter, op).
+
+Each operation runs in its own child process via bench.worker, so memory
+is guaranteed released between runs. Pattern borrowed from teide-bench.
+"""
 
 import argparse
-import gc
 import json
+import os
+import subprocess
 import sys
-from dataclasses import dataclass
+import tempfile
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
 
-from .adapters import (
-    Adapter,
-    BenchmarkResult,
-    DuckDBAdapter,
-    PolarsAdapter,
-    QuestDBAdapter,
-    RayforceAdapter,
-    TimescaleAdapter,
-)
+from .adapters import BenchmarkResult
 from .report import generate_html_report
+
+
+WORKER_TIMEOUT_S = 600
 
 
 @dataclass
 class BenchmarkRun:
-    """Results of a benchmark run."""
+    """Aggregated result for one (adapter, benchmark) pair."""
     adapter: str
     version: str
     benchmark: str
     iterations: int
     results: list[BenchmarkResult]
     timestamp: str
+    error: str | None = None
 
     @property
     def median_ms(self) -> float:
+        if not self.results:
+            return 0.0
         times = sorted(r.time_ms for r in self.results)
         n = len(times)
         if n % 2 == 0:
@@ -42,156 +45,122 @@ class BenchmarkRun:
 
     @property
     def min_ms(self) -> float:
-        return min(r.time_ms for r in self.results)
+        return min((r.time_ms for r in self.results), default=0.0)
 
     @property
     def max_ms(self) -> float:
-        return max(r.time_ms for r in self.results)
+        return max((r.time_ms for r in self.results), default=0.0)
 
 
-class BenchmarkRunner:
-    """Run benchmarks across multiple adapters."""
+BENCHMARKS = {
+    "groupby": ["groupby_q1", "groupby_q2", "groupby_q3",
+                "groupby_q4", "groupby_q5", "groupby_q6"],
+    "join":    ["join_inner", "join_left"],
+    "sort":    ["sort_single", "sort_multi"],
+}
 
-    BENCHMARKS = {
-        "groupby": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6"],
-        "join": ["join_inner", "join_left"],
-        "sort": ["sort_single", "sort_multi"],
-    }
 
-    def __init__(
-        self,
-        adapters: list[str],
-        rayforce_local: str | None = None,
-        iterations: int = 5,
-        warmup: int = 2,
-    ):
-        self.iterations = iterations
-        self.warmup = warmup
-        self._adapters: dict[str, Adapter] = {}
+@dataclass
+class OrchestratorConfig:
+    adapters: list[str]
+    iterations: int = 5
+    warmup: int = 2
+    rayforce_local: str | None = None
 
-        for name in adapters:
-            if name == "polars":
-                self._adapters[name] = PolarsAdapter()
-            elif name == "duckdb":
-                self._adapters[name] = DuckDBAdapter()
-            elif name == "questdb":
-                self._adapters[name] = QuestDBAdapter()
-            elif name == "timescale":
-                self._adapters[name] = TimescaleAdapter()
-            elif name == "rayforce":
-                self._adapters[name] = RayforceAdapter(local_path=rayforce_local)
-            else:
-                raise ValueError(f"Unknown adapter: {name}")
 
-    def run_groupby(self, data_path: Path) -> list[BenchmarkRun]:
-        """Run groupby benchmarks."""
-        results = []
+def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
+                data: Path, right_data: Path | None) -> BenchmarkRun:
+    """Spawn a child process for one (adapter, benchmark) pair."""
+    fd, result_path = tempfile.mkstemp(prefix=f"bench_{adapter}_{benchmark}_",
+                                       suffix=".json")
+    os.close(fd)
 
-        for name, adapter in self._adapters.items():
-            print(f"{name}", end="", flush=True)
-            adapter.load_data(data_path / "data.csv")
+    cmd = [
+        sys.executable, "-m", "bench.worker",
+        "--adapter", adapter,
+        "--benchmark", benchmark,
+        "--data", str(data),
+        "--iterations", str(cfg.iterations),
+        "--warmup", str(cfg.warmup),
+        "--result", result_path,
+    ]
+    if right_data is not None:
+        cmd += ["--right-data", str(right_data)]
+    if cfg.rayforce_local:
+        cmd += ["--rayforce-local", cfg.rayforce_local]
 
-            for bench_name in self.BENCHMARKS["groupby"]:
-                method = getattr(adapter, f"run_{bench_name}")
-                run = self._run_benchmark(name, adapter, bench_name, method)
-                results.append(run)
-                print(".", end="", flush=True)
+    try:
+        subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
+        with open(result_path) as f:
+            data_out = json.load(f)
+    except subprocess.TimeoutExpired:
+        data_out = {
+            "adapter": adapter, "benchmark": benchmark,
+            "version": "?", "iterations": 0, "results": [],
+            "timestamp": datetime.now().isoformat(),
+            "error": f"timeout after {WORKER_TIMEOUT_S}s",
+        }
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        data_out = {
+            "adapter": adapter, "benchmark": benchmark,
+            "version": "?", "iterations": 0, "results": [],
+            "timestamp": datetime.now().isoformat(),
+            "error": f"worker produced no result: {e}",
+        }
+    finally:
+        if os.path.exists(result_path):
+            os.unlink(result_path)
 
-            adapter.close()
-            gc.collect()
-            print()
+    results = [
+        BenchmarkResult(name=r["name"], time_ns=r["time_ns"],
+                        rows=r["rows"], error=r.get("error"))
+        for r in data_out.get("results", [])
+    ]
+    return BenchmarkRun(
+        adapter=adapter,
+        version=data_out.get("version") or "?",
+        benchmark=benchmark,
+        iterations=data_out.get("iterations", 0),
+        results=results,
+        timestamp=data_out.get("timestamp", datetime.now().isoformat()),
+        error=data_out.get("error"),
+    )
 
-        return results
 
-    def run_join(self, data_path: Path) -> list[BenchmarkRun]:
-        """Run join benchmarks."""
-        results = []
-        left_path = data_path / "left.csv"
-        right_path = data_path / "right.csv"
+def _print_op_result(run: BenchmarkRun) -> None:
+    if run.error:
+        print(f"  {run.benchmark:<20s} ERROR: {run.error}")
+    elif not run.results:
+        print(f"  {run.benchmark:<20s} (no results)")
+    else:
+        print(f"  {run.benchmark:<20s} median={run.median_ms:>8.2f}ms  "
+              f"min={run.min_ms:>8.2f}ms  rows={run.results[0].rows}")
 
-        for name, adapter in self._adapters.items():
-            print(f"{name}", end="", flush=True)
-            adapter.load_data(left_path, "left")
 
-            for bench_name in self.BENCHMARKS["join"]:
-                method = getattr(adapter, f"run_{bench_name}")
-                run = self._run_benchmark(
-                    name, adapter, bench_name,
-                    lambda m=method: m(right_path)
-                )
-                results.append(run)
-                print(".", end="", flush=True)
+def run_suite(cfg: OrchestratorConfig, suite: str, data_path: Path) -> list[BenchmarkRun]:
+    """Run a named suite (groupby / join / sort) across all adapters."""
+    if suite == "join":
+        primary = data_path / "left.csv"
+        right = data_path / "right.csv"
+    else:
+        primary = data_path / "data.csv"
+        right = None
 
-            adapter.close()
-            gc.collect()
-            print()
-
-        return results
-
-    def run_sort(self, data_path: Path) -> list[BenchmarkRun]:
-        """Run sort benchmarks."""
-        results = []
-
-        for name, adapter in self._adapters.items():
-            print(f"{name}", end="", flush=True)
-            adapter.load_data(data_path / "data.csv")
-
-            for bench_name in self.BENCHMARKS["sort"]:
-                method = getattr(adapter, f"run_{bench_name}")
-                run = self._run_benchmark(name, adapter, bench_name, method)
-                results.append(run)
-                print(".", end="", flush=True)
-
-            adapter.close()
-            gc.collect()
-            print()
-
-        return results
-
-    def _run_benchmark(
-        self,
-        adapter_name: str,
-        adapter: Adapter,
-        bench_name: str,
-        method: Callable[[], BenchmarkResult],
-    ) -> BenchmarkRun:
-        """Run a single benchmark with warmup and iterations."""
-        # Warmup
-        for _ in range(self.warmup):
-            method()
-
-        # Measured runs
-        results = []
-        for _ in range(self.iterations):
-            result = method()
-            results.append(result)
-
-        return BenchmarkRun(
-            adapter=adapter_name,
-            version=adapter.version,
-            benchmark=bench_name,
-            iterations=self.iterations,
-            results=results,
-            timestamp=datetime.now().isoformat(),
-        )
-
-    def _print_result(self, run: BenchmarkRun) -> None:
-        """Print benchmark result."""
-        rows = run.results[0].rows if run.results else 0
-        print(
-            f"  {run.benchmark}: "
-            f"median={run.median_ms:.2f}ms "
-            f"min={run.min_ms:.2f}ms "
-            f"max={run.max_ms:.2f}ms "
-            f"({rows} rows)"
-        )
+    ops = BENCHMARKS[suite]
+    runs = []
+    for adapter in cfg.adapters:
+        print(f"[{adapter}]")
+        for op in ops:
+            run = _run_worker(cfg, adapter, op, primary, right)
+            _print_op_result(run)
+            runs.append(run)
+    return runs
 
 
 def save_results(results: list[BenchmarkRun], output_path: Path) -> None:
-    """Save results to JSON file."""
     data = []
     for run in results:
-        run_data = {
+        data.append({
             "adapter": run.adapter,
             "version": run.version,
             "benchmark": run.benchmark,
@@ -200,13 +169,12 @@ def save_results(results: list[BenchmarkRun], output_path: Path) -> None:
             "min_ms": run.min_ms,
             "max_ms": run.max_ms,
             "timestamp": run.timestamp,
+            "error": run.error,
             "results": [
                 {"time_ms": r.time_ms, "rows": r.rows, "error": r.error}
                 for r in run.results
             ],
-        }
-        data.append(run_data)
-
+        })
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(data, f, indent=2)
@@ -214,15 +182,10 @@ def save_results(results: list[BenchmarkRun], output_path: Path) -> None:
 
 
 def print_comparison(results: list[BenchmarkRun]) -> None:
-    """Print comparison table."""
-    # Group by benchmark
-    by_benchmark: dict[str, dict[str, BenchmarkRun]] = {}
+    by_bench: dict[str, dict[str, BenchmarkRun]] = {}
     for run in results:
-        if run.benchmark not in by_benchmark:
-            by_benchmark[run.benchmark] = {}
-        by_benchmark[run.benchmark][run.adapter] = run
+        by_bench.setdefault(run.benchmark, {})[run.adapter] = run
 
-    # Put rayforce first, then sort the rest
     all_adapters = set(r.adapter for r in results)
     adapters = []
     if "rayforce" in all_adapters:
@@ -230,137 +193,82 @@ def print_comparison(results: list[BenchmarkRun]) -> None:
         all_adapters.remove("rayforce")
     adapters.extend(sorted(all_adapters))
 
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print("COMPARISON (median ms)")
-    print("=" * 60)
+    print("=" * 70)
 
-    # Header
-    header = f"{'Benchmark':<15}"
-    for adapter in adapters:
-        header += f" {adapter:>12}"
+    header = f"{'Benchmark':<18}"
+    for a in adapters:
+        header += f" {a:>12}"
     print(header)
-    print("-" * 60)
+    print("-" * 70)
 
-    # Track speedups relative to rayforce
     speedups: dict[str, list[float]] = {a: [] for a in adapters}
-
-    # Rows
-    for bench_name, adapter_results in sorted(by_benchmark.items()):
-        row = f"{bench_name:<15}"
-        rf_time = adapter_results.get("rayforce", None)
-        rf_ms = rf_time.median_ms if rf_time else None
-
-        for adapter in adapters:
-            if adapter in adapter_results:
-                t = adapter_results[adapter].median_ms
-                row += f" {t:>12.2f}"
-                if rf_ms and rf_ms > 0:
-                    speedups[adapter].append(t / rf_ms)
-            else:
+    for bench_name, ar in sorted(by_bench.items()):
+        row = f"{bench_name:<18}"
+        rf_ms = ar["rayforce"].median_ms if "rayforce" in ar and not ar["rayforce"].error else None
+        for a in adapters:
+            r = ar.get(a)
+            if r is None or r.error or not r.results:
                 row += f" {'N/A':>12}"
+                continue
+            t = r.median_ms
+            row += f" {t:>12.2f}"
+            if rf_ms and rf_ms > 0:
+                speedups[a].append(t / rf_ms)
         print(row)
 
-    # Average speedup line
-    print("-" * 60)
-    row = f"{'(avg speedup)':<15}"
-    for adapter in adapters:
-        if speedups[adapter]:
-            avg = sum(speedups[adapter]) / len(speedups[adapter])
-            row += f" {avg:>11.2f}x"
+    print("-" * 70)
+    avg = f"{'(avg vs rayforce)':<18}"
+    for a in adapters:
+        if speedups[a]:
+            avg += f" {sum(speedups[a]) / len(speedups[a]):>11.2f}x"
         else:
-            row += f" {'N/A':>12}"
-    print(row)
-    print("=" * 60)
+            avg += f" {'N/A':>12}"
+    print(avg)
+    print("=" * 70)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run benchmarks for rayforce-bench")
+    ap = argparse.ArgumentParser(description="Run rayforce benchmarks")
+    ap.add_argument("benchmark", nargs="?",
+                    choices=["groupby", "join", "sort", "all"],
+                    help="Benchmark suite to run")
+    ap.add_argument("-d", "--data", help="Path to dataset directory")
+    ap.add_argument("-a", "--adapters", nargs="+",
+                    default=["rayforce", "polars", "duckdb"])
+    ap.add_argument("--rayforce-local",
+                    help="Path to local rayforce-py for dev builds")
+    ap.add_argument("-i", "--iterations", type=int, default=5)
+    ap.add_argument("-w", "--warmup", type=int, default=2)
+    ap.add_argument("-o", "--output", help="Output JSON path")
+    ap.add_argument("--html", default="docs/index.html",
+                    help="Output HTML report path")
+    ap.add_argument("--no-html", action="store_true")
+    ap.add_argument("--check-deps", action="store_true")
+    ap.add_argument("--no-docker", action="store_true",
+                    help="Skip Docker auto-start for questdb/timescale")
+    ap.add_argument("--stop-infra", action="store_true",
+                    help="Stop infrastructure after run")
+    args = ap.parse_args()
 
-    parser.add_argument(
-        "benchmark",
-        nargs="?",
-        choices=["groupby", "join", "sort", "all"],
-        help="Benchmark suite to run",
-    )
-    parser.add_argument(
-        "-d", "--data",
-        help="Path to dataset directory",
-    )
-    parser.add_argument(
-        "-a", "--adapters",
-        nargs="+",
-        default=["rayforce", "polars", "duckdb"],
-        help="Adapters: polars, duckdb, questdb, timescale, rayforce",
-    )
-    parser.add_argument(
-        "--rayforce-local",
-        help="Path to local rayforce-py repo for dev builds",
-    )
-    parser.add_argument(
-        "-i", "--iterations",
-        type=int,
-        default=5,
-        help="Number of measured iterations (default: 5)",
-    )
-    parser.add_argument(
-        "-w", "--warmup",
-        type=int,
-        default=2,
-        help="Number of warmup iterations (default: 2)",
-    )
-    parser.add_argument(
-        "-o", "--output",
-        help="Output JSON file for results",
-    )
-    parser.add_argument(
-        "--html",
-        default="docs/index.html",
-        help="Output HTML report path (default: docs/index.html)",
-    )
-    parser.add_argument(
-        "--no-html",
-        action="store_true",
-        help="Skip HTML report generation",
-    )
-    parser.add_argument(
-        "--check-deps",
-        action="store_true",
-        help="Check dependencies and exit",
-    )
-    parser.add_argument(
-        "--no-docker",
-        action="store_true",
-        help="Don't auto-start Docker containers for questdb/timescale",
-    )
-    parser.add_argument(
-        "--stop-infra",
-        action="store_true",
-        help="Stop infrastructure containers after benchmarks",
-    )
-
-    args = parser.parse_args()
-
-    # Check dependencies first
     from .adapters import print_dependency_status
     if args.check_deps:
         print_dependency_status(quiet=False)
         sys.exit(0)
 
-    # Validate required args for actual benchmark runs
     if not args.benchmark:
-        parser.error("benchmark is required (choose from: groupby, join, sort, all)")
+        ap.error("benchmark is required (groupby, join, sort, all)")
     if not args.data:
-        parser.error("-d/--data is required")
-
+        ap.error("-d/--data is required")
     if not print_dependency_status(quiet=True):
         sys.exit(1)
 
-    # Start required infrastructure (Docker containers)
     if not args.no_docker:
-        from .infra import start_required_infrastructure
+        from .infra import start_required_infrastructure, CONTAINERS, is_container_running
         if not start_required_infrastructure(args.adapters, quiet=True):
-            from .infra import CONTAINERS, is_container_running
-            failed = [a for a in args.adapters if a in CONTAINERS and not is_container_running(CONTAINERS[a]["name"])]
+            failed = [a for a in args.adapters
+                      if a in CONTAINERS and not is_container_running(CONTAINERS[a]["name"])]
             if failed:
                 args.adapters = [a for a in args.adapters if a not in failed]
                 if not args.adapters:
@@ -368,34 +276,26 @@ def main():
                     sys.exit(1)
 
     data_path = Path(args.data)
-
     if not data_path.exists():
         print(f"Error: {data_path} not found")
         sys.exit(1)
 
-    runner = BenchmarkRunner(
-        adapters=args.adapters,
-        rayforce_local=args.rayforce_local,
+    cfg = OrchestratorConfig(
+        adapters=list(args.adapters),
         iterations=args.iterations,
         warmup=args.warmup,
+        rayforce_local=args.rayforce_local,
     )
 
-    results = []
-
-    if args.benchmark in ("groupby", "all"):
-        results.extend(runner.run_groupby(data_path))
-
-    if args.benchmark in ("join", "all"):
-        results.extend(runner.run_join(data_path))
-
-    if args.benchmark in ("sort", "all"):
-        results.extend(runner.run_sort(data_path))
+    suites = ["groupby", "join", "sort"] if args.benchmark == "all" else [args.benchmark]
+    results: list[BenchmarkRun] = []
+    for suite in suites:
+        results.extend(run_suite(cfg, suite, data_path))
 
     print_comparison(results)
 
     if args.output:
         save_results(results, Path(args.output))
-
     if not args.no_html:
         generate_html_report(results, Path(args.html))
 
