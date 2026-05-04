@@ -112,3 +112,23 @@ class Adapter(ABC):
         result = func()
         end = time.perf_counter_ns()
         return result, end - start
+
+    def run_full(self, bench_name: str, n_warmup: int, n_iter: int,
+                 right_path: Path | None = None) -> list[BenchmarkResult]:
+        """Run warmup + measured iterations for a single benchmark.
+
+        Default implementation invokes the bench method n_warmup + n_iter
+        times. Adapters that need to perform warmup and iterations in a
+        single external invocation (e.g. rayforce .rfl runner) override
+        this method.
+        """
+        method = getattr(self, f"run_{bench_name}")
+        if bench_name.startswith("join_"):
+            if right_path is None:
+                raise ValueError(f"{bench_name} requires right_path")
+            invoke = lambda: method(right_path)
+        else:
+            invoke = method
+        for _ in range(n_warmup):
+            invoke()
+        return [invoke() for _ in range(n_iter)]
