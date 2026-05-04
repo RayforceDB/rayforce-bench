@@ -10,6 +10,17 @@ if TYPE_CHECKING:
     from .runner import BenchmarkRun
 
 
+# Stable colors per engine — matches teide-bench palette so cross-repo
+# screenshots stay visually consistent.
+ENGINE_COLORS = {
+    "rayforce":  "#ff7f0e",
+    "duckdb":    "#1f77b4",
+    "polars":    "#2ca02c",
+    "questdb":   "#9467bd",
+    "timescale": "#d62728",
+}
+
+
 def _compute_boxplot(values: list[float]) -> list[float]:
     """Compute boxplot stats: [min, q1, median, q3, max]."""
     if not values:
@@ -107,3 +118,133 @@ def generate_html_report(
         html_path.write_text(html_content)
 
     print(f"Results saved: {json_path}")
+
+
+def generate_histogram_html(results: list["BenchmarkRun"],
+                             output_path: Path,
+                             title: str = "RayforceDB H2O Benchmark") -> None:
+    """Generate a self-contained Plotly bar chart, log-Y, grouped by adapter.
+
+    Same shape as teide-bench/results/bench.html — easy quick-look that
+    works without docs/index.html infrastructure.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    by_bench: dict[str, dict[str, float]] = {}
+    for r in results:
+        if r.error or not r.results:
+            continue
+        by_bench.setdefault(r.benchmark, {})[r.adapter] = r.median_ms
+
+    benches = sorted(by_bench.keys())
+    adapters = sorted({a for d in by_bench.values() for a in d.keys()})
+
+    values = {a: [by_bench.get(b, {}).get(a) for b in benches] for a in adapters}
+    colors = [ENGINE_COLORS.get(a, "#666") for a in adapters]
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>{title}</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>body{{font-family:sans-serif;padding:20px}}</style>
+</head><body>
+<h2>{title}</h2>
+<div id="chart"></div>
+<script>
+const benches = {json.dumps(benches)};
+const adapters = {json.dumps(adapters)};
+const values = {json.dumps(values)};
+const colors = {json.dumps(colors)};
+const traces = adapters.map((a, i) => ({{
+  x: benches,
+  y: values[a],
+  name: a,
+  type: 'bar',
+  marker: {{ color: colors[i] }},
+  text: values[a].map(v => v == null ? '' :
+        v >= 1000 ? (v/1000).toFixed(2)+'s' : v.toFixed(1)+'ms'),
+  textposition: 'outside',
+  textfont: {{ size: 9 }},
+}}));
+Plotly.newPlot('chart', traces, {{
+  barmode: 'group',
+  height: 500,
+  yaxis: {{ title: 'Time (ms)', type: 'log' }},
+  template: 'plotly_white',
+  legend: {{ orientation: 'h', y: 1.1 }},
+}});
+</script></body></html>"""
+
+    output_path.write_text(html)
+    print(f"Histogram saved: {output_path}")
+
+
+def generate_sort_grid_html(input_json: Path, output_path: Path,
+                             title: str = "Sort grid — typed scaling curve") -> None:
+    """Render a log-log scaling curve from sort_grid_runner output.
+
+    One trace per (adapter, dtype) pair — legend lets the viewer toggle
+    individual curves. Loads the same docs/sort_data.json the runner
+    writes, so the page can be re-rendered without re-running benchmarks.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = json.loads(Path(input_json).read_text())
+    rows = data.get("results", [])
+    by_pair: dict[tuple[str, str], list[tuple[int, float]]] = {}
+    for r in rows:
+        by_pair.setdefault((r["adapter"], r["dtype"]), []).append(
+            (r["length"], r["median_ms"])
+        )
+
+    traces = []
+    for (adapter, dtype), points in sorted(by_pair.items()):
+        points.sort()
+        xs = [p[0] for p in points]
+        ys = [p[1] for p in points]
+        traces.append({
+            "x": xs, "y": ys,
+            "name": f"{adapter} / {dtype}",
+            "mode": "lines+markers",
+            "type": "scatter",
+            "legendgroup": adapter,
+            "marker": {"color": ENGINE_COLORS.get(adapter, "#666")},
+            "line": {"color": ENGINE_COLORS.get(adapter, "#666"),
+                     "dash": _dash_for_dtype(dtype)},
+        })
+
+    meta = data.get("meta", {})
+    label = meta.get("rayforce_label", "rayforce")
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>{title}</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>body{{font-family:sans-serif;padding:20px}}</style>
+</head><body>
+<h2>{title}</h2>
+<p>{label} — {meta.get('iterations', '?')} iterations, {meta.get('warmup', '?')} warmup</p>
+<div id="chart" style="height: 700px"></div>
+<script>
+const traces = {json.dumps(traces)};
+Plotly.newPlot('chart', traces, {{
+  xaxis: {{ title: 'Length (rows)', type: 'log', autorange: true }},
+  yaxis: {{ title: 'Median time (ms)', type: 'log', autorange: true }},
+  template: 'plotly_white',
+  legend: {{ groupclick: 'togglegroup' }},
+}});
+</script></body></html>"""
+
+    output_path.write_text(html)
+    print(f"Sort grid HTML saved: {output_path}")
+
+
+# Dashed/dotted lines distinguish dtypes within an engine's color group.
+_DTYPE_DASH = {
+    "u8": "dot", "i16": "dashdot", "i32": "dash",
+    "i64": "solid", "f64": "longdash",
+    "str8": "longdashdot", "str16": "5px,2px,1px,2px",
+}
+
+
+def _dash_for_dtype(dtype: str) -> str:
+    return _DTYPE_DASH.get(dtype, "solid")

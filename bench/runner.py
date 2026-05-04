@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .adapters import BenchmarkResult
 from .engine_source import engine_label, resolve_rayforce_py
-from .report import generate_html_report
+from .report import generate_histogram_html, generate_html_report
 from .swapcheck import SwapSample, warn_if_already_used, warn_if_grew
 
 
@@ -327,6 +327,7 @@ def main():
         save_results(results, Path(args.output))
     if not args.no_html:
         generate_html_report(results, Path(args.html))
+        generate_histogram_html(results, Path(args.html).parent / "histogram.html")
 
     if args.stop_infra:
         from .infra import stop_infrastructure

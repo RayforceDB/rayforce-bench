@@ -19,6 +19,7 @@ from pathlib import Path
 
 from .engine_source import engine_label, resolve_rayforce_py
 from .generators.sort_grid import DTYPES, gen_grid, scaling_lengths
+from .report import generate_sort_grid_html
 from .swapcheck import SwapSample, warn_if_already_used, warn_if_grew
 
 
@@ -202,6 +203,9 @@ def main():
         "results": results,
     }, indent=2))
     print(f"\nResults saved to {out_path} ({len(results)} entries)")
+
+    html_path = out_path.parent / "sort.html"
+    generate_sort_grid_html(out_path, html_path)
 
 
 if __name__ == "__main__":
