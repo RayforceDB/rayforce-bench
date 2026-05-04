@@ -21,14 +21,13 @@ class GeneratedDataset:
     metadata: dict[str, Any]
 
     def write(self, output_dir: Path, formats: list[str] | None = None) -> dict[str, Path]:
-        """Write dataset to disk in specified formats.
+        """Write dataset to disk and emit a manifest with SHA256 sums.
 
-        Args:
-            output_dir: Directory to write files to
-            formats: List of formats to write ('parquet', 'csv'). Default: ['parquet']
-
-        Returns:
-            Dict mapping table names to their file paths
+        The SHA256 in manifest.json lets a user on a different machine
+        verify byte-identical inputs. Two runs with the same seed + n_rows
+        + k must produce the same hash; if they don't, something has
+        changed in the generator (numpy bit-generator, formatting,
+        ordering) and benchmark numbers are no longer cross-comparable.
         """
         formats = formats or ["parquet"]
         output_dir = Path(output_dir)
@@ -39,32 +38,34 @@ class GeneratedDataset:
 
         for table_name, table in self.tables.items():
             table_paths = {}
+            file_hashes = {}
 
             for fmt in formats:
                 if fmt == "parquet":
                     path = output_dir / f"{table_name}.parquet"
                     pq.write_table(table, path, compression="zstd")
-                    table_paths["parquet"] = str(path)
                 elif fmt == "csv":
                     path = output_dir / f"{table_name}.csv"
                     csv.write_csv(table, path)
-                    table_paths["csv"] = str(path)
                 else:
                     raise ValueError(f"Unknown format: {fmt}")
+
+                table_paths[fmt] = str(path)
+                file_hashes[fmt] = _sha256_file(path)
 
             paths[table_name] = table_paths
             file_info[table_name] = {
                 "rows": table.num_rows,
                 "columns": table.num_columns,
                 "schema": {col.name: str(col.type) for col in table.schema},
-                "files": table_paths
+                "files": table_paths,
+                "sha256": file_hashes,
             }
 
-        # Write manifest
         manifest = {
             "name": self.name,
             "tables": file_info,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
         manifest_path = output_dir / "manifest.json"
@@ -72,6 +73,15 @@ class GeneratedDataset:
             json.dump(manifest, f, indent=2)
 
         return paths
+
+
+def _sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
+    """SHA256 of a file, streamed so we don't blow up on multi-GB CSVs."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(chunk_size):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 @dataclass

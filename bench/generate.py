@@ -40,6 +40,7 @@ def cmd_join(args):
     gen = JoinGenerator(
         n_rows_left=parse_size(args.left_rows),
         n_rows_right=parse_size(args.right_rows),
+        k=args.k,
         null_pct=args.null_pct,
         seed=args.seed,
     )
@@ -119,7 +120,8 @@ def main():
     # join
     p_join = subparsers.add_parser('join', help='Generate join benchmark data')
     p_join.add_argument('--left-rows', default='10m', help='Left table rows (default: 10m)')
-    p_join.add_argument('--right-rows', default='1m', help='Right table rows (default: 1m)')
+    p_join.add_argument('--right-rows', default='10m', help='Right table rows (default: 10m, canonical H2O)')
+    p_join.add_argument('-k', type=int, default=100, help='Low cardinality (default: 100)')
     p_join.add_argument('--null-pct', type=float, default=0.0, help='Null percentage 0.0-1.0')
     p_join.set_defaults(func=cmd_join)
 
