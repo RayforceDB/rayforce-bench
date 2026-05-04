@@ -17,6 +17,7 @@ from pathlib import Path
 
 from .adapters import BenchmarkResult
 from .report import generate_html_report
+from .swapcheck import SwapSample, warn_if_already_used, warn_if_grew
 
 
 WORKER_TIMEOUT_S = 600
@@ -89,6 +90,7 @@ def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
 
+    swap_before = SwapSample.now()
     try:
         subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
         with open(result_path) as f:
@@ -110,6 +112,7 @@ def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
     finally:
         if os.path.exists(result_path):
             os.unlink(result_path)
+    warn_if_grew(swap_before, SwapSample.now(), f"{adapter}/{benchmark}")
 
     results = [
         BenchmarkResult(name=r["name"], time_ns=r["time_ns"],
@@ -286,6 +289,8 @@ def main():
         warmup=args.warmup,
         rayforce_local=args.rayforce_local,
     )
+
+    warn_if_already_used(SwapSample.now())
 
     suites = ["groupby", "join", "sort"] if args.benchmark == "all" else [args.benchmark]
     results: list[BenchmarkRun] = []
