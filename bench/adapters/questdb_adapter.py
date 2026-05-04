@@ -89,6 +89,29 @@ class QuestDBAdapter(Adapter):
                 )
             sender.flush()
 
+        # ILP is async — the rows (and even the table itself, on a first
+        # write) aren't queryable until QuestDB commits them (default
+        # cadence ~1s). Block until count() matches the load, treating any
+        # error from the SELECT as "not visible yet".
+        import time as _time
+        expected = df.height
+        actual = 0
+        deadline = _time.time() + 30
+        while _time.time() < deadline:
+            try:
+                with self._conn.cursor() as cur:
+                    cur.execute(f"SELECT count(*) FROM {sql_table_name}")
+                    actual = cur.fetchone()[0]
+                if actual >= expected:
+                    break
+            except Exception:
+                actual = 0
+            _time.sleep(0.1)
+        else:
+            raise RuntimeError(
+                f"QuestDB ILP commit timeout: {actual}/{expected} rows visible"
+            )
+
         self._table_names[table_name] = sql_table_name
 
     def _get_table(self, name: str = "data") -> str:

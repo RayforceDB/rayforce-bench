@@ -20,8 +20,11 @@ CONTAINERS = {
         "env": {"POSTGRES_PASSWORD": "postgres"},
         "ready_check": ("localhost", 5433),
         "ready_timeout": 30,
+        # Postgres opens its port before initdb finishes, so the port-ready
+        # check returns long before psql can actually connect. Wait up to
+        # 30s for SELECT 1 to succeed before issuing CREATE DATABASE.
         "post_start": [
-            "for i in 1 2 3 4 5; do docker exec {name} psql -U postgres -c 'SELECT 1;' 2>/dev/null && break || sleep 2; done",
+            "for i in $(seq 1 15); do docker exec {name} psql -U postgres -c 'SELECT 1;' >/dev/null 2>&1 && break || sleep 2; done",
             "docker exec {name} psql -U postgres -c 'CREATE DATABASE benchmark;' 2>/dev/null || true",
         ],
     },
