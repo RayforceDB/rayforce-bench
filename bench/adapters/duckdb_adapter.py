@@ -153,6 +153,39 @@ class DuckDBAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
 
+    _DUCKDB_TYPES = {
+        "u8": "UTINYINT", "i16": "SMALLINT", "i32": "INTEGER",
+        "i64": "BIGINT", "f64": "DOUBLE",
+        "str8": "VARCHAR", "str16": "VARCHAR",
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        cast = self._DUCKDB_TYPES[dtype]
+        if self._conn is None:
+            self._conn = duckdb.connect()
+        self._conn.execute("DROP TABLE IF EXISTS sort_data")
+        self._conn.execute(
+            f"CREATE TABLE sort_data AS "
+            f"SELECT CAST(v AS {cast}) AS v FROM read_csv_auto('{csv_path}')"
+        )
+        rows = self._conn.execute("SELECT COUNT(*) FROM sort_data").fetchone()[0]
+        sql = "CREATE OR REPLACE TABLE sort_result AS SELECT * FROM sort_data ORDER BY v"
+
+        for _ in range(n_warmup):
+            self._conn.execute(sql)
+
+        results = []
+        for _ in range(n_iter):
+            self._conn.execute("DROP TABLE IF EXISTS sort_result")
+            _, time_ns = self._time_it(lambda: self._conn.execute(sql))
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
+
+        self._conn.execute("DROP TABLE IF EXISTS sort_result")
+        self._conn.execute("DROP TABLE IF EXISTS sort_data")
+        return results
+
     def close(self) -> None:
         if self._conn is not None:
             self._conn.close()

@@ -113,6 +113,19 @@ class Adapter(ABC):
         end = time.perf_counter_ns()
         return result, end - start
 
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a typed single-column CSV (extended sort grid).
+
+        Optional — adapters that participate in the sort grid override this.
+        Default raises NotImplementedError so questdb/timescale, which we
+        don't include in the grid, fail loudly if accidentally selected.
+        """
+        raise NotImplementedError(
+            f"{self.name} does not implement run_sort_typed_full; "
+            f"exclude it from --adapters when running sort-ext"
+        )
+
     def run_full(self, bench_name: str, n_warmup: int, n_iter: int,
                  right_path: Path | None = None) -> list[BenchmarkResult]:
         """Run warmup + measured iterations for a single benchmark.

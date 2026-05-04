@@ -230,5 +230,30 @@ class RayforceAdapter(Adapter):
         query = f"(xasc {t} `id1`id2`id3)"
         return self._run_timed_query(query, "sort_multi")
 
+    _RF_TYPES_NAME = {
+        "u8": "U8", "i16": "I16", "i32": "I32",
+        "i64": "I64", "f64": "F64",
+        "str8": "STR", "str16": "STR",
+    }
+
+    def run_sort_typed_full(self, csv_path, dtype: str,
+                             n_warmup: int, n_iter: int):
+        """Sort a single typed column for the extended sort grid."""
+        type_name = self._RF_TYPES_NAME[dtype]
+        rf_type = getattr(self._rayforce, type_name)
+        t = self._Table.from_csv([rf_type], str(csv_path))
+        rows = len(t)
+
+        for _ in range(n_warmup):
+            t.order_by("v").execute()
+
+        results = []
+        for _ in range(n_iter):
+            start = time.perf_counter_ns()
+            t.order_by("v").execute()
+            time_ns = time.perf_counter_ns() - start
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
+        return results
+
     def close(self) -> None:
         self._table_names.clear()

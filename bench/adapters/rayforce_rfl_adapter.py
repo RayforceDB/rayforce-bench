@@ -192,5 +192,29 @@ class RayforceRflAdapter(Adapter):
                 times.append(v)
         return times, rows
 
+    _RFL_TYPES = {
+        "u8": "U8", "i16": "I16", "i32": "I32",
+        "i64": "I64", "f64": "F64",
+        "str8": "STR", "str16": "STR",
+    }
+
+    def run_sort_typed_full(self, csv_path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid (rfl mode)."""
+        rfl_type = self._RFL_TYPES[dtype]
+        query = "(xasc t [v])"
+        warmup_lines = [query for _ in range(n_warmup)]
+        timed_lines = [f"(println (timeit {query}))" for _ in range(n_iter)]
+        script = "\n".join([
+            f'(set t (read-csv [{rfl_type}] "{csv_path}"))',
+            "(println (count t))",
+            *warmup_lines,
+            *timed_lines,
+            "(exit 0)",
+        ])
+        times_ms, rows = self._exec(script)
+        return [BenchmarkResult(f"sort_{dtype}", int(ms * 1_000_000), rows)
+                for ms in times_ms]
+
     def close(self) -> None:
         self._left = None

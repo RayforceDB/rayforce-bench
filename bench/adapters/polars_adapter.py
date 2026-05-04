@@ -135,5 +135,27 @@ class PolarsAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
 
+    _POLARS_DTYPES = {
+        "u8": pl.UInt8, "i16": pl.Int16, "i32": pl.Int32,
+        "i64": pl.Int64, "f64": pl.Float64,
+        "str8": pl.Utf8, "str16": pl.Utf8,
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        pl_dtype = self._POLARS_DTYPES[dtype]
+        df = pl.read_csv(csv_path, schema={"v": pl_dtype})
+        rows = df.height
+
+        for _ in range(n_warmup):
+            df.sort("v")
+
+        results = []
+        for _ in range(n_iter):
+            _, time_ns = self._time_it(lambda: df.sort("v"))
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
+        return results
+
     def close(self) -> None:
         self._tables.clear()
