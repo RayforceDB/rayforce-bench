@@ -1,6 +1,7 @@
 __pycache__/
 .claude/
 data/
+.deps/
 
 # Python
 *.py[cod]

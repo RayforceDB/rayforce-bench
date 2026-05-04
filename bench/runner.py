@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .adapters import BenchmarkResult
+from .engine_source import engine_label, resolve_rayforce_py
 from .report import generate_html_report
 from .swapcheck import SwapSample, warn_if_already_used, warn_if_grew
 
@@ -67,6 +68,7 @@ class OrchestratorConfig:
     iterations: int = 5
     warmup: int = 2
     rayforce_local: str | None = None
+    labels: dict[str, str] = field(default_factory=dict)
 
 
 def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
@@ -242,6 +244,8 @@ def main():
                     default=["rayforce", "polars", "duckdb"])
     ap.add_argument("--rayforce-local",
                     help="Path to local rayforce-py for dev builds")
+    ap.add_argument("--rayforce-branch",
+                    help="Clone rayforce-py from this git branch and use it")
     ap.add_argument("-i", "--iterations", type=int, default=5)
     ap.add_argument("-w", "--warmup", type=int, default=2)
     ap.add_argument("-o", "--output", help="Output JSON path")
@@ -283,11 +287,19 @@ def main():
         print(f"Error: {data_path} not found")
         sys.exit(1)
 
+    rayforce_src = resolve_rayforce_py(args.rayforce_local, args.rayforce_branch)
+    labels: dict[str, str] = {}
+    if "rayforce" in args.adapters:
+        labels["rayforce"] = engine_label("rayforce", rayforce_src)
+        if rayforce_src is not None:
+            print(f"Using rayforce: {labels['rayforce']}")
+
     cfg = OrchestratorConfig(
         adapters=list(args.adapters),
         iterations=args.iterations,
         warmup=args.warmup,
-        rayforce_local=args.rayforce_local,
+        rayforce_local=str(rayforce_src) if rayforce_src else None,
+        labels=labels,
     )
 
     warn_if_already_used(SwapSample.now())
