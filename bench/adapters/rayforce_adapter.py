@@ -267,7 +267,11 @@ class RayforceAdapter(Adapter):
     _RF_TYPES_NAME = {
         "u8": "U8", "i16": "I16", "i32": "I32",
         "i64": "I64", "f64": "F64",
-        "str8": "STR", "str16": "STR",
+        # rayforce-py 1.0.0 has rf.String but it's a Vector wrapper without
+        # the .ray_name attribute Table.from_csv() expects, so we can't
+        # request a RAY_STR column at load time. Fall back to Symbol — same
+        # underlying scan path that ~/rayforce/bench/h2o/q*.rfl uses.
+        "str8": "Symbol", "str16": "Symbol",
     }
 
     def run_sort_typed_full(self, csv_path, dtype: str,
