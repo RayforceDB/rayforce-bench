@@ -255,13 +255,13 @@ class RayforceAdapter(Adapter):
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""
         t = self._get_symbol()
-        query = f"(xasc {t} `id1)"
+        query = f"(xasc {t} 'id1)"
         return self._run_timed_query(query, "sort_single")
 
     def run_sort_multi(self) -> BenchmarkResult:
         """Sort by multiple columns."""
         t = self._get_symbol()
-        query = f"(xasc {t} `id1`id2`id3)"
+        query = f"(xasc {t} [id1 id2 id3])"
         return self._run_timed_query(query, "sort_multi")
 
     _RF_TYPES_NAME = {
