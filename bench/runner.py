@@ -142,11 +142,18 @@ def _print_op_result(run: BenchmarkRun) -> None:
               f"min={run.min_ms:>8.2f}ms  rows={run.results[0].rows}")
 
 
-def run_suite(cfg: OrchestratorConfig, suite: str, data_path: Path) -> list[BenchmarkRun]:
-    """Run a named suite (groupby / join / sort) across all adapters."""
+def run_suite(cfg: OrchestratorConfig, suite: str, data_path: Path,
+              join_data: Path | None = None) -> list[BenchmarkRun]:
+    """Run a named suite (groupby / join / sort) across all adapters.
+
+    For 'join' suite, the dataset has separate left/right tables. If
+    join_data is given (canonical case from `bench all`), use it; otherwise
+    fall back to data_path/left.csv (legacy `bench join -d <join_dir>`).
+    """
     if suite == "join":
-        primary = data_path / "left.csv"
-        right = data_path / "right.csv"
+        d = join_data if join_data is not None else data_path
+        primary = d / "left.csv"
+        right = d / "right.csv"
     else:
         primary = data_path / "data.csv"
         right = None
@@ -240,6 +247,9 @@ def main():
                     choices=["groupby", "join", "sort", "all"],
                     help="Benchmark suite to run")
     ap.add_argument("-d", "--data", help="Path to dataset directory")
+    ap.add_argument("--join-data", help="Path to join dataset directory "
+                    "(needed when running 'all' or when join's left/right "
+                    "live elsewhere from -d)")
     ap.add_argument("-a", "--adapters", nargs="+",
                     default=["rayforce", "polars", "duckdb", "chdb",
                              "datafusion", "pandas"])
@@ -307,9 +317,10 @@ def main():
     warn_if_already_used(SwapSample.now())
 
     suites = ["groupby", "join", "sort"] if args.benchmark == "all" else [args.benchmark]
+    join_path = Path(args.join_data) if args.join_data else None
     results: list[BenchmarkRun] = []
     for suite in suites:
-        results.extend(run_suite(cfg, suite, data_path))
+        results.extend(run_suite(cfg, suite, data_path, join_data=join_path))
 
     print_comparison(results)
 

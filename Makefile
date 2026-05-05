@@ -115,14 +115,15 @@ bench-sort: _clean-cache
 	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 bench-all: _clean-cache
-	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 # Scaling sweep: every adapter × every op × every size in $(SIZES).
 # Generates the interactive scaling.html with engine + op filters.
 bench-scaling: _clean-cache
-	@$(PYTHON) -m bench.scaling_runner \
+	@$(PYTHON) -u -m bench.scaling_runner \
 		--sizes $(SIZES) -a $(ADAPTERS) \
 		--data-dir $(DATA_DIR) \
+		-i $(ITERATIONS) -w $(WARMUP) \
 		$(RAYFORCE_FLAGS)
 
 # Extended sort grid: typed columns × scaling lengths (random pattern only).
