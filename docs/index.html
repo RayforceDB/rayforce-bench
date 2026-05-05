@@ -840,47 +840,6 @@
            Task Tabs - like project cards
            =================================== */
         
-        .task-tabs {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-            justify-content: center;
-        }
-        
-        .task-tab {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all var(--transition-normal);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        .task-tab:hover {
-            border-color: var(--accent-golden);
-            color: var(--accent-golden);
-            transform: translateY(-2px);
-        }
-        
-        .task-tab.active {
-            background: var(--accent-golden);
-            border-color: var(--accent-golden);
-            color: var(--primary-navy);
-        }
-        
-        .task-panel {
-            display: none;
-        }
-        
-        .task-panel.active {
-            display: block;
-        }
-        
         /* ===================================
            Footer - matching website
            =================================== */
@@ -1380,59 +1339,6 @@
         </div>
     
         </section>
-        
-        <section class="section">
-            <div class="section-header lazy-load">
-                <h2>Task Breakdown</h2>
-                <span class="section-badge">Per-Query</span>
-            </div>
-
-        <div class="task-tabs lazy-load">
-            <button class="task-tab active" onclick="showTask(0)">groupby_q1</button>
-            <button class="task-tab" onclick="showTask(1)">groupby_q2</button>
-            <button class="task-tab" onclick="showTask(2)">groupby_q3</button>
-            <button class="task-tab" onclick="showTask(3)">groupby_q4</button>
-            <button class="task-tab" onclick="showTask(4)">groupby_q5</button>
-            <button class="task-tab" onclick="showTask(5)">groupby_q6</button>
-        </div>
-
-            <div class="task-panel active">
-                <div class="chart-card">
-                    <div id="task-chart-0" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-1" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-2" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-3" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-4" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-5" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-        </section>
     </main>
 
     <!-- Get Started CTA Section -->
@@ -1639,125 +1545,11 @@
             }
         }
         
-        // Task detail charts
-        const taskCharts = {};
-        
-        function initTaskCharts() {
-            if (!chartData.tasks) return;
-            
-            Object.keys(chartData.tasks).forEach((taskId, idx) => {
-                const containerId = 'task-chart-' + idx;
-                const container = document.getElementById(containerId);
-                if (!container) return;
-                
-                const chart = echarts.init(container);
-                taskCharts[taskId] = chart;
-                updateTaskChart(taskId, chart);
-                
-                window.addEventListener('resize', () => chart.resize());
-            });
-        }
-        
-        function updateTaskChart(taskId, chart) {
-            if (!chart || !chartData.tasks[taskId]) return;
-
-            const theme = getChartTheme();
-            const data = chartData.tasks[taskId];
-
-            // Sort data by median (middle value of boxplot)
-            const sortedData = [...data].sort((a, b) => a.boxplot[2] - b.boxplot[2]);
-
-            const option = {
-                backgroundColor: theme.backgroundColor,
-                textStyle: { color: theme.textColor },
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                    borderColor: 'transparent',
-                    textStyle: { color: '#fff' },
-                    formatter: function(params) {
-                        const p = params[0];
-                        const adapterData = sortedData[p.dataIndex];
-                        return `<div style="font-weight:600;margin-bottom:8px">${adapterData.adapter}</div>
-                            <div>Median: <strong>${adapterData.boxplot[2].toFixed(3)} ms</strong></div>
-                            <div>Min: ${adapterData.boxplot[0].toFixed(3)} ms</div>
-                            <div>Max: ${adapterData.boxplot[4].toFixed(3)} ms</div>
-                            <div>Q1: ${adapterData.boxplot[1].toFixed(3)} ms</div>
-                            <div>Q3: ${adapterData.boxplot[3].toFixed(3)} ms</div>`;
-                    }
-                },
-                grid: {
-                    left: '3%',
-                    right: '4%',
-                    bottom: '10%',
-                    top: '15%',
-                    containLabel: true
-                },
-                xAxis: {
-                    type: 'category',
-                    data: sortedData.map(d => d.adapter),
-                    axisLine: { lineStyle: { color: theme.axisLineColor } },
-                    axisLabel: { color: theme.textColor, fontWeight: 500 }
-                },
-                yAxis: {
-                    type: 'value',
-                    name: 'Time (ms)',
-                    nameTextStyle: { color: theme.textColor },
-                    axisLine: { lineStyle: { color: theme.axisLineColor } },
-                    axisLabel: { color: theme.textColor },
-                    splitLine: { lineStyle: { color: theme.splitLineColor } },
-                    min: 0
-                },
-                series: [{
-                    name: 'Median Time',
-                    type: 'bar',
-                    data: sortedData.map(d => ({
-                        value: d.boxplot[2], // median
-                        itemStyle: {
-                            color: getAdapterColor(d.adapter),
-                            borderRadius: [4, 4, 0, 0]
-                        }
-                    })),
-                    barWidth: '60%',
-                    label: {
-                        show: true,
-                        position: 'top',
-                        formatter: function(params) {
-                            return params.value.toFixed(2) + ' ms';
-                        },
-                        color: theme.textColor,
-                        fontSize: 11
-                    }
-                }]
-            };
-
-            chart.setOption(option);
-        }
-        
         function updateCharts() {
-            setTimeout(() => {
-                updateMainChart();
-                Object.entries(taskCharts).forEach(([taskId, chart]) => {
-                    updateTaskChart(taskId, chart);
-                });
-            }, 50);
+            setTimeout(updateMainChart, 50);
         }
-        
-        // Task tabs
-        function showTask(idx) {
-            document.querySelectorAll('.task-tab').forEach((tab, i) => {
-                tab.classList.toggle('active', i === idx);
-            });
-            document.querySelectorAll('.task-panel').forEach((panel, i) => {
-                panel.classList.toggle('active', i === idx);
-                if (i === idx) {
-                    const chart = Object.values(taskCharts)[idx];
-                    if (chart) chart.resize();
-                }
-            });
-        }
-        
+
+
         // Lazy Loading with IntersectionObserver
         function initLazyLoading() {
             const observerOptions = {
@@ -1775,12 +1567,12 @@
                         const chartContainer = entry.target.querySelector('.chart-container');
                         if (chartContainer) {
                             setTimeout(() => {
-                                if (mainChart && chartContainer.id === 'main-chart') {
-                                    mainChart.resize();
+                                if (mainChartFast && chartContainer.id === 'main-chart-fast') {
+                                    mainChartFast.resize();
                                 }
-                                Object.values(taskCharts).forEach(chart => {
-                                    if (chart) chart.resize();
-                                });
+                                if (mainChartHeavy && chartContainer.id === 'main-chart-heavy') {
+                                    mainChartHeavy.resize();
+                                }
                             }, 100);
                         }
 
@@ -1886,7 +1678,6 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             initMainChart();
-            initTaskCharts();
             initLazyLoading();
             updateComparison();
         });
