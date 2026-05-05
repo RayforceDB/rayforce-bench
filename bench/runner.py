@@ -68,8 +68,6 @@ class OrchestratorConfig:
     iterations: int = 5
     warmup: int = 2
     rayforce_local: str | None = None
-    rayforce_mode: str = "py"   # "py" or "rfl"
-    rayforce_bin: str | None = None
     labels: dict[str, str] = field(default_factory=dict)
 
 
@@ -93,9 +91,6 @@ def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
         cmd += ["--right-data", str(right_data)]
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
-    cmd += ["--rayforce-mode", cfg.rayforce_mode]
-    if cfg.rayforce_bin:
-        cmd += ["--rayforce-bin", cfg.rayforce_bin]
 
     swap_before = SwapSample.now()
     try:
@@ -252,11 +247,6 @@ def main():
                     help="Path to local rayforce-py for dev builds")
     ap.add_argument("--rayforce-branch",
                     help="Clone rayforce-py from this git branch and use it")
-    ap.add_argument("--rayforce-mode", default="py", choices=["py", "rfl"],
-                    help="rayforce execution mode: py (rayforce-py wrapper) "
-                         "or rfl (native binary + .rfl scripts)")
-    ap.add_argument("--rayforce-bin",
-                    help="Path to rayforce binary (rfl mode, default ~/rayforce/rayforce)")
     ap.add_argument("-i", "--iterations", type=int, default=5)
     ap.add_argument("-w", "--warmup", type=int, default=2)
     ap.add_argument("-o", "--output", help="Output JSON path")
@@ -311,8 +301,6 @@ def main():
         iterations=args.iterations,
         warmup=args.warmup,
         rayforce_local=str(rayforce_src) if rayforce_src else None,
-        rayforce_mode=args.rayforce_mode,
-        rayforce_bin=args.rayforce_bin,
         labels=labels,
     )
 

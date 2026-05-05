@@ -28,7 +28,6 @@ Examples:
 - Polars: clock wraps `df.group_by(...).agg(...)`.
 - chDB: clock wraps `session.query(SQL, "CSV")`.
 - Rayforce (py): clock wraps `eval_str(query)`.
-- Rayforce (rfl): the binary is invoked once with a `.rfl` script that does `read-csv` outside `(timeit ...)` and the queries inside, so the per-iteration timing the binary prints reflects only the query — same convention as `~/rayforce/bench/h2o/q*.rfl`.
 
 **What we measure:** SQL/expression parsing + planning + execution + result materialization in engine memory.
 
@@ -105,7 +104,7 @@ Source: `bench/generators/base.py:_sha256_file`.
 
 ## Schema — canonical H2O.ai
 
-Schemas match [H2O.ai db-benchmark](https://h2oai.github.io/db-benchmark/) exactly, so the same `.rfl` scripts in `~/rayforce/bench/h2o/` and the same Python harness in `~/Anton/teide-bench/` consume our datasets without modification.
+Schemas match [H2O.ai db-benchmark](https://h2oai.github.io/db-benchmark/) exactly, so canonical H2O datasets are interchangeable with ours.
 
 ### GroupBy (9 columns)
 
@@ -150,8 +149,7 @@ Each adapter loads CSV into its native string type. No re-encoding happens on th
 | Pandas       | object/string     | int64            | int64        | float64           |
 | chDB         | String            | Int64            | Int64        | Float64           |
 | DataFusion   | Utf8              | Int64            | Int64        | Float64           |
-| Rayforce-py  | Symbol            | I64              | I64          | F64               |
-| Rayforce-rfl | SYMBOL            | I64              | I64          | F64               |
+| Rayforce     | Symbol            | I64              | I64          | F64               |
 | QuestDB      | SYMBOL (ILP)      | LONG             | LONG         | DOUBLE            |
 | TimescaleDB  | TEXT              | BIGINT           | BIGINT       | DOUBLE PRECISION  |
 

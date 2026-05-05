@@ -96,15 +96,21 @@ class PandasAdapter(Adapter):
         return BenchmarkResult("groupby_q7", t, len(result))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get("left")
         right = pd.read_csv(right_path)
-        result, t = self._time_it(lambda: left.merge(right, on="id1", how="inner"))
+        result, t = self._time_it(
+            lambda: left.merge(right, on=["id1", "id2", "id3"], how="inner")
+        )
         return BenchmarkResult("join_inner", t, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get("left")
         right = pd.read_csv(right_path)
-        result, t = self._time_it(lambda: left.merge(right, on="id1", how="left"))
+        result, t = self._time_it(
+            lambda: left.merge(right, on=["id1", "id2", "id3"], how="left")
+        )
         return BenchmarkResult("join_left", t, len(result))
 
     def run_sort_single(self) -> BenchmarkResult:

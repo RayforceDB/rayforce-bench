@@ -104,27 +104,21 @@ class PolarsAdapter(Adapter):
         return BenchmarkResult("groupby_q7", time_ns, len(result))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         right = pl.read_csv(right_path)
-
-        def query():
-            return left.join(right, on="id1", how="inner")
-
-        result, time_ns = self._time_it(query)
+        result, time_ns = self._time_it(
+            lambda: left.join(right, on=["id1", "id2", "id3"], how="inner")
+        )
         return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         right = pl.read_csv(right_path)
-
-        def query():
-            return left.join(right, on="id1", how="left")
-
-        result, time_ns = self._time_it(query)
+        result, time_ns = self._time_it(
+            lambda: left.join(right, on=["id1", "id2", "id3"], how="left")
+        )
         return BenchmarkResult("join_left", time_ns, len(result))
 
     def run_sort_single(self) -> BenchmarkResult:

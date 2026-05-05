@@ -186,14 +186,11 @@ class TimescaleAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q7", time_ns, len(result))
 
-    def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+    def _load_right(self, right_path: Path) -> str:
+        """Bulk-COPY the right table; return its SQL name."""
         import io
         import polars as pl
 
-        left = self._get_table("left")
-
-        # Load right table and materialize in memory before timing
         df = pl.read_csv(right_path)
         right_table = "bench_right_tmp"
 
@@ -216,60 +213,46 @@ class TimescaleAdapter(Adapter):
             cur.execute(f"CREATE TABLE {right_table} ({', '.join(columns)})")
             with cur.copy(f"COPY {right_table} FROM STDIN WITH CSV") as copy:
                 copy.write(buffer.read())
+        return right_table
+
+    def run_join_inner(self, right_path: Path) -> BenchmarkResult:
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
+        left = self._get_table("left")
+        right = self._load_right(right_path)
 
         def query():
             with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {left} INNER JOIN {right_table} ON {left}.id1 = {right_table}.id1")
+                cur.execute(
+                    f"SELECT * FROM {left} INNER JOIN {right} "
+                    f"ON {left}.id1 = {right}.id1 "
+                    f"AND {left}.id2 = {right}.id2 "
+                    f"AND {left}.id3 = {right}.id3"
+                )
                 return cur.fetchall()
 
         result, time_ns = self._time_it(query)
-
         with self._conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
-
+            cur.execute(f"DROP TABLE IF EXISTS {right}")
         return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
-        import io
-        import polars as pl
-
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-
-        # Load right table and materialize in memory before timing
-        df = pl.read_csv(right_path)
-        right_table = "bench_right_tmp"
-
-        with self._conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
-
-        columns = []
-        for name, dtype in df.schema.items():
-            if dtype == pl.Int64:
-                columns.append(f"{name} BIGINT")
-            elif dtype == pl.Float64:
-                columns.append(f"{name} DOUBLE PRECISION")
-            else:
-                columns.append(f"{name} TEXT")
-
-        buffer = io.StringIO()
-        df.write_csv(buffer, include_header=False)
-        buffer.seek(0)
-        with self._conn.cursor() as cur:
-            cur.execute(f"CREATE TABLE {right_table} ({', '.join(columns)})")
-            with cur.copy(f"COPY {right_table} FROM STDIN WITH CSV") as copy:
-                copy.write(buffer.read())
+        right = self._load_right(right_path)
 
         def query():
             with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {left} LEFT JOIN {right_table} ON {left}.id1 = {right_table}.id1")
+                cur.execute(
+                    f"SELECT * FROM {left} LEFT JOIN {right} "
+                    f"ON {left}.id1 = {right}.id1 "
+                    f"AND {left}.id2 = {right}.id2 "
+                    f"AND {left}.id3 = {right}.id3"
+                )
                 return cur.fetchall()
 
         result, time_ns = self._time_it(query)
-
         with self._conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
-
+            cur.execute(f"DROP TABLE IF EXISTS {right}")
         return BenchmarkResult("join_left", time_ns, len(result))
 
     def run_sort_single(self) -> BenchmarkResult:

@@ -116,18 +116,20 @@ class ChdbAdapter(Adapter):
         return "bench_right_tmp"
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         right = self._load_right(right_path)
         return self._time(
-            f"SELECT * FROM {left} INNER JOIN {right} USING (id1)",
+            f"SELECT * FROM {left} INNER JOIN {right} USING (id1, id2, id3)",
             "join_inner",
         )
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         right = self._load_right(right_path)
         return self._time(
-            f"SELECT * FROM {left} LEFT JOIN {right} USING (id1)",
+            f"SELECT * FROM {left} LEFT JOIN {right} USING (id1, id2, id3)",
             "join_left",
         )
 

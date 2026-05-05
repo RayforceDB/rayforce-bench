@@ -208,13 +208,88 @@ class QuestDBAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q7", time_ns, len(result))
 
+    def _load_right(self, path: Path) -> str:
+        """Stream right table into QuestDB via ILP, wait for commit."""
+        import polars as pl
+        import time as _time
+
+        df = pl.read_csv(path)
+        right_table = "bench_right_tmp"
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
+
+        int_cols = [n for n, d in df.schema.items() if d == pl.Int64]
+        float_cols = [n for n, d in df.schema.items() if d == pl.Float64]
+        str_cols = [n for n, d in df.schema.items() if d in (pl.Utf8, pl.String)]
+
+        conf = f"tcp::addr={self._host}:{self._ilp_port};"
+        with self._Sender.from_conf(conf) as sender:
+            for row in df.iter_rows(named=True):
+                sender.row(
+                    right_table,
+                    symbols={c: row[c] for c in str_cols},
+                    columns={
+                        **{c: row[c] for c in int_cols},
+                        **{c: row[c] for c in float_cols},
+                    },
+                    at=self._ServerTimestamp,
+                )
+            sender.flush()
+
+        # Wait for ILP commit visibility (same dance as load_data).
+        expected = df.height
+        deadline = _time.time() + 30
+        while _time.time() < deadline:
+            try:
+                with self._conn.cursor() as cur:
+                    cur.execute(f"SELECT count(*) FROM {right_table}")
+                    if cur.fetchone()[0] >= expected:
+                        break
+            except Exception:
+                pass
+            _time.sleep(0.1)
+        return right_table
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
-        raise NotImplementedError("QuestDB join benchmarks not implemented")
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
+        left = self._get_table("left")
+        right = self._load_right(right_path)
+
+        def query():
+            with self._conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT * FROM {left} INNER JOIN {right} "
+                    f"ON {left}.id1 = {right}.id1 "
+                    f"AND {left}.id2 = {right}.id2 "
+                    f"AND {left}.id3 = {right}.id3"
+                )
+                return cur.fetchall()
+
+        result, time_ns = self._time_it(query)
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {right}")
+        return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
-        raise NotImplementedError("QuestDB join benchmarks not implemented")
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
+        left = self._get_table("left")
+        right = self._load_right(right_path)
+
+        def query():
+            with self._conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT * FROM {left} LEFT JOIN {right} "
+                    f"ON {left}.id1 = {right}.id1 "
+                    f"AND {left}.id2 = {right}.id2 "
+                    f"AND {left}.id3 = {right}.id3"
+                )
+                return cur.fetchall()
+
+        result, time_ns = self._time_it(query)
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {right}")
+        return BenchmarkResult("join_left", time_ns, len(result))
 
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""

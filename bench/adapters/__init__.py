@@ -18,6 +18,7 @@ PandasAdapter      = _maybe_import("pandas_adapter",      "PandasAdapter")
 ChdbAdapter        = _maybe_import("chdb_adapter",        "ChdbAdapter")
 DataFusionAdapter  = _maybe_import("datafusion_adapter",  "DataFusionAdapter")
 RayforceAdapter    = _maybe_import("rayforce_adapter",    "RayforceAdapter")
+# rayforce_rfl_adapter removed — see commit log for rationale.
 QuestDBAdapter     = _maybe_import("questdb_adapter",     "QuestDBAdapter")
 TimescaleAdapter   = _maybe_import("timescale_adapter",   "TimescaleAdapter")
 

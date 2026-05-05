@@ -118,14 +118,16 @@ class DuckDBAdapter(Adapter):
         return BenchmarkResult("groupby_q7", time_ns, len(result))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
 
         def query():
             return self._conn.execute(
-                f"SELECT * FROM {left} INNER JOIN bench_right_tmp ON {left}.id1 = bench_right_tmp.id1"
+                f"SELECT * FROM {left} INNER JOIN bench_right_tmp "
+                f"ON {left}.id1 = bench_right_tmp.id1 "
+                f"AND {left}.id2 = bench_right_tmp.id2 "
+                f"AND {left}.id3 = bench_right_tmp.id3"
             ).fetchdf()
 
         result, time_ns = self._time_it(query)
@@ -133,14 +135,16 @@ class DuckDBAdapter(Adapter):
         return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
 
         def query():
             return self._conn.execute(
-                f"SELECT * FROM {left} LEFT JOIN bench_right_tmp ON {left}.id1 = bench_right_tmp.id1"
+                f"SELECT * FROM {left} LEFT JOIN bench_right_tmp "
+                f"ON {left}.id1 = bench_right_tmp.id1 "
+                f"AND {left}.id2 = bench_right_tmp.id2 "
+                f"AND {left}.id3 = bench_right_tmp.id3"
             ).fetchdf()
 
         result, time_ns = self._time_it(query)

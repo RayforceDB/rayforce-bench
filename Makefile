@@ -15,8 +15,6 @@
 #   SIZE=10m|1m|100k|10k   H2O dataset size (default: 10m)
 #   LOCAL=1                Use rayforce-py from $(RAYFORCE_LOCAL) (~/rayforce-py)
 #   ALL=1                  Include QuestDB & TimescaleDB (requires Docker)
-#   RAYFORCE_MODE=py|rfl   rayforce execution mode (default: py)
-#   RAYFORCE_BIN=<path>    Path to rayforce binary for rfl mode
 #   SIZES=10,100,1k,...    Sizes for bench-scaling sweep
 #   SORT_MAX=1m            Max length on the extended sort scaling curve
 #   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
@@ -28,8 +26,6 @@ PYTHON ?= python
 DATA_DIR ?= data
 SIZE ?= 10m
 RAYFORCE_LOCAL ?= ~/rayforce-py
-RAYFORCE_MODE ?= py
-RAYFORCE_BIN ?=
 ITERATIONS ?= 5
 WARMUP ?= 2
 
@@ -58,10 +54,7 @@ else
 LOCAL_FLAG :=
 endif
 
-RAYFORCE_FLAGS := --rayforce-mode $(RAYFORCE_MODE) $(LOCAL_FLAG)
-ifneq ($(RAYFORCE_BIN),)
-RAYFORCE_FLAGS += --rayforce-bin $(RAYFORCE_BIN)
-endif
+RAYFORCE_FLAGS := $(LOCAL_FLAG)
 
 # H2O data paths. Canonical H2O J1 has equal-sized left and right tables.
 ifeq ($(SIZE),10k)
@@ -101,7 +94,6 @@ help:
 	@echo "  SIZE=10m             Data size: 10k, 100k, 1m, 10m"
 	@echo "  LOCAL=1              Use rayforce-py from $(RAYFORCE_LOCAL)"
 	@echo "  ALL=1                Include QuestDB & TimescaleDB"
-	@echo "  RAYFORCE_MODE=rfl    Use native rayforce binary (no rayforce-py needed)"
 	@echo "  SIZES=10,100,1k,...  Sizes for bench-scaling"
 	@echo "  SORT_MAX=1m          Max length on extended sort grid (1k..100m)"
 

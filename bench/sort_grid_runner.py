@@ -46,8 +46,6 @@ class GridConfig:
     iterations: int = 3
     warmup: int = 1
     rayforce_local: str | None = None
-    rayforce_mode: str = "py"
-    rayforce_bin: str | None = None
 
 
 def _spawn(cfg: GridConfig, adapter: str, dtype: str, length: int,
@@ -65,12 +63,9 @@ def _spawn(cfg: GridConfig, adapter: str, dtype: str, length: int,
         "--iterations", str(cfg.iterations),
         "--warmup", str(cfg.warmup),
         "--result", result_path,
-        "--rayforce-mode", cfg.rayforce_mode,
     ]
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
-    if cfg.rayforce_bin:
-        cmd += ["--rayforce-bin", cfg.rayforce_bin]
 
     try:
         subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
@@ -153,8 +148,6 @@ def main():
                     help="Generate CSVs and exit; don't run benchmarks")
     ap.add_argument("--rayforce-local")
     ap.add_argument("--rayforce-branch")
-    ap.add_argument("--rayforce-mode", default="py", choices=["py", "rfl"])
-    ap.add_argument("--rayforce-bin")
     args = ap.parse_args()
 
     dtypes = [d.strip() for d in args.dtypes.split(",") if d.strip()]
@@ -184,8 +177,6 @@ def main():
         iterations=args.iterations,
         warmup=args.warmup,
         rayforce_local=str(rayforce_src) if rayforce_src else None,
-        rayforce_mode=args.rayforce_mode,
-        rayforce_bin=args.rayforce_bin,
     )
 
     warn_if_already_used(SwapSample.now())

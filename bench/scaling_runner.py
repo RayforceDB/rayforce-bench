@@ -112,8 +112,6 @@ class ScalingConfig:
     h2o_ops: list[str] = field(default_factory=lambda: list(H2O_OPS))
     sort_dtypes: list[str] = field(default_factory=lambda: list(SORT_DTYPES))
     rayforce_local: str | None = None
-    rayforce_mode: str = "py"
-    rayforce_bin: str | None = None
 
 
 def _spawn_h2o(cfg: ScalingConfig, adapter: str, op: str, n: int,
@@ -139,14 +137,11 @@ def _spawn_h2o(cfg: ScalingConfig, adapter: str, op: str, n: int,
         "--iterations", str(n_iter),
         "--warmup", str(n_warmup),
         "--result", result_path,
-        "--rayforce-mode", cfg.rayforce_mode,
     ]
     if right is not None:
         cmd += ["--right-data", str(right)]
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
-    if cfg.rayforce_bin:
-        cmd += ["--rayforce-bin", cfg.rayforce_bin]
 
     try:
         subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
@@ -177,12 +172,9 @@ def _spawn_sort_grid(cfg: ScalingConfig, adapter: str, dtype: str, n: int,
         "--iterations", str(n_iter),
         "--warmup", str(n_warmup),
         "--result", result_path,
-        "--rayforce-mode", cfg.rayforce_mode,
     ]
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
-    if cfg.rayforce_bin:
-        cmd += ["--rayforce-bin", cfg.rayforce_bin]
 
     try:
         subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
@@ -307,8 +299,6 @@ def main():
     ap.add_argument("--no-html", action="store_true")
     ap.add_argument("--rayforce-local")
     ap.add_argument("--rayforce-branch")
-    ap.add_argument("--rayforce-mode", default="py", choices=["py", "rfl"])
-    ap.add_argument("--rayforce-bin")
     args = ap.parse_args()
 
     sizes = [parse_size(s) for s in args.sizes.split(",") if s.strip()]
@@ -329,8 +319,6 @@ def main():
         h2o_ops=h2o_ops,
         sort_dtypes=sort_dtypes,
         rayforce_local=str(rayforce_src) if rayforce_src else None,
-        rayforce_mode=args.rayforce_mode,
-        rayforce_bin=args.rayforce_bin,
     )
 
     print(f"Sweep: {len(args.adapters)} adapters × "

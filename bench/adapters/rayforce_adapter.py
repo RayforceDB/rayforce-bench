@@ -136,7 +136,7 @@ class RayforceAdapter(Adapter):
             raise RuntimeError(
                 "rayforce-py lacks Symbol/STR types; "
                 "canonical H2O schema requires string IDs. "
-                "Use --rayforce-mode rfl until the next rayforce-py release."
+                "Upgrade rayforce-py."
             )
 
         # Look at the first data row to disambiguate (groupby vs join layout).
@@ -235,25 +235,21 @@ class RayforceAdapter(Adapter):
         return self._Table.from_csv(column_types, str(path))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left_sym = self._get_symbol("left")
-        # Load right table and materialize in memory before timing
         right_table = self._load_table_from_csv(right_path)
         right_sym = "_bench_right_tmp"
         right_table.save(right_sym)
-
-        query = f"(ij `id1 {left_sym} {right_sym})"
+        query = f"(inner-join [id1 id2 id3] {left_sym} {right_sym})"
         return self._run_timed_query(query, "join_inner")
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left_sym = self._get_symbol("left")
-        # Load right table and materialize in memory before timing
         right_table = self._load_table_from_csv(right_path)
         right_sym = "_bench_right_tmp"
         right_table.save(right_sym)
-
-        query = f"(lj `id1 {left_sym} {right_sym})"
+        query = f"(left-join [id1 id2 id3] {left_sym} {right_sym})"
         return self._run_timed_query(query, "join_left")
 
     def run_sort_single(self) -> BenchmarkResult:

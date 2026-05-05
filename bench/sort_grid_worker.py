@@ -31,9 +31,6 @@ def _make_adapter(name, args):
         from .adapters.datafusion_adapter import DataFusionAdapter
         return DataFusionAdapter()
     if name == "rayforce":
-        if args.rayforce_mode == "rfl":
-            from .adapters.rayforce_rfl_adapter import RayforceRflAdapter
-            return RayforceRflAdapter(binary=args.rayforce_bin)
         from .adapters.rayforce_adapter import RayforceAdapter
         return RayforceAdapter(local_path=args.rayforce_local)
     raise ValueError(f"Unsupported adapter for sort grid: {name}")
@@ -49,8 +46,6 @@ def main():
     ap.add_argument("--warmup", type=int, default=1)
     ap.add_argument("--result", required=True)
     ap.add_argument("--rayforce-local")
-    ap.add_argument("--rayforce-mode", default="py", choices=["py", "rfl"])
-    ap.add_argument("--rayforce-bin")
     args = ap.parse_args()
 
     output = {

@@ -78,12 +78,12 @@ class Adapter(ABC):
 
     @abstractmethod
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         pass
 
     @abstractmethod
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         pass
 
     @abstractmethod
@@ -137,8 +137,7 @@ class Adapter(ABC):
 
         Default implementation invokes the bench method n_warmup + n_iter
         times. Adapters that need to perform warmup and iterations in a
-        single external invocation (e.g. rayforce .rfl runner) override
-        this method.
+        single external invocation override this method.
         """
         method = getattr(self, f"run_{bench_name}")
         if bench_name.startswith("join_"):

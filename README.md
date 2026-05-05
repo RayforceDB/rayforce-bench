@@ -3,9 +3,9 @@
 Benchmarking framework for comparing RayforceDB against popular DataFrame libraries and databases.
 
 > **Branch `prototype`**: subprocess-isolated workers, swap-usage monitor,
-> uniform Python-level timing, dual-mode rayforce adapter (rayforce-py or
-> native binary + .rfl), and an extended typed sort grid. See **Roadmap**
-> below for what's next.
+> uniform Python-level timing for every adapter (single Python entry —
+> all engines via their PyPI wrapper or wire-protocol client), and an
+> extended typed sort grid. See **Roadmap** below for what's next.
 
 ## Live Results
 
@@ -60,15 +60,10 @@ Default `make bench` runs the embedded engines (no Docker required):
 | `questdb`   | Time-series | Specialized TSDB with SQL — relevant for the financial / market-data segment that's natural rayforce territory. |
 | `timescale` | Postgres extension | TSDB baseline. Not a true OLAP competitor; included for context only. |
 
-### Rayforce execution modes
+### Rayforce
 
-- **`py` (default)** — uses the `rayforce-py` PyPI package. Requires
-  `pip install rayforce-py` (pending public release).
-- **`rfl`** — drives the native `rayforce` binary by generating temporary
-  `.rfl` scripts and parsing `(timeit ...)` output. Set via
-  `RAYFORCE_MODE=rfl` (Makefile) or `--rayforce-mode rfl` (CLI). Useful
-  while `rayforce-py` is not yet on PyPI, or to benchmark the C core
-  directly. The default binary path is `~/rayforce/rayforce`.
+Uses the `rayforce-py` PyPI package (`pip install rayforce-py`). Same
+Python entry point as every other adapter — fair, symmetric timing.
 
 ## Benchmarks
 
@@ -84,8 +79,8 @@ Based on [H2O.ai db-benchmark](https://h2oai.github.io/db-benchmark/):
 - **Q7**: `sum(v3), count(v1) group by id1, id2, id3, id4, id5, id6` (6-key)
 
 Schema: `id1..id3` are strings (cardinality K), `id4..id6` are int64
-(cardinality K, K, n_high), `v1`/`v2` int, `v3` float — same as
-`~/rayforce/bench/h2o/q*.rfl` and teide-bench.
+(cardinality K, K, n_high), `v1`/`v2` int, `v3` float — canonical H2O.ai
+db-benchmark layout.
 
 ### Join Queries
 - **Inner Join**: Join on `id1`
@@ -177,8 +172,6 @@ Options:
   -w, --warmup N         Number of warmup iterations (default: 2)
   --rayforce-local PATH  Path to local rayforce-py repo for dev builds
   --rayforce-branch X    Clone rayforce-py from this git branch and build it
-  --rayforce-mode py|rfl Rayforce execution mode (default: py)
-  --rayforce-bin PATH    Path to rayforce binary (rfl mode, default ~/rayforce/rayforce)
   --html PATH            Output HTML report path (default: docs/index.html)
   --no-html              Skip HTML report generation
   --no-docker            Don't auto-start Docker containers
@@ -205,15 +198,13 @@ Options:
   -w, --warmup N         Warmup iterations (default: 1)
   -o, --output PATH      Output JSON (default: docs/sort_data.json)
   --gen-only             Generate CSVs and exit
-  --rayforce-mode py|rfl Same as runner
-  --rayforce-bin PATH    Same as runner
 ```
 
 ## Benchmarking a development rayforce
 
-The `--rayforce-mode` flag picks how the rayforce adapter executes queries. Three orthogonal ways to point it at a dev build:
+Two ways to point the rayforce adapter at a dev build of `rayforce-py`:
 
-### 1. Local rayforce-py checkout (`py` mode)
+### 1. Local checkout
 
 ```bash
 make bench LOCAL=1 RAYFORCE_LOCAL=~/rayforce-py
@@ -225,7 +216,7 @@ python -m bench.runner groupby -d data/groupby_10m_k100 \
 
 Builds the wrapper from the path, installs it into the venv, runs against it. Version label in reports becomes `rayforce@<branch> (<commit>) [dirty]`.
 
-### 2. rayforce-py git branch
+### 2. Git branch
 
 ```bash
 python -m bench.runner groupby -d data/groupby_10m_k100 \
@@ -234,15 +225,6 @@ python -m bench.runner groupby -d data/groupby_10m_k100 \
 ```
 
 Clones `RayforceDB/rayforce-py.git` at that branch into `.deps/rayforce-py-branch-<name>/`, builds, and uses it. Re-running pulls fresh — useful for tracking a colleague's branch over time.
-
-### 3. Native binary + `.rfl` (`rfl` mode)
-
-```bash
-make bench RAYFORCE_MODE=rfl                                      # default ~/rayforce/rayforce
-make bench RAYFORCE_MODE=rfl RAYFORCE_BIN=/custom/path/rayforce
-```
-
-Generates a temporary `.rfl` script per (op, iteration set), invokes the binary, parses `(timeit ...)` output from stdout. Doesn't need rayforce-py installed at all — useful while the wrapper is pre-PyPI, or when you want to benchmark a C-core branch directly.
 
 ## Server-Based Adapters (Docker)
 
@@ -279,7 +261,6 @@ rayforce-bench/
 │   │   ├── chdb_adapter.py      # embedded ClickHouse
 │   │   ├── datafusion_adapter.py
 │   │   ├── rayforce_adapter.py      # rayforce-py (PyPI / --rayforce-local / --rayforce-branch)
-│   │   ├── rayforce_rfl_adapter.py  # native binary + generated .rfl scripts
 │   │   ├── questdb_adapter.py
 │   │   └── timescale_adapter.py
 │   ├── generators/              # Canonical H2O.ai data
@@ -314,7 +295,7 @@ rayforce-bench/
 
 ## Data Format
 
-Canonical H2O.ai schemas — same as `~/rayforce/bench/h2o/*.rfl` and the canonical [H2O db-benchmark](https://h2oai.github.io/db-benchmark/). Files are CSV with a header row and a `manifest.json` carrying SHA256 of every emitted file.
+Canonical [H2O db-benchmark](https://h2oai.github.io/db-benchmark/) schemas. Files are CSV with a header row and a `manifest.json` carrying SHA256 of every emitted file.
 
 ### GroupBy Dataset (9 columns)
 
@@ -362,8 +343,8 @@ Key principles:
   query call — no engine-internal `(timeit ...)` shortcuts
 - Each (adapter, op) runs in its own subprocess so memory pressure from
   one engine can't contaminate another
-- Data is pre-loaded into memory (or pre-read in the `.rfl` script before
-  the timed block) so the timing reflects query execution, not CSV parse
+- Data is pre-loaded into memory before the timed block so the timing
+  reflects query execution, not CSV parse
 - Warmup iterations ensure JIT compilation and cache warming
 - Swap-usage monitor flags any run where the OS started paging — those
   results are not reliable

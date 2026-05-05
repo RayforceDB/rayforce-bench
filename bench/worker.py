@@ -39,9 +39,6 @@ def _make_adapter(name, args):
         from .adapters.timescale_adapter import TimescaleAdapter
         return TimescaleAdapter()
     if name == "rayforce":
-        if args.rayforce_mode == "rfl":
-            from .adapters.rayforce_rfl_adapter import RayforceRflAdapter
-            return RayforceRflAdapter(binary=args.rayforce_bin)
         from .adapters.rayforce_adapter import RayforceAdapter
         return RayforceAdapter(local_path=args.rayforce_local)
     raise ValueError(f"Unknown adapter: {name}")
@@ -58,9 +55,6 @@ def main():
     ap.add_argument("--warmup", type=int, default=2)
     ap.add_argument("--result", required=True, help="Where to write JSON result")
     ap.add_argument("--rayforce-local", help="Path to local rayforce-py for dev builds")
-    ap.add_argument("--rayforce-mode", default="py", choices=["py", "rfl"],
-                    help="rayforce execution mode: py (Python wrapper) or rfl (binary + .rfl)")
-    ap.add_argument("--rayforce-bin", help="Path to rayforce binary (rfl mode)")
     args = ap.parse_args()
 
     output = {
