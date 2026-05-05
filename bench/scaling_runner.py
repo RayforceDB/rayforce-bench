@@ -30,6 +30,9 @@ from .swapcheck import SwapSample, warn_if_already_used, warn_if_grew
 
 
 WORKER_TIMEOUT_S = 1200
+WORKER_RETRIES   = 1   # Retry once on empty/missing result (rayforce-py
+                       # wrapper sometimes crashes mid-run; second attempt
+                       # in a fresh subprocess usually succeeds).
 
 DEFAULT_ADAPTERS = ["rayforce", "duckdb", "polars", "chdb",
                     "datafusion", "pandas"]
@@ -154,16 +157,12 @@ def _spawn_h2o(cfg: ScalingConfig, adapter: str, op: str, n: int,
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
 
-    try:
-        subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
-        with open(result_path) as f:
-            return json.load(f)
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as e:
-        return {"adapter": adapter, "benchmark": op, "results": [],
-                "error": f"worker failed: {e}", "version": "?"}
-    finally:
-        if os.path.exists(result_path):
-            os.unlink(result_path)
+    return _run_worker_with_retry(
+        cmd, result_path,
+        identity=f"{adapter}/{op} n={n}",
+        on_fail={"adapter": adapter, "benchmark": op, "results": [],
+                 "version": "?"},
+    )
 
 
 def _spawn_sort_grid(cfg: ScalingConfig, adapter: str, dtype: str, n: int,
@@ -187,16 +186,47 @@ def _spawn_sort_grid(cfg: ScalingConfig, adapter: str, dtype: str, n: int,
     if cfg.rayforce_local:
         cmd += ["--rayforce-local", cfg.rayforce_local]
 
-    try:
-        subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False)
-        with open(result_path) as f:
-            return json.load(f)
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as e:
-        return {"adapter": adapter, "dtype": dtype, "length": n, "results": [],
-                "error": f"worker failed: {e}", "version": "?"}
-    finally:
-        if os.path.exists(result_path):
-            os.unlink(result_path)
+    return _run_worker_with_retry(
+        cmd, result_path,
+        identity=f"{adapter}/sort_{dtype} n={n}",
+        on_fail={"adapter": adapter, "dtype": dtype, "length": n,
+                 "results": [], "version": "?"},
+    )
+
+
+def _run_worker_with_retry(cmd: list, result_path: str,
+                            identity: str, on_fail: dict) -> dict:
+    """Spawn a worker; retry once if the JSON result is missing or empty.
+
+    Why retry: rayforce-py 1.0.0 occasionally crashes between the timed
+    block and the JSON write — the parent then sees "Expecting value"
+    on json.load with no actionable info. A second attempt in a fresh
+    Python subprocess usually succeeds. Other adapters never need this
+    in practice.
+
+    On final failure we attach the worker's stderr tail so the report
+    explains why instead of just "Expecting value: line 1 column 1".
+    """
+    last_err = None
+    for attempt in range(1 + WORKER_RETRIES):
+        try:
+            proc = subprocess.run(cmd, timeout=WORKER_TIMEOUT_S, check=False,
+                                  capture_output=True, text=True)
+            with open(result_path) as f:
+                return json.load(f)
+        except subprocess.TimeoutExpired:
+            last_err = f"timeout after {WORKER_TIMEOUT_S}s"
+            break  # retrying a timeout doesn't change anything
+        except (FileNotFoundError, json.JSONDecodeError):
+            tail = (proc.stderr or "").strip().splitlines()[-3:]
+            last_err = (f"empty result (rc={proc.returncode}; "
+                        f"stderr: {' | '.join(tail) if tail else 'silent'})")
+        finally:
+            if os.path.exists(result_path):
+                os.unlink(result_path)
+        if attempt < WORKER_RETRIES:
+            print(f"  retry [{identity}]: {last_err}")
+    return {**on_fail, "error": f"worker failed: {last_err}"}
 
 
 def _median(vals):
