@@ -337,29 +337,38 @@ class QuestDBAdapter(Adapter):
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
 
+        # Random N-character strings are high-cardinality — push them as
+        # STRING via ILP `columns`, not SYMBOL via `symbols` (Symbol is
+        # a dictionary type and chokes on N=1M unique values).
         conf = f"tcp::addr={self._host}:{self._ilp_port};"
         with self._Sender.from_conf(conf) as sender:
             for row in df.iter_rows(named=True):
-                v = str(row["v"]) if is_str else row["v"]
-                if is_str:
-                    sender.row(sort_table, symbols={"v": v},
-                               at=self._ServerTimestamp)
-                else:
-                    sender.row(sort_table, columns={"v": v},
-                               at=self._ServerTimestamp)
+                v = row["v"]
+                sender.row(sort_table, columns={"v": v},
+                           at=self._ServerTimestamp)
             sender.flush()
 
+        # Wait for ILP commit visibility. 1M-row ILP commits can take a
+        # while; raise loudly on timeout so we don't sort an empty table
+        # and report fake 0.36ms / 0 rows.
         expected = df.height
-        deadline = _time.time() + 30
+        actual = 0
+        deadline = _time.time() + 120
         while _time.time() < deadline:
             try:
                 with self._conn.cursor() as cur:
                     cur.execute(f"SELECT count(*) FROM {sort_table}")
-                    if cur.fetchone()[0] >= expected:
-                        break
+                    actual = cur.fetchone()[0]
+                if actual >= expected:
+                    break
             except Exception:
-                pass
-            _time.sleep(0.1)
+                actual = 0
+            _time.sleep(0.2)
+        else:
+            raise RuntimeError(
+                f"QuestDB ILP commit timeout for sort_{dtype}: "
+                f"{actual}/{expected} rows visible after 120s"
+            )
 
         sql = f"SELECT * FROM {sort_table} ORDER BY v"
 
