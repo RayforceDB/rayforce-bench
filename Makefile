@@ -20,9 +20,10 @@
 #   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
 
 .PHONY: setup data bench bench-join bench-sort bench-all bench-scaling \
-        bench-sort-ext sort-grid-data clean help
+        bench-sort-ext sort-grid-data clean help _clean-cache
 
-PYTHON ?= python
+VENV_PY := .venv/bin/python
+PYTHON  ?= $(VENV_PY)
 DATA_DIR ?= data
 SIZE ?= 10m
 RAYFORCE_LOCAL ?= ~/rayforce-py
@@ -97,29 +98,49 @@ help:
 	@echo "  SIZES=10,100,1k,...  Sizes for bench-scaling"
 	@echo "  SORT_MAX=1m          Max length on extended sort grid (1k..100m)"
 
-setup:
-	@pip install -q -r requirements.txt
-	@$(PYTHON) -m bench.runner --check-deps
+# ── Lazy bootstraps ─────────────────────────────────────────────────────
+# These are file targets, so make only re-runs them when their output
+# is actually missing. setup/data targets below are PHONY aliases that
+# users can call explicitly (e.g. `make setup` to refresh deps).
 
-data:
+$(VENV_PY):
+	@echo "==> Creating .venv and installing requirements"
+	@python3 -m venv .venv
+	@$(VENV_PY) -m pip install -q --upgrade pip
+	@$(VENV_PY) -m pip install -q -r requirements.txt
+
+$(GROUPBY_DATA)/data.csv: $(VENV_PY)
+	@echo "==> Generating groupby dataset (SIZE=$(SIZE))"
 	@$(PYTHON) -m bench.generate -o $(DATA_DIR) groupby -n $(SIZE) -k 100
+
+$(JOIN_DATA)/left.csv: $(VENV_PY)
+	@echo "==> Generating join dataset (SIZE=$(SIZE))"
 	@$(PYTHON) -m bench.generate -o $(DATA_DIR) join --left-rows $(SIZE) --right-rows $(JOIN_RIGHT)
 
-bench: _clean-cache
+# ── User-facing aliases ─────────────────────────────────────────────────
+
+setup: $(VENV_PY)
+	@$(PYTHON) -m bench.runner --check-deps
+
+data: $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv
+	@echo "Data ready: $(GROUPBY_DATA), $(JOIN_DATA)"
+
+# ── Bench targets — depend on data so make auto-creates anything missing ─
+
+bench: _clean-cache $(GROUPBY_DATA)/data.csv
 	@$(PYTHON) -m bench.runner groupby -d $(GROUPBY_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
-bench-join: _clean-cache
+bench-join: _clean-cache $(JOIN_DATA)/left.csv
 	@$(PYTHON) -m bench.runner join -d $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
-bench-sort: _clean-cache
+bench-sort: _clean-cache $(GROUPBY_DATA)/data.csv
 	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
-bench-all: _clean-cache
+bench-all: _clean-cache $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv
 	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
-# Scaling sweep: every adapter × every op × every size in $(SIZES).
-# Generates the interactive scaling.html with engine + op filters.
-bench-scaling: _clean-cache
+# Scaling sweep generates its own CSVs at every size as it runs.
+bench-scaling: _clean-cache $(VENV_PY)
 	@$(PYTHON) -u -m bench.scaling_runner \
 		--sizes $(SIZES) -a $(ADAPTERS) \
 		--data-dir $(DATA_DIR) \
@@ -128,7 +149,7 @@ bench-scaling: _clean-cache
 
 # Extended sort grid: typed columns × scaling lengths (random pattern only).
 # QuestDB / Timescale excluded — Docker overhead dwarfs the actual sort.
-bench-sort-ext: _clean-cache
+bench-sort-ext: _clean-cache $(VENV_PY)
 	@$(PYTHON) -m bench.sort_grid_runner \
 		--max $(SORT_MAX) \
 		--dtypes $(SORT_DTYPES) \
@@ -137,7 +158,7 @@ bench-sort-ext: _clean-cache
 		$(RAYFORCE_FLAGS)
 
 # Generate sort-grid CSVs without running the bench (useful for sharing data).
-sort-grid-data:
+sort-grid-data: $(VENV_PY)
 	@$(PYTHON) -m bench.sort_grid_runner --gen-only \
 		--max $(SORT_MAX) --dtypes $(SORT_DTYPES) \
 		--data-dir $(DATA_DIR)/sort_grid

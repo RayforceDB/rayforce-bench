@@ -139,7 +139,7 @@ def _print_op_result(run: BenchmarkRun) -> None:
         print(f"  {run.benchmark:<20s} (no results)")
     else:
         print(f"  {run.benchmark:<20s} median={run.median_ms:>8.2f}ms  "
-              f"min={run.min_ms:>8.2f}ms  rows={run.results[0].rows}")
+              f"min={run.min_ms:>8.2f}ms  result={run.results[0].rows} rows")
 
 
 def run_suite(cfg: OrchestratorConfig, suite: str, data_path: Path,
