@@ -360,6 +360,17 @@ def main():
           f"({len(h2o_ops)} H2O ops + {len(sort_dtypes)} sort dtypes) × "
           f"{len(sizes)} sizes")
 
+    # Auto-start Docker containers for any server-engine adapter — otherwise
+    # the per-worker psycopg connect fails with "Connection refused" on
+    # every iteration and the curve has nothing but errors for them.
+    from .infra import start_required_infrastructure, CONTAINERS, is_container_running
+    if not start_required_infrastructure(args.adapters, quiet=True):
+        failed = [a for a in args.adapters
+                  if a in CONTAINERS and not is_container_running(CONTAINERS[a]["name"])]
+        if failed:
+            print(f"WARNING: failed to start: {failed} — they'll show as ERROR.")
+            cfg.adapters = [a for a in cfg.adapters if a not in failed]
+
     warn_if_already_used(SwapSample.now())
     results = run(cfg, data_root)
 
