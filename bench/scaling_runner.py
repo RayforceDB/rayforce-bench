@@ -73,6 +73,17 @@ def adaptive_iter(n: int) -> tuple[int, int]:
     return 3, 1
 
 
+# CLI-level override (set in main); when not None, replaces adaptive_iter.
+_FORCED_ITER: int | None = None
+_FORCED_WARMUP: int | None = None
+
+
+def iter_counts(n: int) -> tuple[int, int]:
+    if _FORCED_ITER is not None and _FORCED_WARMUP is not None:
+        return _FORCED_ITER, _FORCED_WARMUP
+    return adaptive_iter(n)
+
+
 def fmt_size(n: int) -> str:
     if n >= 1_000_000_000: return f"{n // 1_000_000_000}b"
     if n >= 1_000_000:     return f"{n // 1_000_000}m"
@@ -121,7 +132,7 @@ def _spawn_h2o(cfg: ScalingConfig, adapter: str, op: str, n: int,
                                        suffix=".json")
     os.close(fd)
 
-    n_iter, n_warmup = adaptive_iter(n)
+    n_iter, n_warmup = iter_counts(n)
     if op.startswith("join_"):
         primary = join_dir / "left.csv"
         right = join_dir / "right.csv"
@@ -162,7 +173,7 @@ def _spawn_sort_grid(cfg: ScalingConfig, adapter: str, dtype: str, n: int,
                                        suffix=".json")
     os.close(fd)
 
-    n_iter, n_warmup = adaptive_iter(n)
+    n_iter, n_warmup = iter_counts(n)
     cmd = [
         sys.executable, "-m", "bench.sort_grid_worker",
         "--adapter", adapter,
@@ -196,6 +207,16 @@ def _median(vals):
     return (s[n // 2 - 1] + s[n // 2]) / 2 if n % 2 == 0 else s[n // 2]
 
 
+# CLI override: "min" (best of N) or "median".
+_METRIC: str = "median"
+
+
+def _agg(vals):
+    if not vals:
+        return 0.0
+    return min(vals) if _METRIC == "min" else _median(vals)
+
+
 def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
     """Sweep sizes, return aggregated [{adapter, op, size, median_ms, ...}]."""
     results = []
@@ -227,7 +248,7 @@ def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
                 times = [r["time_ns"] / 1e6 for r in data.get("results", [])]
                 if not times:
                     continue
-                med = _median(times)
+                med = _agg(times)
                 rows = data["results"][0]["rows"]
                 print(f"  {adapter:<11s} {op:<14s} n={size:<10d} "
                       f"median={med:>9.3f}ms  rows={rows}")
@@ -260,7 +281,7 @@ def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
                 times = [r["time_ns"] / 1e6 for r in data.get("results", [])]
                 if not times:
                     continue
-                med = _median(times)
+                med = _agg(times)
                 rows = data["results"][0]["rows"]
                 op = f"sort_{dtype}"
                 print(f"  {adapter:<11s} {op:<14s} n={size:<10d} "
@@ -297,6 +318,12 @@ def main():
     ap.add_argument("-o", "--output", default="docs/scaling_data.json",
                     help="Where to write aggregated results")
     ap.add_argument("--no-html", action="store_true")
+    ap.add_argument("-i", "--iterations", type=int, default=None,
+                    help="Override iter count (default: adaptive 21/7/5/3 by size)")
+    ap.add_argument("-w", "--warmup", type=int, default=None,
+                    help="Override warmup count (default: adaptive 5/3/2/1 by size)")
+    ap.add_argument("--metric", choices=["median", "min"], default="median",
+                    help="Aggregate timed iterations as median or min (default median)")
     ap.add_argument("--rayforce-local")
     ap.add_argument("--rayforce-branch")
     args = ap.parse_args()
@@ -305,6 +332,12 @@ def main():
     h2o_ops = [op.strip() for op in args.ops.split(",") if op.strip()]
     sort_dtypes = [d.strip() for d in args.sort_dtypes.split(",") if d.strip()]
     data_root = Path(args.data_dir).resolve()
+
+    global _FORCED_ITER, _FORCED_WARMUP, _METRIC
+    if args.iterations is not None and args.warmup is not None:
+        _FORCED_ITER = args.iterations
+        _FORCED_WARMUP = args.warmup
+    _METRIC = args.metric
 
     rayforce_src = resolve_rayforce_py(args.rayforce_local, args.rayforce_branch)
     label = engine_label("rayforce", rayforce_src)

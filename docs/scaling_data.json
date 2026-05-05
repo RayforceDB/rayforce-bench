@@ -13076,6 +13076,1494 @@
         3.993003,
         4.844767
       ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.326283,
+      "times_ms": [
+        0.629431,
+        0.326283
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.393912,
+      "times_ms": [
+        0.485868,
+        0.393912
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.501988,
+      "times_ms": [
+        0.501988,
+        0.538057
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.319499,
+      "times_ms": [
+        0.425181,
+        0.319499
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.44579,
+      "times_ms": [
+        0.479304,
+        0.44579
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.387449,
+      "times_ms": [
+        0.428618,
+        0.387449
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.368773,
+      "times_ms": [
+        0.515864,
+        0.368773
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.399262,
+      "times_ms": [
+        0.514241,
+        0.399262
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.588012,
+      "times_ms": [
+        0.925616,
+        0.588012
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.284012,
+      "times_ms": [
+        0.35108,
+        0.284012
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.346401,
+      "times_ms": [
+        0.362952,
+        0.346401
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.281457,
+      "times_ms": [
+        0.320101,
+        0.281457
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.356751,
+      "times_ms": [
+        0.356751,
+        0.359666
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.323417,
+      "times_ms": [
+        0.323417,
+        0.349728
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.310302,
+      "times_ms": [
+        0.338115,
+        0.310302
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.387339,
+      "times_ms": [
+        0.387339,
+        0.443887
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.292258,
+      "times_ms": [
+        0.343375,
+        0.292258
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 10,
+      "rows": 10,
+      "median_ms": 0.291546,
+      "times_ms": [
+        0.327796,
+        0.291546
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 100,
+      "rows": 62,
+      "median_ms": 0.316444,
+      "times_ms": [
+        0.38759,
+        0.316444
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 100,
+      "rows": 99,
+      "median_ms": 0.658577,
+      "times_ms": [
+        0.706288,
+        0.658577
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.428117,
+      "times_ms": [
+        0.515023,
+        0.428117
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.58167,
+      "times_ms": [
+        0.707309,
+        0.58167
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.542094,
+      "times_ms": [
+        0.617718,
+        0.542094
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.385756,
+      "times_ms": [
+        0.579405,
+        0.385756
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 100,
+      "rows": 100,
+      "median_ms": 0.774728,
+      "times_ms": [
+        0.878206,
+        0.774728
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 100,
+      "rows": 100,
+      "median_ms": 0.689626,
+      "times_ms": [
+        0.70733,
+        0.689626
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 100,
+      "rows": 100,
+      "median_ms": 0.690978,
+      "times_ms": [
+        0.690978,
+        0.707971
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 100,
+      "rows": 62,
+      "median_ms": 0.345689,
+      "times_ms": [
+        0.345689,
+        0.345719
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 100,
+      "rows": 99,
+      "median_ms": 0.394623,
+      "times_ms": [
+        0.418609,
+        0.394623
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.363243,
+      "times_ms": [
+        0.416414,
+        0.363243
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.480778,
+      "times_ms": [
+        0.510113,
+        0.480778
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.417727,
+      "times_ms": [
+        0.438627,
+        0.417727
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 100,
+      "rows": 64,
+      "median_ms": 0.374364,
+      "times_ms": [
+        0.423468,
+        0.374364
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 100,
+      "rows": 100,
+      "median_ms": 0.542455,
+      "times_ms": [
+        0.57669,
+        0.542455
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 100,
+      "rows": 100,
+      "median_ms": 0.457483,
+      "times_ms": [
+        0.508249,
+        0.457483
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 100,
+      "rows": 100,
+      "median_ms": 0.49272,
+      "times_ms": [
+        0.506376,
+        0.49272
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.376709,
+      "times_ms": [
+        0.468303,
+        0.376709
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 1000,
+      "rows": 954,
+      "median_ms": 0.963528,
+      "times_ms": [
+        1.067337,
+        0.963528
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.461911,
+      "times_ms": [
+        0.554468,
+        0.461911
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.691239,
+      "times_ms": [
+        0.895429,
+        0.691239
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.488833,
+      "times_ms": [
+        0.622859,
+        0.488833
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.384284,
+      "times_ms": [
+        0.465058,
+        0.384284
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 2.621342,
+      "times_ms": [
+        2.765727,
+        2.621342
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 1000,
+      "rows": 0,
+      "median_ms": 4.138707,
+      "times_ms": [
+        4.629473,
+        4.138707
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 6.473031,
+      "times_ms": [
+        7.514228,
+        6.473031
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 3.146023,
+      "times_ms": [
+        3.496822,
+        3.146023
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 2.64692,
+      "times_ms": [
+        2.798239,
+        2.64692
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.553856,
+      "times_ms": [
+        0.559487,
+        0.553856
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 1000,
+      "rows": 954,
+      "median_ms": 1.545469,
+      "times_ms": [
+        1.545469,
+        1.565827
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.659489,
+      "times_ms": [
+        0.659489,
+        0.67597
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.827919,
+      "times_ms": [
+        0.877654,
+        0.827919
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.697872,
+      "times_ms": [
+        0.755191,
+        0.697872
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 1000,
+      "rows": 100,
+      "median_ms": 0.585677,
+      "times_ms": [
+        0.591679,
+        0.585677
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 2.236498,
+      "times_ms": [
+        2.312923,
+        2.236498
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 1000,
+      "rows": 0,
+      "median_ms": 1.528737,
+      "times_ms": [
+        1.528737,
+        1.669977
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 2.884644,
+      "times_ms": [
+        2.884644,
+        3.061762
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 2.084457,
+      "times_ms": [
+        2.237159,
+        2.084457
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 1000,
+      "rows": 1000,
+      "median_ms": 2.615791,
+      "times_ms": [
+        2.722355,
+        2.615791
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 0.490145,
+      "times_ms": [
+        0.536573,
+        0.490145
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 10000,
+      "rows": 6275,
+      "median_ms": 5.831296,
+      "times_ms": [
+        6.144414,
+        5.831296
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 0.521115,
+      "times_ms": [
+        0.651854,
+        0.521115
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 1.2892,
+      "times_ms": [
+        1.2892,
+        1.372078
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 0.627687,
+      "times_ms": [
+        0.700326,
+        0.627687
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 0.470348,
+      "times_ms": [
+        0.53469,
+        0.470348
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 16.044484,
+      "times_ms": [
+        22.845461,
+        16.044484
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 10000,
+      "rows": 86,
+      "median_ms": 7.367448,
+      "times_ms": [
+        8.233711,
+        7.367448
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 22.862193,
+      "times_ms": [
+        34.718666,
+        22.862193
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 20.320373,
+      "times_ms": [
+        27.152669,
+        20.320373
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 30.319191,
+      "times_ms": [
+        30.319191,
+        35.253297
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 2.369862,
+      "times_ms": [
+        2.369862,
+        2.696195
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 10000,
+      "rows": 6275,
+      "median_ms": 10.290285,
+      "times_ms": [
+        10.290285,
+        11.673313
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 2.793901,
+      "times_ms": [
+        2.793901,
+        2.83501
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 2.954277,
+      "times_ms": [
+        3.014361,
+        2.954277
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 2.742162,
+      "times_ms": [
+        2.899754,
+        2.742162
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 10000,
+      "rows": 100,
+      "median_ms": 2.439134,
+      "times_ms": [
+        2.522223,
+        2.439134
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 21.605785,
+      "times_ms": [
+        24.121716,
+        21.605785
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 10000,
+      "rows": 86,
+      "median_ms": 10.309772,
+      "times_ms": [
+        10.309772,
+        11.200361
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 29.560243,
+      "times_ms": [
+        29.638302,
+        29.560243
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 19.879372,
+      "times_ms": [
+        19.879372,
+        23.954337
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 10000,
+      "rows": 10000,
+      "median_ms": 30.096315,
+      "times_ms": [
+        31.149346,
+        30.096315
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 100000,
+      "rows": 100,
+      "median_ms": 1.473762,
+      "times_ms": [
+        1.473762,
+        1.641592
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 100000,
+      "rows": 10000,
+      "median_ms": 9.871816,
+      "times_ms": [
+        17.265173,
+        9.871816
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 2.80933,
+      "times_ms": [
+        3.036845,
+        2.80933
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 4.839975,
+      "times_ms": [
+        5.153103,
+        4.839975
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 3.965065,
+      "times_ms": [
+        4.423721,
+        3.965065
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 2.551128,
+      "times_ms": [
+        2.748875,
+        2.551128
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 100000,
+      "rows": 100000,
+      "median_ms": 208.063129,
+      "times_ms": [
+        275.226331,
+        208.063129
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 100000,
+      "rows": 988,
+      "median_ms": 34.37498,
+      "times_ms": [
+        34.37498,
+        50.486262
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 100000,
+      "rows": 100003,
+      "median_ms": 228.559006,
+      "times_ms": [
+        233.212806,
+        228.559006
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 100000,
+      "rows": 100000,
+      "median_ms": 247.04064,
+      "times_ms": [
+        256.718587,
+        247.04064
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 100000,
+      "rows": 100000,
+      "median_ms": 242.68523,
+      "times_ms": [
+        257.037555,
+        242.68523
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 100000,
+      "rows": 100,
+      "median_ms": 21.216542,
+      "times_ms": [
+        21.381818,
+        21.216542
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 100000,
+      "rows": 10000,
+      "median_ms": 42.233064,
+      "times_ms": [
+        42.889266,
+        42.233064
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 26.705846,
+      "times_ms": [
+        26.915857,
+        26.705846
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 27.272819,
+      "times_ms": [
+        27.272819,
+        27.569995
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 25.940506,
+      "times_ms": [
+        26.777373,
+        25.940506
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 100000,
+      "rows": 1000,
+      "median_ms": 23.146856,
+      "times_ms": [
+        23.146856,
+        23.252858
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 100000,
+      "rows": 100000,
+      "median_ms": 248.902592,
+      "times_ms": [
+        268.885311,
+        248.902592
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 100000,
+      "rows": 988,
+      "median_ms": 151.139304,
+      "times_ms": [
+        163.363058,
+        151.139304
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 100000,
+      "rows": 100003,
+      "median_ms": 337.138882,
+      "times_ms": [
+        338.501372,
+        337.138882
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 100000,
+      "rows": 100000,
+      "median_ms": 251.7107,
+      "times_ms": [
+        257.082028,
+        251.7107
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 100000,
+      "rows": 100000,
+      "median_ms": 394.198435,
+      "times_ms": [
+        421.227117,
+        394.198435
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 1000000,
+      "rows": 100,
+      "median_ms": 2.675655,
+      "times_ms": [
+        2.868523,
+        2.675655
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 22.245907,
+      "times_ms": [
+        22.245907,
+        24.233058
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 23.183565,
+      "times_ms": [
+        25.391869,
+        23.183565
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 50.378766,
+      "times_ms": [
+        51.616758,
+        50.378766
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 30.614254,
+      "times_ms": [
+        30.78026,
+        30.614254
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 16.228395,
+      "times_ms": [
+        16.228395,
+        18.182313
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 1000000,
+      "rows": 1000000,
+      "median_ms": 1270.292591,
+      "times_ms": [
+        1272.68711,
+        1270.292591
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 1000000,
+      "rows": 9970,
+      "median_ms": 352.880031,
+      "times_ms": [
+        352.880031,
+        360.108212
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 1000000,
+      "rows": 1000046,
+      "median_ms": 2217.891456,
+      "times_ms": [
+        2217.891456,
+        2263.802121
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 1000000,
+      "rows": 1000000,
+      "median_ms": 2641.169973,
+      "times_ms": [
+        2712.043575,
+        2641.169973
+      ]
+    },
+    {
+      "adapter": "questdb",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 1000000,
+      "rows": 1000000,
+      "median_ms": 2751.414242,
+      "times_ms": [
+        2843.482373,
+        2751.414242
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q1",
+      "size": 1000000,
+      "rows": 100,
+      "median_ms": 77.7923,
+      "times_ms": [
+        77.7923,
+        78.318534
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q2",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 285.758065,
+      "times_ms": [
+        287.289256,
+        285.758065
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q3",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 149.239183,
+      "times_ms": [
+        152.890319,
+        149.239183
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q4",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 181.616018,
+      "times_ms": [
+        185.664002,
+        181.616018
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q5",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 159.943767,
+      "times_ms": [
+        159.943767,
+        164.152197
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q6",
+      "size": 1000000,
+      "rows": 10000,
+      "median_ms": 113.859126,
+      "times_ms": [
+        116.650683,
+        113.859126
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "groupby_q7",
+      "size": 1000000,
+      "rows": 1000000,
+      "median_ms": 2792.805387,
+      "times_ms": [
+        2795.624016,
+        2792.805387
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_inner",
+      "size": 1000000,
+      "rows": 9970,
+      "median_ms": 1369.300422,
+      "times_ms": [
+        1414.112186,
+        1369.300422
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "join_left",
+      "size": 1000000,
+      "rows": 1000046,
+      "median_ms": 1861.707879,
+      "times_ms": [
+        3001.667704,
+        1861.707879
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_single",
+      "size": 1000000,
+      "rows": 1000000,
+      "median_ms": 2319.652931,
+      "times_ms": [
+        2319.652931,
+        2361.939843
+      ]
+    },
+    {
+      "adapter": "timescale",
+      "version": "3.3.4",
+      "op": "sort_multi",
+      "size": 1000000,
+      "rows": 1000000,
+      "median_ms": 4561.522305,
+      "times_ms": [
+        4561.522305,
+        4596.004753
+      ]
     }
   ]
 }
