@@ -14,7 +14,7 @@
 # Options:
 #   SIZE=10m|1m|100k|10k   H2O dataset size (default: 10m)
 #   LOCAL=1                Use rayforce-py from $(RAYFORCE_LOCAL) (~/rayforce-py)
-#   ALL=1                  Include QuestDB & TimescaleDB (requires Docker)
+#   DOCKER=ON              Include QuestDB & TimescaleDB (require Docker)
 #   SIZES=10,100,1k,...    Sizes for bench-scaling sweep
 #   SORT_MAX=1m            Max length on the extended sort scaling curve
 #   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
@@ -40,7 +40,7 @@ SORT_WARMUP ?= 1
 SORT_DTYPES ?= u8,i16,i32,i64,f64,str8,str16
 
 # Adapters
-ifdef ALL
+ifeq ($(DOCKER),ON)
 ADAPTERS := rayforce polars duckdb chdb datafusion pandas questdb timescale
 STOP_INFRA := --stop-infra
 else
@@ -94,7 +94,7 @@ help:
 	@echo "Options:"
 	@echo "  SIZE=10m             Data size: 10k, 100k, 1m, 10m"
 	@echo "  LOCAL=1              Use rayforce-py from $(RAYFORCE_LOCAL)"
-	@echo "  ALL=1                Include QuestDB & TimescaleDB"
+	@echo "  DOCKER=ON            Include QuestDB & TimescaleDB"
 	@echo "  SIZES=10,100,1k,...  Sizes for bench-scaling"
 	@echo "  SORT_MAX=1m          Max length on extended sort grid (1k..100m)"
 

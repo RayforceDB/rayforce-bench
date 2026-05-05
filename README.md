@@ -53,7 +53,7 @@ Default `make bench` runs the embedded engines (no Docker required):
 | `datafusion` | Embedded SQL (Rust + Arrow) | Substrate for InfluxDB 3, GlareDB, ROAPI — measuring against it covers the Apache columnar ecosystem. |
 | `pandas`     | DataFrame (Python) | Slow baseline. Included so readers calibrated against pandas can map the rest of the chart. |
 
-`ALL=1` adds two server-based engines (require Docker):
+`DOCKER=ON` adds two server-based engines (require Docker):
 
 | Adapter | Type | Why included |
 |---------|------|--------------|
@@ -228,11 +228,10 @@ Clones `RayforceDB/rayforce-py.git` at that branch into `.deps/rayforce-py-branc
 
 ## Server-Based Adapters (Docker)
 
-QuestDB and TimescaleDB are off by default. Add `ALL=1` to opt in — the runner auto-starts containers via `bench/infra.py`:
+QuestDB and TimescaleDB are off by default. Add `DOCKER=ON` to opt in — the runner auto-starts containers via `bench/infra.py` and stops them on exit:
 
 ```bash
-make bench ALL=1                # auto-start containers, run, leave them up
-make bench ALL=1 STOP_INFRA=1   # auto-start, run, stop on exit (in CI)
+make bench DOCKER=ON            # auto-start containers, run, stop on exit
 ```
 
 Manual control:
