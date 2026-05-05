@@ -33,6 +33,12 @@ def _make_adapter(name, args):
     if name == "rayforce":
         from .adapters.rayforce_adapter import RayforceAdapter
         return RayforceAdapter(local_path=args.rayforce_local)
+    if name == "questdb":
+        from .adapters.questdb_adapter import QuestDBAdapter
+        return QuestDBAdapter()
+    if name == "timescale":
+        from .adapters.timescale_adapter import TimescaleAdapter
+        return TimescaleAdapter()
     raise ValueError(f"Unsupported adapter for sort grid: {name}")
 
 

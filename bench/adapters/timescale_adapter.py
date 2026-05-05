@@ -279,6 +279,55 @@ class TimescaleAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
 
+    # PostgreSQL has no UINT8; SMALLINT covers 0..255 safely.
+    _TIMESCALE_TYPES = {
+        "u8": "SMALLINT", "i16": "SMALLINT", "i32": "INTEGER",
+        "i64": "BIGINT", "f64": "DOUBLE PRECISION",
+        "str8": "TEXT", "str16": "TEXT",
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        import io
+        import polars as pl
+
+        col_type = self._TIMESCALE_TYPES[dtype]
+        sort_table = "bench_sort_tmp"
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
+            cur.execute(f"CREATE TABLE {sort_table} (v {col_type})")
+
+        # Stream CSV body (sans header) into the typed table via COPY.
+        df = pl.read_csv(csv_path)
+        buffer = io.StringIO()
+        df.write_csv(buffer, include_header=False)
+        buffer.seek(0)
+        with self._conn.cursor() as cur:
+            with cur.copy(f"COPY {sort_table} FROM STDIN WITH CSV") as copy:
+                copy.write(buffer.read())
+
+        sql = f"SELECT * FROM {sort_table} ORDER BY v"
+
+        for _ in range(n_warmup):
+            with self._conn.cursor() as cur:
+                cur.execute(sql)
+                cur.fetchall()
+
+        results = []
+        for _ in range(n_iter):
+            def query():
+                with self._conn.cursor() as cur:
+                    cur.execute(sql)
+                    return cur.fetchall()
+            r, time_ns = self._time_it(query)
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, len(r)))
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
+        return results
+
     def close(self) -> None:
         if self._conn is not None:
             # Drop benchmark tables

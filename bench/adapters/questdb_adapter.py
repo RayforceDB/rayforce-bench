@@ -315,6 +315,72 @@ class QuestDBAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
 
+    # u8 unsigned doesn't exist in QuestDB; SHORT covers 0..255 safely.
+    _QUESTDB_TYPES = {
+        "u8": "SHORT", "i16": "SHORT", "i32": "INT",
+        "i64": "LONG", "f64": "DOUBLE",
+        "str8": "SYMBOL", "str16": "SYMBOL",
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        import polars as pl
+        import time as _time
+        col_type = self._QUESTDB_TYPES[dtype]
+        is_str = dtype.startswith("str")
+
+        # Load the single-column CSV with the requested type.
+        df = pl.read_csv(csv_path)
+        sort_table = "bench_sort_tmp"
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
+
+        conf = f"tcp::addr={self._host}:{self._ilp_port};"
+        with self._Sender.from_conf(conf) as sender:
+            for row in df.iter_rows(named=True):
+                v = str(row["v"]) if is_str else row["v"]
+                if is_str:
+                    sender.row(sort_table, symbols={"v": v},
+                               at=self._ServerTimestamp)
+                else:
+                    sender.row(sort_table, columns={"v": v},
+                               at=self._ServerTimestamp)
+            sender.flush()
+
+        expected = df.height
+        deadline = _time.time() + 30
+        while _time.time() < deadline:
+            try:
+                with self._conn.cursor() as cur:
+                    cur.execute(f"SELECT count(*) FROM {sort_table}")
+                    if cur.fetchone()[0] >= expected:
+                        break
+            except Exception:
+                pass
+            _time.sleep(0.1)
+
+        sql = f"SELECT * FROM {sort_table} ORDER BY v"
+
+        for _ in range(n_warmup):
+            with self._conn.cursor() as cur:
+                cur.execute(sql)
+                cur.fetchall()
+
+        results = []
+        for _ in range(n_iter):
+            def query():
+                with self._conn.cursor() as cur:
+                    cur.execute(sql)
+                    return cur.fetchall()
+            r, time_ns = self._time_it(query)
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, len(r)))
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
+        return results
+
     def close(self) -> None:
         if self._conn is not None:
             # Drop benchmark tables

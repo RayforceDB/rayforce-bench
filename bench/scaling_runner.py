@@ -36,7 +36,7 @@ DEFAULT_ADAPTERS = ["rayforce", "duckdb", "polars", "chdb",
 
 # Adapters that implement run_sort_typed_full (typed-sort grid).
 SORT_GRID_ADAPTERS = {"rayforce", "duckdb", "polars", "chdb",
-                      "datafusion", "pandas"}
+                      "datafusion", "pandas", "questdb", "timescale"}
 
 H2O_OPS = [
     "groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4",
