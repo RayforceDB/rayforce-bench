@@ -124,7 +124,7 @@ bench-scaling: _clean-cache
 		--sizes $(SIZES) -a $(ADAPTERS) \
 		--data-dir $(DATA_DIR) \
 		-i $(ITERATIONS) -w $(WARMUP) \
-		$(RAYFORCE_FLAGS)
+		$(RAYFORCE_FLAGS) $(STOP_INFRA)
 
 # Extended sort grid: typed columns × scaling lengths (random pattern only).
 # QuestDB / Timescale excluded — Docker overhead dwarfs the actual sort.

@@ -326,6 +326,8 @@ def main():
                     help="Aggregate timed iterations as median or min (default median)")
     ap.add_argument("--rayforce-local")
     ap.add_argument("--rayforce-branch")
+    ap.add_argument("--stop-infra", action="store_true",
+                    help="Stop server containers (questdb / timescale) after the sweep")
     args = ap.parse_args()
 
     sizes = [parse_size(s) for s in args.sizes.split(",") if s.strip()]
@@ -380,6 +382,11 @@ def main():
         from .report import generate_scaling_html
         html_path = out_path.parent / "scaling.html"
         generate_scaling_html(out_path, html_path)
+
+    if args.stop_infra:
+        from .infra import stop_infrastructure
+        stop_infrastructure(args.adapters, quiet=True)
+        print("Stopped server containers.")
 
 
 if __name__ == "__main__":
