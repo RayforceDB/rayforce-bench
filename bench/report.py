@@ -103,24 +103,14 @@ def generate_html_report(
         "tasks": tasks_data,
     }
 
-    # Save data.json
+    # Save the data: machine-readable JSON for tooling, JS shim for the
+    # static index.html to consume without a regex-replace dance.
     output_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(chart_data, indent=2))
+    js_path = output_path.parent / "data.js"
+    js_path.write_text(f"window.chartData = {json.dumps(chart_data)};\n")
 
-    # Update index.html with embedded chartData
-    html_path = output_path.parent / "index.html"
-    if html_path.exists():
-        html_content = html_path.read_text()
-        # Replace chartData value
-        html_content = re.sub(
-            r"const chartData = \{.*?\};",
-            f"const chartData = {json.dumps(chart_data)};",
-            html_content,
-            flags=re.DOTALL
-        )
-        html_path.write_text(html_content)
-
-    print(f"Results saved: {json_path}")
+    print(f"Results saved: {json_path}, {js_path}")
 
 
 def generate_histogram_html(results: list["BenchmarkRun"],
