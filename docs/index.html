@@ -1015,21 +1015,21 @@
     <div class="perf-cards">
 
             <div class="perf-card lazy-load-scale">
-                <div class="metric">5</div>
+                <div class="metric" id="metricDatabases">—</div>
                 <div class="label">Databases</div>
                 <div class="sublabel">compared</div>
             </div>
 
 
             <div class="perf-card lazy-load-scale">
-                <div class="metric">6</div>
+                <div class="metric" id="metricQueries">—</div>
                 <div class="label">Queries</div>
                 <div class="sublabel">benchmarked</div>
             </div>
 
 
             <div class="perf-card lazy-load-scale">
-                <div class="metric">30</div>
+                <div class="metric" id="metricDataPoints">—</div>
                 <div class="label">Data Points</div>
                 <div class="sublabel">collected</div>
             </div>
@@ -1095,252 +1095,10 @@
                         <th>Database</th>
                         <th>Median (ms)</th>
                         <th>Min (ms)</th>
-                        <th>P95 (ms)</th>
-                        <th>Rows/sec</th>
+                        <th>Max (ms)</th>
                     </tr>
                 </thead>
-                <tbody>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.553</td>
-                <td class="mono">0.512</td>
-                <td class="mono">0.670</td>
-                <td class="mono">18,083,183</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">0.741</td>
-                <td class="mono">0.711</td>
-                <td class="mono">0.867</td>
-                <td class="mono">13,495,276</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">1.425</td>
-                <td class="mono">1.356</td>
-                <td class="mono">1.720</td>
-                <td class="mono">7,017,544</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">10.128</td>
-                <td class="mono">7.874</td>
-                <td class="mono">15.559</td>
-                <td class="mono">987,361</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">21.849</td>
-                <td class="mono">21.192</td>
-                <td class="mono">21.932</td>
-                <td class="mono">457,683</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">1.241</td>
-                <td class="mono">1.177</td>
-                <td class="mono">1.435</td>
-                <td class="mono">8,058,018</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">3.532</td>
-                <td class="mono">3.289</td>
-                <td class="mono">3.808</td>
-                <td class="mono">2,831,257</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">8.240</td>
-                <td class="mono">7.886</td>
-                <td class="mono">9.151</td>
-                <td class="mono">1,213,592</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">15.224</td>
-                <td class="mono">14.388</td>
-                <td class="mono">18.281</td>
-                <td class="mono">656,856</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">35.773</td>
-                <td class="mono">35.501</td>
-                <td class="mono">36.117</td>
-                <td class="mono">279,548</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.772</td>
-                <td class="mono">0.740</td>
-                <td class="mono">0.942</td>
-                <td class="mono">12,953,368</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">0.929</td>
-                <td class="mono">0.906</td>
-                <td class="mono">0.992</td>
-                <td class="mono">10,764,263</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">2.002</td>
-                <td class="mono">1.919</td>
-                <td class="mono">2.299</td>
-                <td class="mono">4,995,211</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">5.003</td>
-                <td class="mono">3.798</td>
-                <td class="mono">9.707</td>
-                <td class="mono">1,998,801</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">28.234</td>
-                <td class="mono">24.785</td>
-                <td class="mono">30.096</td>
-                <td class="mono">354,186</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">1.124</td>
-                <td class="mono">1.059</td>
-                <td class="mono">1.234</td>
-                <td class="mono">8,896,797</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">1.268</td>
-                <td class="mono">1.130</td>
-                <td class="mono">1.390</td>
-                <td class="mono">7,886,435</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">2.293</td>
-                <td class="mono">2.181</td>
-                <td class="mono">2.576</td>
-                <td class="mono">4,361,187</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">6.881</td>
-                <td class="mono">5.769</td>
-                <td class="mono">7.477</td>
-                <td class="mono">1,453,277</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">38.984</td>
-                <td class="mono">34.552</td>
-                <td class="mono">48.022</td>
-                <td class="mono">256,514</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.895</td>
-                <td class="mono">0.855</td>
-                <td class="mono">1.005</td>
-                <td class="mono">11,173,184</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">1.213</td>
-                <td class="mono">1.102</td>
-                <td class="mono">1.427</td>
-                <td class="mono">8,244,994</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">2.233</td>
-                <td class="mono">2.183</td>
-                <td class="mono">2.615</td>
-                <td class="mono">4,478,314</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">5.591</td>
-                <td class="mono">5.182</td>
-                <td class="mono">16.943</td>
-                <td class="mono">1,788,589</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">31.870</td>
-                <td class="mono">30.004</td>
-                <td class="mono">37.483</td>
-                <td class="mono">313,775</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.730</td>
-                <td class="mono">0.702</td>
-                <td class="mono">0.793</td>
-                <td class="mono">13,698,630</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">1.719</td>
-                <td class="mono">1.486</td>
-                <td class="mono">1.883</td>
-                <td class="mono">5,817,336</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">4.192</td>
-                <td class="mono">2.958</td>
-                <td class="mono">12.765</td>
-                <td class="mono">2,385,486</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">4.376</td>
-                <td class="mono">4.214</td>
-                <td class="mono">4.775</td>
-                <td class="mono">2,285,208</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">31.747</td>
-                <td class="mono">29.875</td>
-                <td class="mono">34.189</td>
-                <td class="mono">315,091</td>
-            </tr>
-                </tbody>
+                <tbody id="results-tbody"></tbody>
             </table>
         </div>
     
@@ -1389,6 +1147,78 @@
         if (chartData && chartData.generated_at) {
             const el = document.getElementById('generatedAt');
             if (el) el.textContent = chartData.generated_at;
+        }
+
+        // Hero counters reflect what's actually in the data set.
+        if (chartData && chartData.comparison) {
+            const c = chartData.comparison;
+            const dbs = (c.adapters || []).length;
+            const qs  = (c.tasks    || []).length;
+            const pts = (c.values   || []).length;
+            const set = (id, n) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = n;
+            };
+            set('metricDatabases',  dbs);
+            set('metricQueries',    qs);
+            set('metricDataPoints', pts);
+        }
+
+        // Build the results table dynamically from chartData.
+        // Columns: Task | Database | Median (ms) | Min (ms) | Max (ms)
+        const ADAPTER_COLORS = {
+            rayforce:   '#e9a033',
+            duckdb:     '#1565C0',
+            polars:     '#2ca02c',
+            chdb:       '#E91E63',
+            datafusion: '#17becf',
+            pandas:     '#8c564b',
+            questdb:    '#6366F1',
+            timescale:  '#14B8A6',
+        };
+        if (chartData && chartData.comparison && chartData.tasks) {
+            const tbody = document.getElementById('results-tbody');
+            if (tbody) {
+                const tasksMeta = chartData.comparison.tasks || [];
+                const fmt = (n) => (n == null ? '—' : n.toFixed(3));
+                const rowsHtml = [];
+                for (const task of tasksMeta) {
+                    const taskRows = chartData.tasks[task] || [];
+                    const enriched = taskRows.map(r => ({
+                        adapter: r.adapter,
+                        median: r.boxplot ? r.boxplot[2] : null,
+                        min:    r.boxplot ? r.boxplot[0] : null,
+                        max:    r.boxplot ? r.boxplot[4] : null,
+                    }));
+                    enriched.sort((a, b) => {
+                        if (a.adapter === 'rayforce') return -1;
+                        if (b.adapter === 'rayforce') return 1;
+                        return (a.median ?? Infinity) - (b.median ?? Infinity);
+                    });
+                    const bestMedian = Math.min(...enriched
+                        .map(e => e.median ?? Infinity));
+                    for (const e of enriched) {
+                        const color = ADAPTER_COLORS[e.adapter] || '#666';
+                        const isRayforce = e.adapter === 'rayforce';
+                        const isBest = e.median === bestMedian;
+                        const rowCls = isRayforce ? ' class="rayforce-row"' : '';
+                        const medCls = isBest ? 'best-value mono' : 'mono';
+                        const adapterStyle = isRayforce
+                            ? `color: ${color}; font-weight: 600;`
+                            : `color: ${color};`;
+                        rowsHtml.push(
+                            `<tr${rowCls}>` +
+                            `<td><strong>${task}</strong></td>` +
+                            `<td style="${adapterStyle}">${e.adapter}</td>` +
+                            `<td class="${medCls}">${fmt(e.median)}</td>` +
+                            `<td class="mono">${fmt(e.min)}</td>` +
+                            `<td class="mono">${fmt(e.max)}</td>` +
+                            `</tr>`
+                        );
+                    }
+                }
+                tbody.innerHTML = rowsHtml.join('\n');
+            }
         }
 
         // Theme management - default to light

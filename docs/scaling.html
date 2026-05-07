@@ -77,7 +77,7 @@ const OP_GROUPS = {
 const enabled = { engine: {}, op: {} };
 ENGINES.forEach(e => enabled.engine[e] = true);
 // Default-on a useful starter set: groupby_q1 + sort_i64 + sort_str8.
-const DEFAULT_ON = new Set(["groupby_q1", "sort_i64", "sort_str8"]);
+const DEFAULT_ON = new Set(["groupby_q1"]);
 OPS.forEach(o => enabled.op[o] = DEFAULT_ON.has(o));
 if (![...DEFAULT_ON].some(o => OPS.includes(o))) {
   OPS.forEach(o => enabled.op[o] = true);
