@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>RayforceDB H2O Benchmark</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>body{font-family:sans-serif;padding:20px}</style>
+</head><body>
+<h2>RayforceDB H2O Benchmark</h2>
+<div id="chart"></div>
+<script>
+const benches = ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7", "join_inner", "join_left", "sort_multi", "sort_single"];
+const adapters = ["chdb", "datafusion", "duckdb", "pandas", "polars", "questdb", "rayforce", "timescale"];
+const values = {"chdb": [33.714317, 175.177659, 204.346843, 256.653163, 231.965392, 220.45077, 1361.975614, 1043.302953, 2621.439086, 5869.512074, 1159.404996], "datafusion": [137.317804, 204.526049, 279.621335, 344.81922, 345.561096, 295.190312, 601.217645, 744.190871, 810.296543, 2220.30828, 1251.445909], "duckdb": [34.628697, 52.556587, 108.998976, 174.96982, 149.243696, 108.874806, 5796.279045, 309.860906, 9164.048881, 9985.959365, 5793.088206], "pandas": [227.307401, 625.746102, 801.40666, 969.348836, 853.50756, 789.568327, 6865.182423, 5064.072319, 6170.671203, 8424.005925, 9522.287963], "polars": [31.459356, 253.95837, 315.881628, 313.505928, 295.949665, 277.710547, 1981.459423, 366.006041, 642.27547, 1851.747729, 569.875572], "questdb": [12.256242, 52.371321, 399.49271, 686.03386, 441.346295, 234.726298, 12615.729815, 4305.986189, 22354.945824, 30300.876963, 26144.411], "rayforce": [5.46576, 14.763699, 37.00418, 56.267863, 56.169966, 230.683703, 133.315819, 67.390018, 448.308892, 260.948328, 83.142995], "timescale": [434.665394, 660.468551, 1911.804968, 2312.777034, 2054.933011, 1240.068264, 29215.646792, 2325.615598, 17676.770325, 28486.600176, 19653.984813]};
+const colors = ["#e377c2", "#17becf", "#1f77b4", "#8c564b", "#2ca02c", "#9467bd", "#ff7f0e", "#d62728"];
+const traces = adapters.map((a, i) => ({
+  x: benches,
+  y: values[a],
+  name: a,
+  type: 'bar',
+  marker: { color: colors[i] },
+  text: values[a].map(v => v == null ? '' :
+        v >= 1000 ? (v/1000).toFixed(2)+'s' : v.toFixed(1)+'ms'),
+  textposition: 'outside',
+  textfont: { size: 9 },
+}));
+Plotly.newPlot('chart', traces, {
+  barmode: 'group',
+  height: 500,
+  yaxis: { title: 'Time (ms)', type: 'log' },
+  template: 'plotly_white',
+  legend: { orientation: 'h', y: 1.1 },
+});
+</script></body></html>
