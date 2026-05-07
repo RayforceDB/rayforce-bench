@@ -41,8 +41,13 @@ ENV/
 # Old reports folder (deprecated, use docs/ for GitHub Pages)
 reports/
 
-# Keep docs/ (GitHub Pages output) tracked
-# docs/
+# Bench output snapshots — machine-specific, never commit.
+docs/data.json
+docs/data.js
+docs/histogram.html
+docs/scaling.html
+docs/scaling_data.json
+docs/sort_data.json
 
 # Generated datasets (keep manifests and .gitkeep)
 datasets/*/*.csv
