@@ -1006,7 +1006,7 @@
             <div class="hero-meta">
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    January 20, 2026 at 12:00
+                    <span id="generatedAt">—</span>
                 </span>
             </div>
         </div>
@@ -1384,7 +1384,13 @@
     <script src="data.js"></script>
     <script>
         const chartData = window.chartData;
-        
+
+        // Show when this data was written (set by bench/report.py).
+        if (chartData && chartData.generated_at) {
+            const el = document.getElementById('generatedAt');
+            if (el) el.textContent = chartData.generated_at;
+        }
+
         // Theme management - default to light
         const themeToggle = document.querySelector('.theme-toggle');
         

@@ -93,8 +93,11 @@ def generate_html_report(
                 })
         tasks_data[task] = task_results
 
+    generated_at = datetime.now().astimezone().isoformat(timespec="seconds")
+
     # Build chartData in the format expected by the original HTML
     chart_data = {
+        "generated_at": generated_at,
         "comparison": {
             "adapters": adapters,
             "tasks": tasks,
@@ -110,7 +113,16 @@ def generate_html_report(
     js_path = output_path.parent / "data.js"
     js_path.write_text(f"window.chartData = {json.dumps(chart_data)};\n")
 
-    print(f"Results saved: {json_path}, {js_path}")
+    # Read-back-after-write proof: stat the file we just wrote and print
+    # what the filesystem now reports. If `ls -la` later shows a different
+    # mtime/size, the writer was looking at a different file than the user.
+    j_st = json_path.stat()
+    s_st = js_path.stat()
+    j_mtime = datetime.fromtimestamp(j_st.st_mtime).astimezone().isoformat(timespec="seconds")
+    s_mtime = datetime.fromtimestamp(s_st.st_mtime).astimezone().isoformat(timespec="seconds")
+    print(f"Wrote {json_path.resolve()}  size={j_st.st_size}  mtime={j_mtime}")
+    print(f"Wrote {js_path.resolve()}    size={s_st.st_size}  mtime={s_mtime}")
+    print(f"Run finished at {datetime.now().astimezone().isoformat(timespec='seconds')}")
 
 
 def generate_histogram_html(results: list["BenchmarkRun"],
