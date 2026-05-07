@@ -92,7 +92,7 @@ value (`v1` left, `v2` right). Two equal-size tables.
 ### Scaling sweep (`make bench-scaling`)
 
 Runs every adapter through every H2O op + the typed sort grid at every
-size in `SIZES` (default `10,100,1k,10k,100k,1m`). Adaptive iteration
+size in `SIZES` (default `10,100,1k,10k,100k,1m,10m`). Adaptive iteration
 counts: tiny inputs run more iterations to beat the timer noise floor;
 huge inputs run fewer because each iteration is already slow.
 
