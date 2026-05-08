@@ -59,7 +59,13 @@ def main() -> int:
     code = 0
     try:
         adapter = _make_adapter(args.adapter, rayforce_local=args.rayforce_local)
-        if args.op.startswith("join_"):
+        is_canonical_join = (args.op.startswith("join_q")
+                             and args.op[len("join_q"):].isdigit())
+        if is_canonical_join:
+            # data is the canonical-join dataset directory.
+            adapter.load_canonical_join(Path(args.data))
+            df = adapter.materialize(args.op)
+        elif args.op.startswith("join_"):
             adapter.load_data(Path(args.data), table_name="left")
             df = adapter.materialize(args.op, right_path=Path(args.right))
         else:

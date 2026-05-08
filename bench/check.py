@@ -31,12 +31,20 @@ from pathlib import Path
 import polars as pl
 from polars.testing import assert_frame_equal
 
-from .scaling_runner import ensure_groupby, ensure_join, parse_size, fmt_size
+from .scaling_runner import (
+    ensure_groupby, ensure_join, ensure_canonical_join,
+    parse_size, fmt_size,
+)
 
 
 OPS = [
+    # Canonical H2O groupby (q1..q10)
     "groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4",
-    "groupby_q5", "groupby_q6", "groupby_q7",
+    "groupby_q5", "groupby_q6", "groupby_q7", "groupby_q8",
+    "groupby_q9", "groupby_q10",
+    # Canonical H2O joins (q1..q5)
+    "join_q1", "join_q2", "join_q3", "join_q4", "join_q5",
+    # Bonus stress tests
     "join_inner", "join_left",
     "sort_single", "sort_multi",
 ]
@@ -48,7 +56,22 @@ ATOL = 1e-9
 
 
 def _data_paths(data_root: Path, op: str, n: int) -> tuple[Path, Path | None]:
-    """Return (primary_csv, right_csv_or_None) for op at size n."""
+    """Return (primary_path, right_csv_or_None) for op at size n.
+
+    Canonical H2O join (join_q1..q5) needs 4 tables (x/small/medium/big)
+    pre-loaded — primary_path is the dataset directory, right_csv is None
+    (the worker calls adapter.load_canonical_join(dir)).
+
+    Bonus 3-key joins (join_inner/join_left) use a single (left, right)
+    pair; primary_path is left.csv, right_csv is right.csv.
+
+    Groupby/sort use a single CSV; primary_path is data.csv, right None.
+    """
+    is_canonical_join = (op.startswith("join_q")
+                         and op[len("join_q"):].isdigit())
+    if is_canonical_join:
+        cj = ensure_canonical_join(data_root, n, k=100, seed=0)
+        return (cj, None)
     if op.startswith("join_"):
         join_dir = ensure_join(data_root, n, k=100, seed=0)
         return (join_dir / "left.csv", join_dir / "right.csv")
@@ -108,6 +131,20 @@ def _canonicalize(df: pl.DataFrame) -> pl.DataFrame:
     """
     if df.width == 0:
         return df
+    # Drop engine-specific duplicate-column suffixes from joins. Polars
+    # uses `_right`, duckdb `_1`, pandas `_x`/`_y`, chdb `<table>.col`.
+    # The canonical H2O answer is "left-side cols + key + right's v2";
+    # the dup-suffix cols are bookkeeping noise that varies per engine.
+    import re
+    drop = []
+    for name in df.columns:
+        if (name.endswith("_right")
+                or re.search(r"_\d+$", name)
+                or name.endswith("_x") or name.endswith("_y")
+                or "." in name):
+            drop.append(name)
+    if drop:
+        df = df.drop(drop)
     casts = []
     for name, dtype in df.schema.items():
         if isinstance(dtype, pl.Decimal):
@@ -131,8 +168,54 @@ def _canonicalize(df: pl.DataFrame) -> pl.DataFrame:
     return df.sort(cols)
 
 
+def _drop_dup_suffix_cols(df: pl.DataFrame) -> pl.DataFrame:
+    """Drop engine-specific duplicate-column suffixes and bookkeeping cols.
+
+    Sources:
+        polars        → `_right`
+        duckdb        → `_1`
+        pandas        → `_x`, `_y`
+        chdb          → `<table>.col` (qualified)
+        questdb plain → `<col>1` (just trailing digit, no underscore)
+        questdb ILP   → implicit `timestamp` partition column
+    These artifacts vary per engine and aren't part of the semantic
+    canonical H2O result.
+    """
+    if df.width == 0:
+        return df
+    import re
+    cols = df.columns
+    # questdb's "just trailing digit" suffix is ambiguous (could be a
+    # real col name like id1, id4). Detect it by: stripping trailing
+    # digits, the prefix matches another col already in the df.
+    cols_set = set(cols)
+    drop = []
+    for name in cols:
+        if (name.endswith("_right")
+                or re.search(r"_\d+$", name)
+                or name.endswith("_x") or name.endswith("_y")
+                or "." in name
+                or name == "timestamp"):
+            drop.append(name)
+            continue
+        # Trailing-digit case (QuestDB-style: id11 = id1+1, id41 = id4+1).
+        # Strip just the LAST digit; if the prefix is another col, drop.
+        # Doing this for each suffix length up to 2 covers a couple of
+        # join chained-suffixes if any.
+        for strip_n in (1, 2):
+            if len(name) > strip_n and name[-strip_n:].isdigit():
+                prefix = name[:-strip_n]
+                if prefix in cols_set and prefix != name:
+                    drop.append(name)
+                    break
+    return df.drop(drop) if drop else df
+
+
 def _compare(ref: pl.DataFrame, other: pl.DataFrame) -> str | None:
     """Return None if equivalent, else a multi-line diff string."""
+    # Drop engine-specific dup-suffix cols BEFORE schema check.
+    ref = _drop_dup_suffix_cols(ref)
+    other = _drop_dup_suffix_cols(other)
     # Schema: same column set?
     ref_cols = set(ref.columns)
     other_cols = set(other.columns)

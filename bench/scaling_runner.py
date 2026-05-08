@@ -117,6 +117,20 @@ def ensure_join(data_root: Path, n: int, k: int, seed: int) -> Path:
     return out
 
 
+def ensure_canonical_join(data_root: Path, n: int, k: int, seed: int) -> Path:
+    """Generate canonical H2O J1 (x, small, medium, big) for size n."""
+    from .generators import CanonicalJoinGenerator
+    name = f"join_canonical_{fmt_size(n)}_k{k}"
+    out = data_root / name
+    files = ["x.csv", "small.csv", "medium.csv", "big.csv"]
+    if all((out / f).exists() for f in files):
+        return out
+    gen = CanonicalJoinGenerator(n_rows=n, k=k, seed=seed)
+    ds = gen.generate()
+    ds.write(out, formats=["csv"])
+    return out
+
+
 @dataclass
 class ScalingConfig:
     adapters: list[str]

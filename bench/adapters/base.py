@@ -7,6 +7,28 @@ from typing import Any
 import time
 
 
+def _dedupe_col_names(cols: list[str]) -> list[str]:
+    """Rename duplicate column names to `<name>_<n>` (n >= 1).
+
+    Some engines' SQL `JOIN ... USING(key)` only deduplicates the key
+    column; non-key cols with the same name on both sides remain dup.
+    polars rejects DataFrames with dup col names, so adapter materialize
+    methods that build a polars DataFrame from raw cursor descriptions
+    must dedupe first. The `_<n>` suffix is recognised by check.py's
+    drop-suffix normalizer, so cross-engine comparison still passes.
+    """
+    seen: dict[str, int] = {}
+    out: list[str] = []
+    for c in cols:
+        if c not in seen:
+            seen[c] = 0
+            out.append(c)
+        else:
+            seen[c] += 1
+            out.append(f"{c}_{seen[c]}")
+    return out
+
+
 @dataclass
 class BenchmarkResult:
     """Result of a single benchmark run."""
@@ -98,22 +120,64 @@ class Adapter(ABC):
 
     @abstractmethod
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on (id1, id2, id3) — canonical H2O J1."""
+        """Inner join on (id1, id2, id3) — bonus 3-key stress test."""
         pass
 
     @abstractmethod
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on (id1, id2, id3) — canonical H2O J1."""
+        """Left join on (id1, id2, id3) — bonus 3-key stress test."""
+        pass
+
+    # Canonical H2O J1 join queries.
+    # Adapter is expected to have all four tables — `x`, `small`,
+    # `medium`, `big` — pre-loaded via load_canonical_join() before any
+    # of these are called.
+
+    @abstractmethod
+    def run_join_q1(self) -> BenchmarkResult:
+        """Q1: x.join(small, on=id1) — int key, small (1e3) right."""
         pass
 
     @abstractmethod
+    def run_join_q2(self) -> BenchmarkResult:
+        """Q2: x.join(medium, on=id2) — int key, medium (N/1e3) right."""
+        pass
+
+    @abstractmethod
+    def run_join_q3(self) -> BenchmarkResult:
+        """Q3: x.join(medium, on=id2, how=left) — left, int key."""
+        pass
+
+    @abstractmethod
+    def run_join_q4(self) -> BenchmarkResult:
+        """Q4: x.join(medium, on=id5) — string key, medium right."""
+        pass
+
+    @abstractmethod
+    def run_join_q5(self) -> BenchmarkResult:
+        """Q5: x.join(big, on=id3) — int key, big (N) right."""
+        pass
+
+    def load_canonical_join(self, data_dir: Path) -> None:
+        """Load the 4 canonical H2O J1 tables (x, small, medium, big)
+        from <data_dir>/{x,small,medium,big}.csv.
+
+        Default implementation calls load_data() four times. Adapters
+        with single-connection setup can override.
+        """
+        self.load_data(data_dir / "x.csv", "x")
+        self.load_data(data_dir / "small.csv", "small")
+        self.load_data(data_dir / "medium.csv", "medium")
+        self.load_data(data_dir / "big.csv", "big")
+
+    @abstractmethod
     def run_sort_single(self) -> BenchmarkResult:
-        """Sort by single column."""
+        """Sort by single column — bonus."""
         pass
 
     @abstractmethod
     def run_sort_multi(self) -> BenchmarkResult:
-        """Sort by multiple columns."""
+        """Sort by multiple columns — bonus."""
         pass
 
     def get_info(self) -> dict[str, Any]:
@@ -175,7 +239,12 @@ class Adapter(ABC):
         single external invocation override this method.
         """
         method = getattr(self, f"run_{bench_name}")
-        if bench_name.startswith("join_"):
+        # Canonical join_q1..q5 take no path arg — tables are pre-loaded
+        # via load_canonical_join(). Bonus join_inner/join_left take a
+        # right_path arg.
+        is_canonical_join = (bench_name.startswith("join_q")
+                             and bench_name[len("join_q"):].isdigit())
+        if bench_name.startswith("join_") and not is_canonical_join:
             if right_path is None:
                 raise ValueError(f"{bench_name} requires right_path")
             invoke = lambda: method(right_path)

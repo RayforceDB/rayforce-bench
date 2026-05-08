@@ -61,23 +61,28 @@ endif
 
 RAYFORCE_FLAGS := $(LOCAL_FLAG)
 
-# H2O data paths. Canonical H2O J1 has equal-sized left and right tables.
+# H2O data paths. Bonus 3-key join uses equal-sized left/right tables.
+# Canonical H2O J1 uses one main `x` + 3 right tables (small/medium/big).
 ifeq ($(SIZE),10k)
-GROUPBY_DATA := $(DATA_DIR)/groupby_10k_k100
-JOIN_DATA := $(DATA_DIR)/join_10kx10k
-JOIN_RIGHT := 10k
+GROUPBY_DATA       := $(DATA_DIR)/groupby_10k_k100
+JOIN_DATA          := $(DATA_DIR)/join_10kx10k
+JOIN_RIGHT         := 10k
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_10k_k100
 else ifeq ($(SIZE),100k)
-GROUPBY_DATA := $(DATA_DIR)/groupby_100k_k100
-JOIN_DATA := $(DATA_DIR)/join_100kx100k
-JOIN_RIGHT := 100k
+GROUPBY_DATA       := $(DATA_DIR)/groupby_100k_k100
+JOIN_DATA          := $(DATA_DIR)/join_100kx100k
+JOIN_RIGHT         := 100k
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_100k_k100
 else ifeq ($(SIZE),1m)
-GROUPBY_DATA := $(DATA_DIR)/groupby_1m_k100
-JOIN_DATA := $(DATA_DIR)/join_1mx1m
-JOIN_RIGHT := 1m
+GROUPBY_DATA       := $(DATA_DIR)/groupby_1m_k100
+JOIN_DATA          := $(DATA_DIR)/join_1mx1m
+JOIN_RIGHT         := 1m
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_1m_k100
 else
-GROUPBY_DATA := $(DATA_DIR)/groupby_10m_k100
-JOIN_DATA := $(DATA_DIR)/join_10mx10m
-JOIN_RIGHT := 10m
+GROUPBY_DATA       := $(DATA_DIR)/groupby_10m_k100
+JOIN_DATA          := $(DATA_DIR)/join_10mx10m
+JOIN_RIGHT         := 10m
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_10m_k100
 endif
 
 # H2O sort uses the groupby dataset (s1=id1, s6=id1+id2+id3) — same convention
@@ -121,6 +126,10 @@ $(JOIN_DATA)/left.csv: $(VENV_PY)
 	@echo "==> Generating join dataset (SIZE=$(SIZE))"
 	@$(PYTHON) -m bench.generate -o $(DATA_DIR) join --left-rows $(SIZE) --right-rows $(JOIN_RIGHT)
 
+$(CANONICAL_JOIN_DATA)/x.csv: $(VENV_PY)
+	@echo "==> Generating canonical H2O J1 dataset (SIZE=$(SIZE))"
+	@$(PYTHON) -c "from pathlib import Path; from bench.scaling_runner import ensure_canonical_join, parse_size; ensure_canonical_join(Path('$(DATA_DIR)'), parse_size('$(SIZE)'), k=100, seed=0)"
+
 # ── User-facing aliases ─────────────────────────────────────────────────
 
 setup: $(VENV_PY)
@@ -137,11 +146,16 @@ bench: _clean-cache $(GROUPBY_DATA)/data.csv
 bench-join: _clean-cache $(JOIN_DATA)/left.csv
 	@$(PYTHON) -m bench.runner join -d $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
+# Canonical H2O J1 join suite (q1..q5, single-key, 3 right sizes).
+# Data path is the canonical-join directory (x/small/medium/big.csv).
+bench-canonical-join: _clean-cache $(CANONICAL_JOIN_DATA)/x.csv
+	@$(PYTHON) -m bench.runner canonical_join -d $(CANONICAL_JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+
 bench-sort: _clean-cache $(GROUPBY_DATA)/data.csv
 	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
-bench-all: _clean-cache $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv
-	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+bench-all: _clean-cache $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv $(CANONICAL_JOIN_DATA)/x.csv
+	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) --canonical-join-data $(CANONICAL_JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 # Scaling sweep generates its own CSVs at every size as it runs.
 bench-scaling: _clean-cache $(VENV_PY)

@@ -6,7 +6,7 @@ Install client: pip install psycopg[binary]
 
 from pathlib import Path
 
-from .base import Adapter, BenchmarkResult
+from .base import Adapter, BenchmarkResult, _dedupe_col_names
 
 
 class QuestDBAdapter(Adapter):
@@ -259,6 +259,32 @@ class QuestDBAdapter(Adapter):
             _time.sleep(0.1)
         return right_table
 
+    # Canonical H2O J1 — 5 single-key joins.
+
+    def _canon_join(self, right_name: str, key: str, kind: str,
+                    op_name: str) -> BenchmarkResult:
+        x = self._get_table("x")
+        r = self._get_table(right_name)
+        # QuestDB's PG protocol doesn't support USING; use ON.
+        return self._time_pg(
+            f"SELECT * FROM {x} {kind} JOIN {r} ON {x}.{key} = {r}.{key}",
+            op_name)
+
+    def run_join_q1(self) -> BenchmarkResult:
+        return self._canon_join("small", "id1", "INNER", "join_q1")
+
+    def run_join_q2(self) -> BenchmarkResult:
+        return self._canon_join("medium", "id2", "INNER", "join_q2")
+
+    def run_join_q3(self) -> BenchmarkResult:
+        return self._canon_join("medium", "id2", "LEFT", "join_q3")
+
+    def run_join_q4(self) -> BenchmarkResult:
+        return self._canon_join("medium", "id5", "INNER", "join_q4")
+
+    def run_join_q5(self) -> BenchmarkResult:
+        return self._canon_join("big", "id3", "INNER", "join_q5")
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
@@ -412,6 +438,19 @@ class QuestDBAdapter(Adapter):
         if op in sql_map:
             sql = sql_map[op]
             cleanup = None
+        elif op.startswith("join_q") and op[len("join_q"):].isdigit():
+            x = self._get_table("x")
+            joins = {
+                "join_q1": (self._get_table("small"),  "INNER", "id1"),
+                "join_q2": (self._get_table("medium"), "INNER", "id2"),
+                "join_q3": (self._get_table("medium"), "LEFT",  "id2"),
+                "join_q4": (self._get_table("medium"), "INNER", "id5"),
+                "join_q5": (self._get_table("big"),    "INNER", "id3"),
+            }
+            r, kind, key = joins[op]
+            sql = (f"SELECT * FROM {x} {kind} JOIN {r} "
+                   f"ON {x}.{key} = {r}.{key}")
+            cleanup = None
         elif op in ("join_inner", "join_left"):
             left = self._get_table("left")
             right = self._load_right(right_path)
@@ -434,6 +473,7 @@ class QuestDBAdapter(Adapter):
                 cur.execute(sql)
                 cols = [d.name for d in cur.description]
                 rows = cur.fetchall()
+            cols = _dedupe_col_names(cols)
             return pl.DataFrame(rows, schema=cols, orient="row")
         finally:
             if cleanup:

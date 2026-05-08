@@ -138,6 +138,39 @@ class PandasAdapter(Adapter):
         )
         return BenchmarkResult("groupby_q10", t, len(result))
 
+    # Canonical H2O J1 — 5 single-key joins.
+
+    def run_join_q1(self) -> BenchmarkResult:
+        """Q1: x.merge(small, on=id1)."""
+        x, r = self._get("x"), self._get("small")
+        result, t = self._time_it(lambda: x.merge(r, on="id1", suffixes=("", "_right")))
+        return BenchmarkResult("join_q1", t, len(result))
+
+    def run_join_q2(self) -> BenchmarkResult:
+        """Q2: x.merge(medium, on=id2)."""
+        x, r = self._get("x"), self._get("medium")
+        result, t = self._time_it(lambda: x.merge(r, on="id2", suffixes=("", "_right")))
+        return BenchmarkResult("join_q2", t, len(result))
+
+    def run_join_q3(self) -> BenchmarkResult:
+        """Q3: x.merge(medium, on=id2, how=left)."""
+        x, r = self._get("x"), self._get("medium")
+        result, t = self._time_it(
+            lambda: x.merge(r, on="id2", how="left", suffixes=("", "_right")))
+        return BenchmarkResult("join_q3", t, len(result))
+
+    def run_join_q4(self) -> BenchmarkResult:
+        """Q4: x.merge(medium, on=id5) — string key."""
+        x, r = self._get("x"), self._get("medium")
+        result, t = self._time_it(lambda: x.merge(r, on="id5", suffixes=("", "_right")))
+        return BenchmarkResult("join_q4", t, len(result))
+
+    def run_join_q5(self) -> BenchmarkResult:
+        """Q5: x.merge(big, on=id3)."""
+        x, r = self._get("x"), self._get("big")
+        result, t = self._time_it(lambda: x.merge(r, on="id3", suffixes=("", "_right")))
+        return BenchmarkResult("join_q5", t, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get("left")
@@ -188,7 +221,12 @@ class PandasAdapter(Adapter):
         return results
 
     def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
-        df = self._get() if op != "join_inner" and op != "join_left" else None
+        # 'data' is loaded for groupby/sort ops. Joins (bonus or
+        # canonical) load other tables and don't touch 'data'.
+        is_canonical_join = (op.startswith("join_q")
+                             and op[len("join_q"):].isdigit())
+        is_bonus_join = op in ("join_inner", "join_left")
+        df = None if (is_canonical_join or is_bonus_join) else self._get()
         if op == "groupby_q1":
             r = df.groupby("id1", as_index=False)["v1"].sum()
         elif op == "groupby_q2":
@@ -227,6 +265,21 @@ class PandasAdapter(Adapter):
             r = df.groupby(
                 ["id1", "id2", "id3", "id4", "id5", "id6"], as_index=False
             ).agg(v3=("v3", "sum"), cnt=("v1", "count"))
+        elif op == "join_q1":
+            r = self._get("x").merge(self._get("small"), on="id1",
+                                     suffixes=("", "_right"))
+        elif op == "join_q2":
+            r = self._get("x").merge(self._get("medium"), on="id2",
+                                     suffixes=("", "_right"))
+        elif op == "join_q3":
+            r = self._get("x").merge(self._get("medium"), on="id2",
+                                     how="left", suffixes=("", "_right"))
+        elif op == "join_q4":
+            r = self._get("x").merge(self._get("medium"), on="id5",
+                                     suffixes=("", "_right"))
+        elif op == "join_q5":
+            r = self._get("x").merge(self._get("big"), on="id3",
+                                     suffixes=("", "_right"))
         elif op in ("join_inner", "join_left"):
             how = "inner" if op == "join_inner" else "left"
             merged = self._get("left").merge(

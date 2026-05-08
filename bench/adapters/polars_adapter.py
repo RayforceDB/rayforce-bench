@@ -145,6 +145,46 @@ class PolarsAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q10", time_ns, len(result))
 
+    # Canonical H2O J1 — 5 single-key joins on right tables of 3
+    # different sizes. Tables x/small/medium/big preloaded via
+    # load_canonical_join().
+
+    def run_join_q1(self) -> BenchmarkResult:
+        """Q1: x.join(small, on=id1) — int key, 1e3 right rows."""
+        x = self._get_table("x")
+        small = self._get_table("small")
+        result, time_ns = self._time_it(lambda: x.join(small, on="id1"))
+        return BenchmarkResult("join_q1", time_ns, len(result))
+
+    def run_join_q2(self) -> BenchmarkResult:
+        """Q2: x.join(medium, on=id2) — int key, N/1e3 right rows."""
+        x = self._get_table("x")
+        medium = self._get_table("medium")
+        result, time_ns = self._time_it(lambda: x.join(medium, on="id2"))
+        return BenchmarkResult("join_q2", time_ns, len(result))
+
+    def run_join_q3(self) -> BenchmarkResult:
+        """Q3: x.join(medium, on=id2, how=left) — left join, int key."""
+        x = self._get_table("x")
+        medium = self._get_table("medium")
+        result, time_ns = self._time_it(
+            lambda: x.join(medium, on="id2", how="left"))
+        return BenchmarkResult("join_q3", time_ns, len(result))
+
+    def run_join_q4(self) -> BenchmarkResult:
+        """Q4: x.join(medium, on=id5) — string key, medium right."""
+        x = self._get_table("x")
+        medium = self._get_table("medium")
+        result, time_ns = self._time_it(lambda: x.join(medium, on="id5"))
+        return BenchmarkResult("join_q4", time_ns, len(result))
+
+    def run_join_q5(self) -> BenchmarkResult:
+        """Q5: x.join(big, on=id3) — int key, N right rows."""
+        x = self._get_table("x")
+        big = self._get_table("big")
+        result, time_ns = self._time_it(lambda: x.join(big, on="id3"))
+        return BenchmarkResult("join_q5", time_ns, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
@@ -206,6 +246,17 @@ class PolarsAdapter(Adapter):
         return results
 
     def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
+        if op == "join_q1":
+            return self._get_table("x").join(self._get_table("small"), on="id1")
+        if op == "join_q2":
+            return self._get_table("x").join(self._get_table("medium"), on="id2")
+        if op == "join_q3":
+            return self._get_table("x").join(
+                self._get_table("medium"), on="id2", how="left")
+        if op == "join_q4":
+            return self._get_table("x").join(self._get_table("medium"), on="id5")
+        if op == "join_q5":
+            return self._get_table("x").join(self._get_table("big"), on="id3")
         if op in ("join_inner", "join_left"):
             how = "inner" if op == "join_inner" else "left"
             joined = self._get_table("left").join(

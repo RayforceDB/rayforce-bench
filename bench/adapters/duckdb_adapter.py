@@ -113,6 +113,39 @@ class DuckDBAdapter(Adapter):
             f"SUM(v3) AS v3, COUNT(v1) AS cnt FROM {t} "
             f"GROUP BY id1, id2, id3, id4, id5, id6", "groupby_q10")
 
+    # Canonical H2O J1 — 5 single-key joins. Tables x/small/medium/big
+    # preloaded as bench_x / bench_small / bench_medium / bench_big.
+
+    def run_join_q1(self) -> BenchmarkResult:
+        """Q1: x.join(small, on=id1)."""
+        x, r = self._get_table("x"), self._get_table("small")
+        return self._time_sql(
+            f"SELECT * FROM {x} INNER JOIN {r} USING (id1)", "join_q1")
+
+    def run_join_q2(self) -> BenchmarkResult:
+        """Q2: x.join(medium, on=id2)."""
+        x, r = self._get_table("x"), self._get_table("medium")
+        return self._time_sql(
+            f"SELECT * FROM {x} INNER JOIN {r} USING (id2)", "join_q2")
+
+    def run_join_q3(self) -> BenchmarkResult:
+        """Q3: x.join(medium, on=id2, how=left)."""
+        x, r = self._get_table("x"), self._get_table("medium")
+        return self._time_sql(
+            f"SELECT * FROM {x} LEFT JOIN {r} USING (id2)", "join_q3")
+
+    def run_join_q4(self) -> BenchmarkResult:
+        """Q4: x.join(medium, on=id5) — string key."""
+        x, r = self._get_table("x"), self._get_table("medium")
+        return self._time_sql(
+            f"SELECT * FROM {x} INNER JOIN {r} USING (id5)", "join_q4")
+
+    def run_join_q5(self) -> BenchmarkResult:
+        """Q5: x.join(big, on=id3)."""
+        x, r = self._get_table("x"), self._get_table("big")
+        return self._time_sql(
+            f"SELECT * FROM {x} INNER JOIN {r} USING (id3)", "join_q5")
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
@@ -236,6 +269,20 @@ class DuckDBAdapter(Adapter):
         }
         if op in sql_map:
             return self._conn.execute(sql_map[op]).pl()
+        # Canonical H2O J1 — single-key joins on x and pre-loaded
+        # small/medium/big tables.
+        if op.startswith("join_q") and op[len("join_q"):].isdigit():
+            x = self._get_table("x")
+            joins = {
+                "join_q1": (self._get_table("small"),  "INNER", "id1"),
+                "join_q2": (self._get_table("medium"), "INNER", "id2"),
+                "join_q3": (self._get_table("medium"), "LEFT",  "id2"),
+                "join_q4": (self._get_table("medium"), "INNER", "id5"),
+                "join_q5": (self._get_table("big"),    "INNER", "id3"),
+            }
+            r, kind, key = joins[op]
+            return self._conn.execute(
+                f"SELECT * FROM {x} {kind} JOIN {r} USING ({key})").pl()
         if op in ("join_inner", "join_left"):
             left = self._get_table("left")
             self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")

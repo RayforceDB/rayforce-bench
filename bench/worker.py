@@ -74,7 +74,13 @@ def main():
         output["version"] = adapter.version
 
         data_path = Path(args.data)
-        if args.benchmark.startswith("join_"):
+        # Canonical H2O joins (q1..q5) need 4 tables (x, small, medium,
+        # big) pre-loaded; data_path is the directory containing them.
+        is_canonical_join = (args.benchmark.startswith("join_q")
+                             and args.benchmark[len("join_q"):].isdigit())
+        if is_canonical_join:
+            adapter.load_canonical_join(data_path)
+        elif args.benchmark.startswith("join_"):
             adapter.load_data(data_path, "left")
         else:
             adapter.load_data(data_path)

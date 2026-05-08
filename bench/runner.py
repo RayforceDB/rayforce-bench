@@ -58,13 +58,17 @@ BENCHMARKS = {
     # Canonical H2O groupby suite (q1..q10 per db-benchmark/polars/groupby-polars.py).
     # Engines that cannot run a particular op raise NotImplementedError;
     # the worker reports it as "NYI: <reason>" without aborting the run.
-    "groupby": [f"groupby_q{i}" for i in range(1, 11)],
-    # Bonus stress tests — not part of canonical H2O. Current 3-key joins
-    # and full-row sorts are kept here under the "join"/"sort" suite names
-    # while the canonical join refactor (single-key, 3 right sizes) is
-    # pending.
-    "join":    ["join_inner", "join_left"],
-    "sort":    ["sort_single", "sort_multi"],
+    "groupby":        [f"groupby_q{i}" for i in range(1, 11)],
+    # Canonical H2O join suite (q1..q5 per db-benchmark/polars/join-polars.py).
+    # Single-key joins on 3 right-table sizes (small=1e3, medium=N/1e3,
+    # big=N). Adapter loads x/small/medium/big from the canonical-join
+    # dataset directory (data path is the dir, not a CSV).
+    "canonical_join": [f"join_q{i}" for i in range(1, 6)],
+    # Bonus stress tests — kept for now under the existing "join"/"sort"
+    # suite names. Phase 3 of the canonical refactor will rename these
+    # to bonus_3key_inner / bonus_3key_left / bonus_sort_single / bonus_sort_multi.
+    "join":           ["join_inner", "join_left"],
+    "sort":           ["sort_single", "sort_multi"],
 }
 
 
@@ -153,14 +157,22 @@ def _print_op_result(run: BenchmarkRun) -> None:
 
 
 def run_suite(cfg: OrchestratorConfig, suite: str, data_path: Path,
-              join_data: Path | None = None) -> list[BenchmarkRun]:
-    """Run a named suite (groupby / join / sort) across all adapters.
+              join_data: Path | None = None,
+              canonical_join_data: Path | None = None) -> list[BenchmarkRun]:
+    """Run a named suite across all adapters.
 
-    For 'join' suite, the dataset has separate left/right tables. If
-    join_data is given (canonical case from `bench all`), use it; otherwise
-    fall back to data_path/left.csv (legacy `bench join -d <join_dir>`).
+    Suite → data layout:
+      groupby / sort  : <data_path>/data.csv (single CSV)
+      join (bonus)    : <data_path>/left.csv + right.csv (or join_data dir)
+      canonical_join  : <data_path>/{x,small,medium,big}.csv (directory)
     """
-    if suite == "join":
+    if suite == "canonical_join":
+        d = canonical_join_data if canonical_join_data is not None else data_path
+        # The worker takes "--data <dir>" for canonical join and calls
+        # adapter.load_canonical_join(dir) — pass the directory directly.
+        primary = d
+        right = None
+    elif suite == "join":
         d = join_data if join_data is not None else data_path
         primary = d / "left.csv"
         right = d / "right.csv"
@@ -256,12 +268,16 @@ def print_comparison(results: list[BenchmarkRun]) -> None:
 def main():
     ap = argparse.ArgumentParser(description="Run rayforce benchmarks")
     ap.add_argument("benchmark", nargs="?",
-                    choices=["groupby", "join", "sort", "all"],
+                    choices=["groupby", "join", "canonical_join",
+                             "sort", "all"],
                     help="Benchmark suite to run")
     ap.add_argument("-d", "--data", help="Path to dataset directory")
     ap.add_argument("--join-data", help="Path to join dataset directory "
                     "(needed when running 'all' or when join's left/right "
                     "live elsewhere from -d)")
+    ap.add_argument("--canonical-join-data", help="Path to canonical-join "
+                    "dataset directory (containing x.csv, small.csv, "
+                    "medium.csv, big.csv) — used by `bench all`")
     ap.add_argument("-a", "--adapters", nargs="+",
                     default=["rayforce", "polars", "duckdb", "chdb",
                              "datafusion", "pandas"])
@@ -328,11 +344,17 @@ def main():
 
     warn_if_already_used(SwapSample.now())
 
-    suites = ["groupby", "join", "sort"] if args.benchmark == "all" else [args.benchmark]
+    suites = (["groupby", "canonical_join", "join", "sort"]
+              if args.benchmark == "all" else [args.benchmark])
     join_path = Path(args.join_data) if args.join_data else None
+    canonical_join_path = (Path(args.canonical_join_data)
+                           if getattr(args, "canonical_join_data", None)
+                           else None)
     results: list[BenchmarkRun] = []
     for suite in suites:
-        results.extend(run_suite(cfg, suite, data_path, join_data=join_path))
+        results.extend(run_suite(cfg, suite, data_path,
+                                 join_data=join_path,
+                                 canonical_join_data=canonical_join_path))
 
     print_comparison(results)
 

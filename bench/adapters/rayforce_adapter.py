@@ -324,6 +324,54 @@ class RayforceAdapter(Adapter):
         column_types = self._get_column_types(path)
         return self._Table.from_csv(column_types, str(path))
 
+    # Canonical H2O J1 — 5 single-key joins via chain API.
+    #
+    # rayforce-py 2.0a1 has a known wrapper bug: Table.to_dict() drops
+    # duplicate column names, silently losing one side's data. Right
+    # tables (small/medium/big) carry id4/id5/id6 cols that overlap
+    # with x. To sidestep the wrapper bug *and* keep the engine work
+    # honest, we pre-project each right side to (key, v2) before the
+    # join. Engine still computes the same join, just on a narrower
+    # schema; result has only x's cols + v2 → no name collisions.
+
+    def _project_right(self, right_name: str, key: str):
+        return self._get_table_obj(right_name).select(key, "v2").execute()
+
+    def run_join_q1(self) -> BenchmarkResult:
+        """Q1: x.inner_join(small, on=id1)."""
+        x = self._get_table_obj("x")
+        r = self._project_right("small", "id1")
+        return self._timed(
+            lambda: x.inner_join(r, on=["id1"]).execute(), "join_q1")
+
+    def run_join_q2(self) -> BenchmarkResult:
+        """Q2: x.inner_join(medium, on=id2)."""
+        x = self._get_table_obj("x")
+        r = self._project_right("medium", "id2")
+        return self._timed(
+            lambda: x.inner_join(r, on=["id2"]).execute(), "join_q2")
+
+    def run_join_q3(self) -> BenchmarkResult:
+        """Q3: x.left_join(medium, on=id2)."""
+        x = self._get_table_obj("x")
+        r = self._project_right("medium", "id2")
+        return self._timed(
+            lambda: x.left_join(r, on=["id2"]).execute(), "join_q3")
+
+    def run_join_q4(self) -> BenchmarkResult:
+        """Q4: x.inner_join(medium, on=id5) — string key."""
+        x = self._get_table_obj("x")
+        r = self._project_right("medium", "id5")
+        return self._timed(
+            lambda: x.inner_join(r, on=["id5"]).execute(), "join_q4")
+
+    def run_join_q5(self) -> BenchmarkResult:
+        """Q5: x.inner_join(big, on=id3)."""
+        x = self._get_table_obj("x")
+        r = self._project_right("big", "id3")
+        return self._timed(
+            lambda: x.inner_join(r, on=["id3"]).execute(), "join_q5")
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         L = self._get_table_obj("left")
@@ -387,7 +435,22 @@ class RayforceAdapter(Adapter):
     def materialize(self, op: str, right_path: Path | None = None):
         import polars as pl
         C = self._Column
-        if op in ("join_inner", "join_left"):
+        if op.startswith("join_q") and op[len("join_q"):].isdigit():
+            # Pre-project right side to (key, v2) only so the join result
+            # has no duplicate non-key column names (which would be lost
+            # to Table.to_dict()'s collapse bug). Same trick as run_join_qN.
+            x = self._get_table_obj("x")
+            joins = {
+                "join_q1": ("small",  "inner_join", "id1"),
+                "join_q2": ("medium", "inner_join", "id2"),
+                "join_q3": ("medium", "left_join",  "id2"),
+                "join_q4": ("medium", "inner_join", "id5"),
+                "join_q5": ("big",    "inner_join", "id3"),
+            }
+            right_name, fn_name, key = joins[op]
+            r = self._get_table_obj(right_name).select(key, "v2").execute()
+            result = getattr(x, fn_name)(r, on=[key]).execute()
+        elif op in ("join_inner", "join_left"):
             L = self._get_table_obj("left")
             R = self._load_table_from_csv(right_path)
             kind = L.inner_join if op == "join_inner" else L.left_join
