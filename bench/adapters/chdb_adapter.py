@@ -18,6 +18,28 @@ class ChdbAdapter(Adapter):
 
     name = "chdb"
 
+    QUERY_STRINGS = {
+        "groupby_q1":  "SELECT id1, sum(v1) FROM data GROUP BY id1",
+        "groupby_q2":  "SELECT id1, id2, sum(v1) FROM data GROUP BY id1, id2",
+        "groupby_q3":  "SELECT id3, sum(v1), avg(v3) FROM data GROUP BY id3",
+        "groupby_q4":  "SELECT id4, avg(v1), avg(v2), avg(v3) FROM data GROUP BY id4",
+        "groupby_q5":  "SELECT id6, sum(v1), sum(v2), sum(v3) FROM data GROUP BY id6",
+        "groupby_q6":  "SELECT id4, id5, median(v3), stddevSamp(v3) FROM data GROUP BY id4, id5",
+        "groupby_q7":  "SELECT id3, max(v1) - min(v2) FROM data GROUP BY id3",
+        "groupby_q8":  "SELECT id6, v3 FROM (SELECT id6, v3, row_number() OVER (PARTITION BY id6 ORDER BY v3 DESC) rn FROM data WHERE v3 IS NOT NULL) WHERE rn <= 2",
+        "groupby_q9":  "SELECT id2, id4, pow(corr(v1, v2), 2) FROM data GROUP BY id2, id4",
+        "groupby_q10": "SELECT id1, id2, id3, id4, id5, id6, sum(v3), count(v1) FROM data GROUP BY id1, id2, id3, id4, id5, id6",
+        "join_q1":     "SELECT * FROM x INNER JOIN small  USING (id1)",
+        "join_q2":     "SELECT * FROM x INNER JOIN medium USING (id2)",
+        "join_q3":     "SELECT * FROM x LEFT  JOIN medium USING (id2)",
+        "join_q4":     "SELECT * FROM x INNER JOIN medium USING (id5)",
+        "join_q5":     "SELECT * FROM x INNER JOIN big    USING (id3)",
+        "join_inner":  "SELECT * FROM left INNER JOIN right USING (id1, id2, id3)",
+        "join_left":   "SELECT * FROM left LEFT  JOIN right USING (id1, id2, id3)",
+        "sort_single": "SELECT * FROM data ORDER BY id1",
+        "sort_multi":  "SELECT * FROM data ORDER BY id1, id2, id3",
+    }
+
     def __init__(self):
         import chdb
         self.version = chdb.__version__

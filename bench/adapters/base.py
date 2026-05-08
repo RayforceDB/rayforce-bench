@@ -230,6 +230,15 @@ class Adapter(ABC):
             f"cannot participate in `make check`"
         )
 
+    QUERY_STRINGS: dict[str, str] = {}
+    """Per-op illustrative query expression for display in the report.
+
+    Static literal — no engine instance needed; the reporter aggregates
+    these into data.json so the HTML "Compare Databases" panel can show
+    side-by-side how each engine writes the same H2O query. Override in
+    each subclass with the engine-native syntax (chain API, SQL, etc.).
+    """
+
     def run_full(self, bench_name: str, n_warmup: int, n_iter: int,
                  right_path: Path | None = None) -> list[BenchmarkResult]:
         """Run warmup + measured iterations for a single benchmark.

@@ -24,6 +24,44 @@ ENGINE_COLORS = {
 }
 
 
+def _adapter_class(name: str):
+    """Lazy-import the adapter class by short name (no instance)."""
+    table = {
+        "polars":     ("polars_adapter", "PolarsAdapter"),
+        "duckdb":     ("duckdb_adapter", "DuckDBAdapter"),
+        "pandas":     ("pandas_adapter", "PandasAdapter"),
+        "chdb":       ("chdb_adapter", "ChdbAdapter"),
+        "datafusion": ("datafusion_adapter", "DataFusionAdapter"),
+        "rayforce":   ("rayforce_adapter", "RayforceAdapter"),
+        "questdb":    ("questdb_adapter", "QuestDBAdapter"),
+        "timescale":  ("timescale_adapter", "TimescaleAdapter"),
+    }
+    if name not in table:
+        return None
+    mod_name, cls_name = table[name]
+    try:
+        mod = __import__(f"bench.adapters.{mod_name}", fromlist=[cls_name])
+        return getattr(mod, cls_name)
+    except ImportError:
+        return None
+
+
+def _collect_query_strings(adapters_used: list[str]) -> dict[str, dict[str, str]]:
+    """Pivot per-adapter QUERY_STRINGS into {op: {adapter: text}}.
+
+    Used so the HTML "Compare Databases" panel can show side-by-side
+    how each engine writes the same H2O query.
+    """
+    out: dict[str, dict[str, str]] = {}
+    for adapter_name in adapters_used:
+        cls = _adapter_class(adapter_name)
+        if cls is None:
+            continue
+        for op, qs in getattr(cls, "QUERY_STRINGS", {}).items():
+            out.setdefault(op, {})[adapter_name] = qs
+    return out
+
+
 def _compute_boxplot(values: list[float]) -> list[float]:
     """Compute boxplot stats: [min, q1, median, q3, max]."""
     if not values:
@@ -104,6 +142,7 @@ def generate_html_report(
             "values": comparison_values,
         },
         "tasks": tasks_data,
+        "queries": _collect_query_strings(adapters),
     }
 
     # Save the data: machine-readable JSON for tooling, JS shim for the

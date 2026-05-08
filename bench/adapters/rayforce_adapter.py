@@ -25,6 +25,28 @@ class RayforceAdapter(Adapter):
 
     name = "rayforce"
 
+    QUERY_STRINGS = {
+        "groupby_q1":  't.select(v1=Column("v1").sum()).by("id1").execute()',
+        "groupby_q2":  't.select(v1=Column("v1").sum()).by("id1","id2").execute()',
+        "groupby_q3":  't.select(v1=Column("v1").sum(), v3=Column("v3").mean()).by("id3").execute()',
+        "groupby_q4":  't.select(v1=Column("v1").mean(), v2=Column("v2").mean(), v3=Column("v3").mean()).by("id4").execute()',
+        "groupby_q5":  't.select(v1=Column("v1").sum(), v2=Column("v2").sum(), v3=Column("v3").sum()).by("id6").execute()',
+        "groupby_q6":  '# NYI: rayforce engine does not support median + multi-key by()',
+        "groupby_q7":  '# Two-stage workaround for engine NYI on arithmetic-of-aggregates per-group:\nagg = t.select(v1m=Column("v1").max(), v2m=Column("v2").min()).by("id3").execute()\nagg.select("id3", range_v1_v2=Column("v1m") - Column("v2m")).execute()',
+        "groupby_q8":  '# NYI: rayforce-py has no top-N / per-group head(n)',
+        "groupby_q9":  '# NYI: rayforce-py has no Column.corr / pearson_corr',
+        "groupby_q10": 't.select(v3=Column("v3").sum(), cnt=Column("v1").count()).by("id1","id2","id3","id4","id5","id6").execute()',
+        "join_q1":     '# pre-project right to (key, v2) to avoid to_dict() collapse on dup cols\nx.inner_join(small.select("id1","v2").execute(), on=["id1"]).execute()',
+        "join_q2":     'x.inner_join(medium.select("id2","v2").execute(), on=["id2"]).execute()',
+        "join_q3":     'x.left_join(medium.select("id2","v2").execute(), on=["id2"]).execute()',
+        "join_q4":     'x.inner_join(medium.select("id5","v2").execute(), on=["id5"]).execute()',
+        "join_q5":     'x.inner_join(big.select("id3","v2").execute(), on=["id3"]).execute()',
+        "join_inner":  'L.inner_join(R, on=["id1","id2","id3"]).execute()',
+        "join_left":   'L.left_join(R,  on=["id1","id2","id3"]).execute()',
+        "sort_single": 't.order_by("id1").execute()',
+        "sort_multi":  't.order_by("id1","id2","id3").execute()',
+    }
+
     def __init__(self, local_path: str | Path | None = None):
         """Initialize rayforce adapter.
 

@@ -19,6 +19,28 @@ class PandasAdapter(Adapter):
 
     name = "pandas"
 
+    QUERY_STRINGS = {
+        "groupby_q1":  'df.groupby("id1", as_index=False)["v1"].sum()',
+        "groupby_q2":  'df.groupby(["id1","id2"], as_index=False)["v1"].sum()',
+        "groupby_q3":  'df.groupby("id3", as_index=False).agg(v1=("v1","sum"), v3=("v3","mean"))',
+        "groupby_q4":  'df.groupby("id4", as_index=False).agg(v1=("v1","mean"), v2=("v2","mean"), v3=("v3","mean"))',
+        "groupby_q5":  'df.groupby("id6", as_index=False).agg(v1=("v1","sum"), v2=("v2","sum"), v3=("v3","sum"))',
+        "groupby_q6":  'df.groupby(["id4","id5"], as_index=False).agg(v3_median=("v3","median"), v3_std=("v3","std"))',
+        "groupby_q7":  'df.groupby("id3", as_index=False).apply(lambda g: g["v1"].max() - g["v2"].min())',
+        "groupby_q8":  'df.dropna(subset=["v3"]).sort_values("v3", ascending=False).groupby("id6").head(2)',
+        "groupby_q9":  'df.groupby(["id2","id4"]).apply(lambda g: g["v1"].corr(g["v2"]) ** 2)',
+        "groupby_q10": 'df.groupby(["id1","id2","id3","id4","id5","id6"], as_index=False).agg(v3=("v3","sum"), cnt=("v1","count"))',
+        "join_q1":     'x.merge(small,  on="id1")',
+        "join_q2":     'x.merge(medium, on="id2")',
+        "join_q3":     'x.merge(medium, on="id2", how="left")',
+        "join_q4":     'x.merge(medium, on="id5")',
+        "join_q5":     'x.merge(big,    on="id3")',
+        "join_inner":  'left.merge(right, on=["id1","id2","id3"], how="inner")',
+        "join_left":   'left.merge(right, on=["id1","id2","id3"], how="left")',
+        "sort_single": 'df.sort_values("id1")',
+        "sort_multi":  'df.sort_values(["id1","id2","id3"])',
+    }
+
     def __init__(self):
         self.version = pd.__version__
         self._tables: dict[str, pd.DataFrame] = {}

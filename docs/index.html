@@ -719,6 +719,38 @@
             color: var(--text-primary);
         }
 
+        .comparison-queries {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .comparison-query {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin: 0;
+            overflow-x: auto;
+        }
+        .comparison-query .cq-engine {
+            display: block;
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+        @media (max-width: 720px) {
+            .comparison-queries { grid-template-columns: 1fr; }
+        }
+
         .comparison-speedup {
             display: inline-flex;
             align-items: center;
@@ -1503,11 +1535,23 @@
                     speedupText = `${(1/comp.speedup).toFixed(1)}x`;
                 }
 
+                // Per-adapter query expressions for this op (if recorded
+                // by the bench at HTML-generation time).
+                const queries = (chartData.queries || {})[comp.task] || {};
+                const q1 = queries[db1];
+                const q2 = queries[db2];
+                const codeBlock = (q1 || q2) ? `
+                    <div class="comparison-queries">
+                      ${q1 ? `<pre class="comparison-query"><span class="cq-engine" style="color:${db1Color}">${db1}</span><code>${escapeHtml(q1)}</code></pre>` : ''}
+                      ${q2 ? `<pre class="comparison-query"><span class="cq-engine" style="color:${db2Color}">${db2}</span><code>${escapeHtml(q2)}</code></pre>` : ''}
+                    </div>` : '';
+
                 html += `
                     <div class="comparison-item">
                         <span class="comparison-task">${comp.task.replace('groupby_', 'Q')}</span>
                         <span class="comparison-speedup ${speedupClass}">${speedupText}</span>
                         <span class="comparison-times">${comp.db1Time.toFixed(2)}ms vs ${comp.db2Time.toFixed(2)}ms</span>
+                        ${codeBlock}
                     </div>
                 `;
             });
@@ -1515,6 +1559,15 @@
             html += '</div>';
             resultsDiv.innerHTML = html;
             resultsDiv.classList.add('visible');
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // Initialize

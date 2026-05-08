@@ -12,6 +12,28 @@ class PolarsAdapter(Adapter):
 
     name = "polars"
 
+    QUERY_STRINGS = {
+        "groupby_q1":  'df.group_by("id1").agg(pl.sum("v1"))',
+        "groupby_q2":  'df.group_by("id1", "id2").agg(pl.sum("v1"))',
+        "groupby_q3":  'df.group_by("id3").agg(pl.sum("v1"), pl.mean("v3"))',
+        "groupby_q4":  'df.group_by("id4").agg(pl.mean("v1"), pl.mean("v2"), pl.mean("v3"))',
+        "groupby_q5":  'df.group_by("id6").agg(pl.sum("v1"), pl.sum("v2"), pl.sum("v3"))',
+        "groupby_q6":  'df.group_by("id4","id5").agg(pl.median("v3"), pl.std("v3"))',
+        "groupby_q7":  'df.group_by("id3").agg((pl.max("v1") - pl.min("v2")).alias("range_v1_v2"))',
+        "groupby_q8":  'df.drop_nulls("v3").sort("v3", descending=True).group_by("id6").agg(pl.col("v3").head(2).alias("largest2_v3")).explode("largest2_v3")',
+        "groupby_q9":  'df.group_by("id2","id4").agg((pl.corr("v1","v2")**2).alias("r2"))',
+        "groupby_q10": 'df.group_by(["id1","id2","id3","id4","id5","id6"]).agg(pl.sum("v3"), pl.col("v1").count().alias("cnt"))',
+        "join_q1":     'x.join(small,  on="id1")',
+        "join_q2":     'x.join(medium, on="id2")',
+        "join_q3":     'x.join(medium, on="id2", how="left")',
+        "join_q4":     'x.join(medium, on="id5")',
+        "join_q5":     'x.join(big,    on="id3")',
+        "join_inner":  'left.join(right, on=["id1","id2","id3"], how="inner")',
+        "join_left":   'left.join(right, on=["id1","id2","id3"], how="left")',
+        "sort_single": 'df.sort("id1")',
+        "sort_multi":  'df.sort("id1","id2","id3")',
+    }
+
     def __init__(self):
         self.version = pl.__version__
         self._tables: dict[str, pl.DataFrame] = {}

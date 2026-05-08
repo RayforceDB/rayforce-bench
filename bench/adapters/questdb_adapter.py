@@ -18,6 +18,28 @@ class QuestDBAdapter(Adapter):
 
     name = "questdb"
 
+    QUERY_STRINGS = {
+        "groupby_q1":  "SELECT id1, SUM(v1) FROM data GROUP BY id1",
+        "groupby_q2":  "SELECT id1, id2, SUM(v1) FROM data GROUP BY id1, id2",
+        "groupby_q3":  "SELECT id3, SUM(v1), AVG(v3) FROM data GROUP BY id3",
+        "groupby_q4":  "SELECT id4, AVG(v1), AVG(v2), AVG(v3) FROM data GROUP BY id4",
+        "groupby_q5":  "SELECT id6, SUM(v1), SUM(v2), SUM(v3) FROM data GROUP BY id6",
+        "groupby_q6":  "-- NYI: QuestDB has no exact median(); only approx_median",
+        "groupby_q7":  "SELECT id3, MAX(v1) - MIN(v2) FROM data GROUP BY id3",
+        "groupby_q8":  "SELECT id6, v3 FROM (SELECT id6, v3, row_number() OVER (PARTITION BY id6 ORDER BY v3 DESC) rn FROM data WHERE v3 IS NOT NULL) WHERE rn <= 2",
+        "groupby_q9":  "SELECT id2, id4, POWER(corr(v1, v2), 2) FROM data GROUP BY id2, id4",
+        "groupby_q10": "SELECT id1, id2, id3, id4, id5, id6, SUM(v3), COUNT(v1) FROM data GROUP BY id1, id2, id3, id4, id5, id6",
+        "join_q1":     "SELECT * FROM x INNER JOIN small  ON x.id1 = small.id1",
+        "join_q2":     "SELECT * FROM x INNER JOIN medium ON x.id2 = medium.id2",
+        "join_q3":     "SELECT * FROM x LEFT  JOIN medium ON x.id2 = medium.id2",
+        "join_q4":     "SELECT * FROM x INNER JOIN medium ON x.id5 = medium.id5",
+        "join_q5":     "SELECT * FROM x INNER JOIN big    ON x.id3 = big.id3",
+        "join_inner":  "SELECT * FROM left INNER JOIN right ON left.id1=right.id1 AND left.id2=right.id2 AND left.id3=right.id3",
+        "join_left":   "SELECT * FROM left LEFT  JOIN right ON left.id1=right.id1 AND left.id2=right.id2 AND left.id3=right.id3",
+        "sort_single": "SELECT * FROM data ORDER BY id1",
+        "sort_multi":  "SELECT * FROM data ORDER BY id1, id2, id3",
+    }
+
     def __init__(self, host: str = "localhost", pg_port: int = 8812, ilp_port: int = 9009):
         self._host = host
         self._pg_port = pg_port
