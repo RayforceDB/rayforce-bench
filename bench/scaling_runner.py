@@ -174,7 +174,7 @@ def ensure_canonical_join(data_root: Path, n: int, k: int, seed: int) -> Path:
     out = data_root / name
     files = ["x.csv", "small.csv", "medium.csv", "big.csv"]
     want = {"n_rows_x": n, "k": k, "seed": seed,
-            "schema_version": "h2o-canonical-j1-v1"}
+            "schema_version": "h2o-canonical-j1-v2"}
     if (all((out / f).exists() for f in files)
             and _manifest_matches(out, "join_canonical_h2o", want)):
         return out
