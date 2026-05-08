@@ -131,6 +131,21 @@ class Adapter(ABC):
             f"exclude it from --adapters when running sort-ext"
         )
 
+    def materialize(self, op: str, right_path: Path | None = None):
+        """Run an op and return the materialized result as a polars DataFrame.
+
+        Used by `make check` to verify cross-adapter result equivalence.
+        Bench timing path (`run_<op>`) does NOT call this — they exist
+        side-by-side, so changes here cannot affect bench numbers.
+
+        Default raises NotImplementedError; each adapter overrides with
+        its own dispatch table covering the 11 H2O ops.
+        """
+        raise NotImplementedError(
+            f"{self.name} does not implement materialize(); "
+            f"cannot participate in `make check`"
+        )
+
     def run_full(self, bench_name: str, n_warmup: int, n_iter: int,
                  right_path: Path | None = None) -> list[BenchmarkResult]:
         """Run warmup + measured iterations for a single benchmark.

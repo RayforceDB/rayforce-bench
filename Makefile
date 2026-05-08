@@ -7,8 +7,9 @@
 #   make bench-join       Run H2O join benchmarks
 #   make bench-sort       Run H2O sort benchmarks (s1, s6 on groupby data)
 #   make bench-all        Run full H2O suite (groupby + join + sort)
-#   make bench-scaling    Run scaling sweep (10..1m by default) → docs/scaling.html
+#   make bench-scaling    Run scaling sweep (10..10m by default) → docs/scaling.html
 #   make bench-sort-ext   Run extended sort grid (typed × scaling)
+#   make check            Verify cross-adapter result equivalence (polars = ref)
 #   make clean            Clean generated data
 #
 # Options:
@@ -20,7 +21,7 @@
 #   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
 
 .PHONY: setup data bench bench-join bench-sort bench-all bench-scaling \
-        bench-sort-ext sort-grid-data clean help _clean-cache
+        bench-sort-ext sort-grid-data check clean help _clean-cache
 
 VENV_PY := .venv/bin/python
 PYTHON  ?= $(VENV_PY)
@@ -32,6 +33,9 @@ WARMUP ?= 2
 
 # bench-scaling defaults
 SIZES ?= 10,100,1k,10k,100k,1m,10m
+
+# check defaults — full size sweep against polars as reference.
+CHECK_SIZES ?= 10,100,1k,10k,100k,1m,10m
 
 # Sort grid defaults
 SORT_MAX ?= 1m
@@ -145,6 +149,15 @@ bench-scaling: _clean-cache $(VENV_PY)
 		--sizes $(SIZES) -a $(ADAPTERS) \
 		--data-dir $(DATA_DIR) \
 		-i $(ITERATIONS) -w $(WARMUP) \
+		$(RAYFORCE_FLAGS) $(STOP_INFRA)
+
+# Cross-adapter result-equivalence check. polars is the reference; every
+# other adapter's output is compared against it (rtol=1e-6, atol=1e-9).
+# Generates datasets for any size missing in $(DATA_DIR).
+check: _clean-cache $(VENV_PY)
+	@$(PYTHON) -u -m bench.check \
+		--sizes $(CHECK_SIZES) -a $(ADAPTERS) \
+		--data-dir $(DATA_DIR) \
 		$(RAYFORCE_FLAGS) $(STOP_INFRA)
 
 # Extended sort grid: typed columns × scaling lengths (random pattern only).
