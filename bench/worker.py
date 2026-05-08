@@ -80,15 +80,21 @@ def main():
             adapter.load_data(data_path)
 
         right = Path(args.right_data) if args.right_data else None
-        results = adapter.run_full(args.benchmark, args.warmup, args.iterations,
-                                   right_path=right)
-        for r in results:
-            output["results"].append({
-                "name": r.name,
-                "time_ns": r.time_ns,
-                "rows": r.rows,
-                "error": r.error,
-            })
+        try:
+            results = adapter.run_full(args.benchmark, args.warmup, args.iterations,
+                                       right_path=right)
+            for r in results:
+                output["results"].append({
+                    "name": r.name,
+                    "time_ns": r.time_ns,
+                    "rows": r.rows,
+                    "error": r.error,
+                })
+        except NotImplementedError as e:
+            # Engine doesn't support the canonical query — report as NYI
+            # without burning the run as a generic error.
+            output["error"] = f"NYI: {e}"
+            output["nyi"] = True
     except Exception as e:
         output["error"] = f"{type(e).__name__}: {e}"
         output["traceback"] = traceback.format_exc()

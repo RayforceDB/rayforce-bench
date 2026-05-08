@@ -63,17 +63,37 @@ class Adapter(ABC):
 
     @abstractmethod
     def run_groupby_q4(self) -> BenchmarkResult:
-        """Q4: mean(v1), mean(v2), mean(v3) group by id3"""
+        """Q4: mean(v1), mean(v2), mean(v3) by id4 — canonical H2O."""
         pass
 
     @abstractmethod
     def run_groupby_q5(self) -> BenchmarkResult:
-        """Q5: sum(v1), sum(v2), sum(v3) group by id3"""
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 — canonical H2O."""
+        pass
+
+    @abstractmethod
+    def run_groupby_q6(self) -> BenchmarkResult:
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O."""
         pass
 
     @abstractmethod
     def run_groupby_q7(self) -> BenchmarkResult:
-        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O 6-key)."""
+        """Q7: max(v1) - min(v2) by id3 — canonical H2O."""
+        pass
+
+    @abstractmethod
+    def run_groupby_q8(self) -> BenchmarkResult:
+        """Q8: largest two v3 by id6 — canonical H2O."""
+        pass
+
+    @abstractmethod
+    def run_groupby_q9(self) -> BenchmarkResult:
+        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O."""
+        pass
+
+    @abstractmethod
+    def run_groupby_q10(self) -> BenchmarkResult:
+        """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
         pass
 
     @abstractmethod

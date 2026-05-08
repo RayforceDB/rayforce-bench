@@ -76,8 +76,14 @@ def _run_worker(adapter: str, op: str, data: Path,
 
     proc = subprocess.run(cmd, capture_output=True)
     if proc.returncode != 0:
-        return None, (proc.stderr.decode(errors="replace").strip()
-                      or f"exit {proc.returncode}, no stderr")
+        err = proc.stderr.decode(errors="replace").strip()
+        # Detect NotImplementedError as a special NYI status, distinct
+        # from a real failure. The string appears in worker's traceback
+        # output; first line of stderr is the formatted exception.
+        if "NotImplementedError:" in err.splitlines()[0] if err else False:
+            msg = err.splitlines()[0].split("NotImplementedError:", 1)[1].strip()
+            return None, f"NYI: {msg}"
+        return None, err or f"exit {proc.returncode}, no stderr"
     if not proc.stdout:
         return None, "worker exited 0 but produced no stdout"
     try:
@@ -105,7 +111,19 @@ def _canonicalize(df: pl.DataFrame) -> pl.DataFrame:
     casts = []
     for name, dtype in df.schema.items():
         if isinstance(dtype, pl.Decimal):
+            # Decimal[*,*] (PG numeric) → Float64. See _canonicalize doc.
             casts.append(pl.col(name).cast(pl.Float64))
+        elif dtype.is_float():
+            # Engines disagree on representing "undefined" for float
+            # ops on degenerate input (single-element std, corr of two
+            # equal vectors, etc.):
+            #   polars  pl.std    → null
+            #   polars  pl.corr   → NaN
+            #   pandas  .std()    → NaN
+            #   pandas  .corr()   → NaN
+            #   duckdb  STDDEV    → null  (with PG semantics)
+            # Normalize NaN→null on both sides so they compare equal.
+            casts.append(pl.col(name).fill_nan(None))
     if casts:
         df = df.with_columns(casts)
     cols = sorted(df.columns)
@@ -205,6 +223,7 @@ def main() -> int:
     name_w = max(len(a) for a in test_adapters)
 
     failures: list[tuple[str, int, str, str]] = []  # (op, size, adapter, msg)
+    nyi: list[tuple[str, int, str, str]] = []
     total = 0
     passed = 0
 
@@ -229,6 +248,10 @@ def main() -> int:
                     total += 1
                     df, err = _run_worker(
                         adapter, op, data, right, args.rayforce_local)
+                    if err is not None and err.startswith("NYI:"):
+                        line += f" {adapter:<{name_w}s} ⊘"
+                        nyi.append((op, n, adapter, err[len("NYI: "):]))
+                        continue
                     if err is not None:
                         line += f" {adapter:<{name_w}s} ✗"
                         failures.append((op, n, adapter, err))
@@ -249,6 +272,21 @@ def main() -> int:
             stop_infrastructure(args.adapters, quiet=True)
 
     print()
+    if nyi:
+        # NYI ⊘ — engine doesn't yet support that canonical op. Listed
+        # so reviewers see the gap, but does NOT fail the run.
+        print(f"NYI — {len(nyi)} (op, size, adapter) combinations not "
+              f"yet implemented:")
+        # Group by (adapter, reason) for compactness
+        by_msg: dict[tuple[str, str], list[tuple[str, int]]] = {}
+        for op, n, adapter, msg in nyi:
+            by_msg.setdefault((adapter, msg), []).append((op, n))
+        for (adapter, msg), pairs in by_msg.items():
+            ops_str = ", ".join(sorted({f"{op}@{fmt_size(n)}" for op, n in pairs}))
+            print(f"  ⊘ {adapter}: {msg}")
+            print(f"      → {ops_str}")
+        print()
+
     if failures:
         print(f"FAIL — {len(failures)} of {total} comparisons failed:")
         for op, n, adapter, msg in failures:
@@ -257,8 +295,8 @@ def main() -> int:
                 print(f"      {ln}")
         return 1
 
-    print(f"pass — {passed}/{total} comparisons matched polars "
-          f"(rtol={RTOL}, atol={ATOL})")
+    print(f"pass — {passed}/{total} comparisons matched polars, "
+          f"{len(nyi)} NYI (rtol={RTOL}, atol={ATOL})")
     return 0
 
 

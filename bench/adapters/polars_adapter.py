@@ -56,11 +56,11 @@ class PolarsAdapter(Adapter):
         return BenchmarkResult("groupby_q3", time_ns, len(result))
 
     def run_groupby_q4(self) -> BenchmarkResult:
-        """Q4: mean(v1), mean(v2), mean(v3) group by id3"""
+        """Q4: mean(v1), mean(v2), mean(v3) by id4 — canonical H2O."""
         df = self._get_table()
 
         def query():
-            return df.group_by("id3").agg(
+            return df.group_by("id4").agg(
                 pl.mean("v1"), pl.mean("v2"), pl.mean("v3")
             )
 
@@ -68,11 +68,11 @@ class PolarsAdapter(Adapter):
         return BenchmarkResult("groupby_q4", time_ns, len(result))
 
     def run_groupby_q5(self) -> BenchmarkResult:
-        """Q5: sum(v1), sum(v2), sum(v3) group by id3"""
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 — canonical H2O."""
         df = self._get_table()
 
         def query():
-            return df.group_by("id3").agg(
+            return df.group_by("id6").agg(
                 pl.sum("v1"), pl.sum("v2"), pl.sum("v3")
             )
 
@@ -80,28 +80,70 @@ class PolarsAdapter(Adapter):
         return BenchmarkResult("groupby_q5", time_ns, len(result))
 
     def run_groupby_q6(self) -> BenchmarkResult:
-        """Q6: max(v1) - min(v2) group by id3"""
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O."""
         df = self._get_table()
 
         def query():
-            return df.group_by("id3").agg(
-                (pl.max("v1") - pl.min("v2")).alias("range")
+            return df.group_by("id4", "id5").agg(
+                pl.median("v3").alias("v3_median"),
+                pl.std("v3").alias("v3_std"),
             )
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q6", time_ns, len(result))
 
     def run_groupby_q7(self) -> BenchmarkResult:
-        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        """Q7: max(v1) - min(v2) by id3 — canonical H2O."""
         df = self._get_table()
 
         def query():
-            return df.group_by(["id1", "id2", "id3", "id4", "id5", "id6"]).agg(
-                pl.sum("v3"), pl.col("v1").count().alias("cnt")
+            return df.group_by("id3").agg(
+                (pl.max("v1") - pl.min("v2")).alias("range_v1_v2")
             )
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q7", time_ns, len(result))
+
+    def run_groupby_q8(self) -> BenchmarkResult:
+        """Q8: largest two v3 by id6 — canonical H2O."""
+        df = self._get_table()
+
+        def query():
+            return (
+                df.drop_nulls("v3")
+                  .sort("v3", descending=True)
+                  .group_by("id6")
+                  .agg(pl.col("v3").head(2).alias("largest2_v3"))
+                  .explode("largest2_v3")
+            )
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q8", time_ns, len(result))
+
+    def run_groupby_q9(self) -> BenchmarkResult:
+        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O."""
+        df = self._get_table()
+
+        def query():
+            return df.group_by("id2", "id4").agg(
+                (pl.corr("v1", "v2") ** 2).alias("r2")
+            )
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q9", time_ns, len(result))
+
+    def run_groupby_q10(self) -> BenchmarkResult:
+        """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
+        df = self._get_table()
+
+        def query():
+            return df.group_by(["id1", "id2", "id3", "id4", "id5", "id6"]).agg(
+                pl.sum("v3").alias("v3"),
+                pl.col("v1").count().alias("cnt"),
+            )
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q10", time_ns, len(result))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
@@ -169,9 +211,6 @@ class PolarsAdapter(Adapter):
             joined = self._get_table("left").join(
                 pl.read_csv(right_path), on=["id1", "id2", "id3"], how=how
             )
-            # Canonical schema: keep keys + left's id4..id6 + left.v1 + right.v2.
-            # Drop polars's `_right` suffixed duplicates so all adapters
-            # produce identical column sets for cross-engine compare.
             keep = ["id1", "id2", "id3", "id4", "id5", "id6", "v1", "v2"]
             return joined.select([c for c in keep if c in joined.columns])
         df = self._get_table()
@@ -182,16 +221,32 @@ class PolarsAdapter(Adapter):
         if op == "groupby_q3":
             return df.group_by("id3").agg(pl.sum("v1"), pl.mean("v3"))
         if op == "groupby_q4":
-            return df.group_by("id3").agg(pl.mean("v1"), pl.mean("v2"), pl.mean("v3"))
+            return df.group_by("id4").agg(pl.mean("v1"), pl.mean("v2"), pl.mean("v3"))
         if op == "groupby_q5":
-            return df.group_by("id3").agg(pl.sum("v1"), pl.sum("v2"), pl.sum("v3"))
+            return df.group_by("id6").agg(pl.sum("v1"), pl.sum("v2"), pl.sum("v3"))
         if op == "groupby_q6":
-            return df.group_by("id3").agg(
-                (pl.max("v1") - pl.min("v2")).alias("range")
+            return df.group_by("id4", "id5").agg(
+                pl.median("v3").alias("v3_median"),
+                pl.std("v3").alias("v3_std"),
             )
         if op == "groupby_q7":
+            return df.group_by("id3").agg(
+                (pl.max("v1") - pl.min("v2")).alias("range_v1_v2")
+            )
+        if op == "groupby_q8":
+            return (df.drop_nulls("v3")
+                      .sort("v3", descending=True)
+                      .group_by("id6")
+                      .agg(pl.col("v3").head(2).alias("largest2_v3"))
+                      .explode("largest2_v3"))
+        if op == "groupby_q9":
+            return df.group_by("id2", "id4").agg(
+                (pl.corr("v1", "v2") ** 2).alias("r2")
+            )
+        if op == "groupby_q10":
             return df.group_by(["id1", "id2", "id3", "id4", "id5", "id6"]).agg(
-                pl.sum("v3"), pl.col("v1").count().alias("cnt")
+                pl.sum("v3").alias("v3"),
+                pl.col("v1").count().alias("cnt"),
             )
         if op == "sort_single":
             return df.sort("id1")

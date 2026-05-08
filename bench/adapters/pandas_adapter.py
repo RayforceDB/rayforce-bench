@@ -56,45 +56,87 @@ class PandasAdapter(Adapter):
         return BenchmarkResult("groupby_q3", t, len(result))
 
     def run_groupby_q4(self) -> BenchmarkResult:
+        """Q4: mean(v1), mean(v2), mean(v3) by id4 — canonical H2O."""
         df = self._get()
         result, t = self._time_it(
-            lambda: df.groupby("id3", as_index=False).agg(
+            lambda: df.groupby("id4", as_index=False).agg(
                 v1=("v1", "mean"), v2=("v2", "mean"), v3=("v3", "mean")
             )
         )
         return BenchmarkResult("groupby_q4", t, len(result))
 
     def run_groupby_q5(self) -> BenchmarkResult:
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 — canonical H2O."""
         df = self._get()
         result, t = self._time_it(
-            lambda: df.groupby("id3", as_index=False).agg(
+            lambda: df.groupby("id6", as_index=False).agg(
                 v1=("v1", "sum"), v2=("v2", "sum"), v3=("v3", "sum")
             )
         )
         return BenchmarkResult("groupby_q5", t, len(result))
 
     def run_groupby_q6(self) -> BenchmarkResult:
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O."""
+        df = self._get()
+        result, t = self._time_it(
+            lambda: df.groupby(["id4", "id5"], as_index=False).agg(
+                v3_median=("v3", "median"), v3_std=("v3", "std")
+            )
+        )
+        return BenchmarkResult("groupby_q6", t, len(result))
+
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: max(v1) - min(v2) by id3 — canonical H2O."""
         df = self._get()
 
         def query():
             g = df.groupby("id3", as_index=False)
             return pd.DataFrame({
                 "id3": g["v1"].max()["id3"],
-                "range": g["v1"].max()["v1"].values - g["v2"].min()["v2"].values,
+                "range_v1_v2": g["v1"].max()["v1"].values
+                               - g["v2"].min()["v2"].values,
             })
 
         result, t = self._time_it(query)
-        return BenchmarkResult("groupby_q6", t, len(result))
+        return BenchmarkResult("groupby_q7", t, len(result))
 
-    def run_groupby_q7(self) -> BenchmarkResult:
-        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+    def run_groupby_q8(self) -> BenchmarkResult:
+        """Q8: largest two v3 by id6 — canonical H2O."""
+        df = self._get()
+
+        def query():
+            r = (df.dropna(subset=["v3"])
+                   .sort_values("v3", ascending=False)
+                   .groupby("id6", as_index=False)
+                   .head(2)[["id6", "v3"]])
+            return r.rename(columns={"v3": "largest2_v3"})
+
+        result, t = self._time_it(query)
+        return BenchmarkResult("groupby_q8", t, len(result))
+
+    def run_groupby_q9(self) -> BenchmarkResult:
+        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O."""
+        df = self._get()
+
+        def query():
+            r = (df.groupby(["id2", "id4"])
+                   .apply(lambda g: g["v1"].corr(g["v2"]) ** 2)
+                   .reset_index())
+            r.columns = ["id2", "id4", "r2"]
+            return r
+
+        result, t = self._time_it(query)
+        return BenchmarkResult("groupby_q9", t, len(result))
+
+    def run_groupby_q10(self) -> BenchmarkResult:
+        """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
         df = self._get()
         result, t = self._time_it(
             lambda: df.groupby(
                 ["id1", "id2", "id3", "id4", "id5", "id6"], as_index=False
             ).agg(v3=("v3", "sum"), cnt=("v1", "count"))
         )
-        return BenchmarkResult("groupby_q7", t, len(result))
+        return BenchmarkResult("groupby_q10", t, len(result))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
@@ -155,18 +197,33 @@ class PandasAdapter(Adapter):
             r = df.groupby("id3", as_index=False).agg(
                 v1=("v1", "sum"), v3=("v3", "mean"))
         elif op == "groupby_q4":
-            r = df.groupby("id3", as_index=False).agg(
+            r = df.groupby("id4", as_index=False).agg(
                 v1=("v1", "mean"), v2=("v2", "mean"), v3=("v3", "mean"))
         elif op == "groupby_q5":
-            r = df.groupby("id3", as_index=False).agg(
+            r = df.groupby("id6", as_index=False).agg(
                 v1=("v1", "sum"), v2=("v2", "sum"), v3=("v3", "sum"))
         elif op == "groupby_q6":
+            r = df.groupby(["id4", "id5"], as_index=False).agg(
+                v3_median=("v3", "median"), v3_std=("v3", "std"))
+        elif op == "groupby_q7":
             g = df.groupby("id3", as_index=False)
             r = pd.DataFrame({
                 "id3": g["v1"].max()["id3"],
-                "range": g["v1"].max()["v1"].values - g["v2"].min()["v2"].values,
+                "range_v1_v2": g["v1"].max()["v1"].values
+                               - g["v2"].min()["v2"].values,
             })
-        elif op == "groupby_q7":
+        elif op == "groupby_q8":
+            r = (df.dropna(subset=["v3"])
+                   .sort_values("v3", ascending=False)
+                   .groupby("id6", as_index=False)
+                   .head(2)[["id6", "v3"]]
+                   .rename(columns={"v3": "largest2_v3"}))
+        elif op == "groupby_q9":
+            r = (df.groupby(["id2", "id4"])
+                   .apply(lambda g: g["v1"].corr(g["v2"]) ** 2)
+                   .reset_index())
+            r.columns = ["id2", "id4", "r2"]
+        elif op == "groupby_q10":
             r = df.groupby(
                 ["id1", "id2", "id3", "id4", "id5", "id6"], as_index=False
             ).agg(v3=("v3", "sum"), cnt=("v1", "count"))
@@ -184,7 +241,10 @@ class PandasAdapter(Adapter):
             r = df.sort_values(["id1", "id2", "id3"])
         else:
             raise ValueError(f"unknown op: {op}")
-        return pl.from_pandas(r)
+        # nan_to_null=False so float NaN survives as NaN (not polars-null);
+        # other engines preserve NaN (polars's pl.corr → NaN for degenerate
+        # groups), and the cross-engine comparison must agree.
+        return pl.from_pandas(r, nan_to_null=False)
 
     def close(self) -> None:
         self._tables.clear()

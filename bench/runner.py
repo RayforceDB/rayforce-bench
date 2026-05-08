@@ -55,8 +55,14 @@ class BenchmarkRun:
 
 
 BENCHMARKS = {
-    "groupby": ["groupby_q1", "groupby_q2", "groupby_q3",
-                "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7"],
+    # Canonical H2O groupby suite (q1..q10 per db-benchmark/polars/groupby-polars.py).
+    # Engines that cannot run a particular op raise NotImplementedError;
+    # the worker reports it as "NYI: <reason>" without aborting the run.
+    "groupby": [f"groupby_q{i}" for i in range(1, 11)],
+    # Bonus stress tests — not part of canonical H2O. Current 3-key joins
+    # and full-row sorts are kept here under the "join"/"sort" suite names
+    # while the canonical join refactor (single-key, 3 right sizes) is
+    # pending.
     "join":    ["join_inner", "join_left"],
     "sort":    ["sort_single", "sort_multi"],
 }
@@ -133,7 +139,11 @@ def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
 
 
 def _print_op_result(run: BenchmarkRun) -> None:
-    if run.error:
+    if run.error and run.error.startswith("NYI"):
+        # Canonical query the engine cannot run — report cleanly so the
+        # user sees the gap, not a stack trace.
+        print(f"  {run.benchmark:<20s} NYI: {run.error[len('NYI: '):]}")
+    elif run.error:
         print(f"  {run.benchmark:<20s} ERROR: {run.error}")
     elif not run.results:
         print(f"  {run.benchmark:<20s} (no results)")

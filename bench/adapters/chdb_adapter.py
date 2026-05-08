@@ -68,51 +68,93 @@ class ChdbAdapter(Adapter):
         return ipc.open_stream(io.BytesIO(raw)).read_all().num_rows
 
     def run_groupby_q1(self) -> BenchmarkResult:
+        """Q1: sum(v1) by id1 — canonical H2O."""
         t = self._get_table()
-        return self._time(f"SELECT id1, sum(v1) FROM {t} GROUP BY id1", "groupby_q1")
+        return self._time(
+            f"SELECT id1, sum(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q1")
 
     def run_groupby_q2(self) -> BenchmarkResult:
+        """Q2: sum(v1) by id1, id2 — canonical H2O."""
         t = self._get_table()
         return self._time(
-            f"SELECT id1, id2, sum(v1) FROM {t} GROUP BY id1, id2",
-            "groupby_q2",
-        )
+            f"SELECT id1, id2, sum(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q2")
 
     def run_groupby_q3(self) -> BenchmarkResult:
+        """Q3: sum(v1), mean(v3) by id3 — canonical H2O."""
         t = self._get_table()
         return self._time(
-            f"SELECT id3, sum(v1), avg(v3) FROM {t} GROUP BY id3",
-            "groupby_q3",
-        )
+            f"SELECT id3, sum(v1) AS v1, avg(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q3")
 
     def run_groupby_q4(self) -> BenchmarkResult:
+        """Q4: mean(v1), mean(v2), mean(v3) by id4 — canonical H2O."""
         t = self._get_table()
         return self._time(
-            f"SELECT id3, avg(v1), avg(v2), avg(v3) FROM {t} GROUP BY id3",
-            "groupby_q4",
-        )
+            f"SELECT id4, avg(v1) AS v1, avg(v2) AS v2, avg(v3) AS v3 "
+            f"FROM {t} GROUP BY id4",
+            "groupby_q4")
 
     def run_groupby_q5(self) -> BenchmarkResult:
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 — canonical H2O."""
         t = self._get_table()
         return self._time(
-            f"SELECT id3, sum(v1), sum(v2), sum(v3) FROM {t} GROUP BY id3",
-            "groupby_q5",
-        )
+            f"SELECT id6, sum(v1) AS v1, sum(v2) AS v2, sum(v3) AS v3 "
+            f"FROM {t} GROUP BY id6",
+            "groupby_q5")
 
     def run_groupby_q6(self) -> BenchmarkResult:
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O.
+
+        ClickHouse: `median(x)` (alias of `quantile(0.5)`),
+        `stddevSamp(x)` (sample std, ddof=1, matching polars).
+        """
         t = self._get_table()
         return self._time(
-            f"SELECT id3, max(v1) - min(v2) FROM {t} GROUP BY id3",
-            "groupby_q6",
-        )
+            f"SELECT id4, id5, median(v3) AS v3_median, "
+            f"stddevSamp(v3) AS v3_std FROM {t} GROUP BY id4, id5",
+            "groupby_q6")
 
     def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: max(v1) - min(v2) by id3 — canonical H2O."""
         t = self._get_table()
         return self._time(
-            f"SELECT id1, id2, id3, id4, id5, id6, sum(v3), count(v1) "
+            f"SELECT id3, max(v1) - min(v2) AS range_v1_v2 "
+            f"FROM {t} GROUP BY id3",
+            "groupby_q7")
+
+    def run_groupby_q8(self) -> BenchmarkResult:
+        """Q8: largest two v3 by id6 — canonical H2O."""
+        t = self._get_table()
+        return self._time(
+            f"SELECT id6, v3 AS largest2_v3 FROM ("
+            f"  SELECT id6, v3, "
+            f"  row_number() OVER (PARTITION BY id6 ORDER BY v3 DESC) AS rn "
+            f"  FROM {t} WHERE v3 IS NOT NULL"
+            f") sub WHERE rn <= 2",
+            "groupby_q8")
+
+    def run_groupby_q9(self) -> BenchmarkResult:
+        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O.
+
+        ClickHouse uses `corr(x, y)` (population corr by default — same
+        as polars's pl.corr); pow(corr, 2) gives r².
+        """
+        t = self._get_table()
+        return self._time(
+            f"SELECT id2, id4, pow(corr(v1, v2), 2) AS r2 "
+            f"FROM {t} GROUP BY id2, id4",
+            "groupby_q9")
+
+    def run_groupby_q10(self) -> BenchmarkResult:
+        """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
+        t = self._get_table()
+        return self._time(
+            f"SELECT id1, id2, id3, id4, id5, id6, "
+            f"sum(v3) AS v3, count(v1) AS cnt "
             f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6",
-            "groupby_q7",
-        )
+            "groupby_q10")
 
     def _load_right(self, right_path: Path) -> str:
         sess = self._ensure_session()
@@ -188,10 +230,28 @@ class ChdbAdapter(Adapter):
             "groupby_q1": f"SELECT id1, sum(v1) AS v1 FROM {t} GROUP BY id1",
             "groupby_q2": f"SELECT id1, id2, sum(v1) AS v1 FROM {t} GROUP BY id1, id2",
             "groupby_q3": f"SELECT id3, sum(v1) AS v1, avg(v3) AS v3 FROM {t} GROUP BY id3",
-            "groupby_q4": f"SELECT id3, avg(v1) AS v1, avg(v2) AS v2, avg(v3) AS v3 FROM {t} GROUP BY id3",
-            "groupby_q5": f"SELECT id3, sum(v1) AS v1, sum(v2) AS v2, sum(v3) AS v3 FROM {t} GROUP BY id3",
-            "groupby_q6": f"SELECT id3, max(v1) - min(v2) AS range FROM {t} GROUP BY id3",
+            "groupby_q4": f"SELECT id4, avg(v1) AS v1, avg(v2) AS v2, avg(v3) AS v3 FROM {t} GROUP BY id4",
+            "groupby_q5": f"SELECT id6, sum(v1) AS v1, sum(v2) AS v2, sum(v3) AS v3 FROM {t} GROUP BY id6",
+            "groupby_q6": (
+                f"SELECT id4, id5, median(v3) AS v3_median, "
+                f"stddevSamp(v3) AS v3_std FROM {t} GROUP BY id4, id5"
+            ),
             "groupby_q7": (
+                f"SELECT id3, max(v1) - min(v2) AS range_v1_v2 "
+                f"FROM {t} GROUP BY id3"
+            ),
+            "groupby_q8": (
+                f"SELECT id6, v3 AS largest2_v3 FROM ("
+                f"  SELECT id6, v3, row_number() OVER "
+                f"  (PARTITION BY id6 ORDER BY v3 DESC) AS rn "
+                f"  FROM {t} WHERE v3 IS NOT NULL"
+                f") sub WHERE rn <= 2"
+            ),
+            "groupby_q9": (
+                f"SELECT id2, id4, pow(corr(v1, v2), 2) AS r2 "
+                f"FROM {t} GROUP BY id2, id4"
+            ),
+            "groupby_q10": (
                 f"SELECT id1, id2, id3, id4, id5, id6, "
                 f"sum(v3) AS v3, count(v1) AS cnt FROM {t} "
                 f"GROUP BY id1, id2, id3, id4, id5, id6"

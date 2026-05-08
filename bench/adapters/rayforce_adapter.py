@@ -228,36 +228,45 @@ class RayforceAdapter(Adapter):
         )
 
     def run_groupby_q4(self) -> BenchmarkResult:
-        """Q4: mean(v1), mean(v2), mean(v3) group by id3"""
+        """Q4: mean(v1), mean(v2), mean(v3) by id4 — canonical H2O."""
         t = self._get_table_obj()
         C = self._Column
         return self._timed(
             lambda: t.select(v1=C("v1").mean(),
                              v2=C("v2").mean(),
-                             v3=C("v3").mean()).by("id3").execute(),
+                             v3=C("v3").mean()).by("id4").execute(),
             "groupby_q4",
         )
 
     def run_groupby_q5(self) -> BenchmarkResult:
-        """Q5: sum(v1), sum(v2), sum(v3) group by id3"""
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 — canonical H2O."""
         t = self._get_table_obj()
         C = self._Column
         return self._timed(
             lambda: t.select(v1=C("v1").sum(),
                              v2=C("v2").sum(),
-                             v3=C("v3").sum()).by("id3").execute(),
+                             v3=C("v3").sum()).by("id6").execute(),
             "groupby_q5",
         )
 
     def run_groupby_q6(self) -> BenchmarkResult:
-        """Q6: max(v1) - min(v2) group by id3.
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O.
 
-        Two-stage because rayforce does not currently support arithmetic
-        across two per-group aggregates inside `.by(...)` — the
-        `Column("v1").max() - Column("v2").min()` expression is computed
-        globally and then broadcast, not per-group. Workaround: aggregate
-        max/min separately per group, then subtract in a follow-up
-        select with no `.by`.
+        rayforce-py 2.0a1 has Column.median() but no std/sd/var/deviation
+        and no Column-level arithmetic to compute std manually
+        (no pow/sqrt/mul). NYI until upstream adds Column.std().
+        See REQUIREMENTS_CANONICAL_H2O.md (~/rayforce/) §1.1.
+        """
+        raise NotImplementedError(
+            "rayforce-py has no Column.std(); canonical H2O q6 needs sd(v3)")
+
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: max(v1) - min(v2) by id3 — canonical H2O.
+
+        Two-stage workaround: rayforce's arithmetic-of-aggregates
+        (Column.max() - Column.min()) inside .by(...) computes globally,
+        not per-group. Compute max/min per group first, subtract after.
+        See REQUIREMENTS_CANONICAL_H2O.md §1.2.
         """
         t = self._get_table_obj()
         C = self._Column
@@ -266,12 +275,35 @@ class RayforceAdapter(Adapter):
             agg = t.select(v1m=C("v1").max(),
                            v2m=C("v2").min()).by("id3").execute()
             return agg.select("id3",
-                              range=C("v1m") - C("v2m")).execute()
+                              range_v1_v2=C("v1m") - C("v2m")).execute()
 
-        return self._timed(query, "groupby_q6")
+        return self._timed(query, "groupby_q7")
 
-    def run_groupby_q7(self) -> BenchmarkResult:
-        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+    def run_groupby_q8(self) -> BenchmarkResult:
+        """Q8: largest two v3 by id6 — canonical H2O.
+
+        rayforce-py 2.0a1 has no head(N) / top-N / window functions;
+        cannot compute per-group top-N. NYI until upstream adds one of
+        Column.head(n) / per-group ROW_NUMBER. See REQUIREMENTS §1.3.
+        """
+        raise NotImplementedError(
+            "rayforce-py has no top-N / per-group head(n); "
+            "canonical H2O q8 needs largest two v3 by group")
+
+    def run_groupby_q9(self) -> BenchmarkResult:
+        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O.
+
+        rayforce-py 2.0a1 has no corr/pearson_corr/cov, and no
+        Column-level arithmetic to construct corr manually. NYI until
+        upstream adds Column.corr(other) or Column arithmetic +
+        sum/var. See REQUIREMENTS §1.4.
+        """
+        raise NotImplementedError(
+            "rayforce-py has no Column.corr / pearson_corr / cov; "
+            "canonical H2O q9 needs correlation by group")
+
+    def run_groupby_q10(self) -> BenchmarkResult:
+        """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
         t = self._get_table_obj()
         C = self._Column
         return self._timed(
@@ -279,7 +311,7 @@ class RayforceAdapter(Adapter):
                              cnt=C("v1").count()
                              ).by("id1", "id2", "id3",
                                   "id4", "id5", "id6").execute(),
-            "groupby_q7",
+            "groupby_q10",
         )
 
     def _load_table_from_csv(self, path: Path) -> object:
@@ -367,18 +399,30 @@ class RayforceAdapter(Adapter):
             elif op == "groupby_q4":
                 result = t.select(v1=C("v1").mean(),
                                   v2=C("v2").mean(),
-                                  v3=C("v3").mean()).by("id3").execute()
+                                  v3=C("v3").mean()).by("id4").execute()
             elif op == "groupby_q5":
                 result = t.select(v1=C("v1").sum(),
                                   v2=C("v2").sum(),
-                                  v3=C("v3").sum()).by("id3").execute()
+                                  v3=C("v3").sum()).by("id6").execute()
             elif op == "groupby_q6":
-                # Two-stage workaround — see run_groupby_q6 for rationale.
+                raise NotImplementedError(
+                    "rayforce-py has no Column.std(); "
+                    "canonical H2O q6 needs sd(v3)")
+            elif op == "groupby_q7":
+                # Two-stage workaround — see run_groupby_q7 for rationale.
                 agg = t.select(v1m=C("v1").max(),
                                v2m=C("v2").min()).by("id3").execute()
                 result = agg.select("id3",
-                                    range=C("v1m") - C("v2m")).execute()
-            elif op == "groupby_q7":
+                                    range_v1_v2=C("v1m") - C("v2m")).execute()
+            elif op == "groupby_q8":
+                raise NotImplementedError(
+                    "rayforce-py has no top-N / per-group head(n); "
+                    "canonical H2O q8 needs largest two v3 by group")
+            elif op == "groupby_q9":
+                raise NotImplementedError(
+                    "rayforce-py has no Column.corr / pearson_corr; "
+                    "canonical H2O q9 needs correlation by group")
+            elif op == "groupby_q10":
                 result = t.select(v3=C("v3").sum(),
                                   cnt=C("v1").count()
                                   ).by("id1", "id2", "id3",
