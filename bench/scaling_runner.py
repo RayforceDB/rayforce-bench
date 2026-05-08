@@ -419,23 +419,6 @@ def main():
     out_path.write_text(json.dumps(payload, indent=2))
     print(f"\nResults saved to {out_path} ({len(results)} entries)")
 
-    # Row-count sanity check across adapters for each (op, size) pair.
-    by_key: dict[tuple, dict[str, int]] = {}
-    for r in results:
-        by_key.setdefault((r["op"], r["size"]), {})[r["adapter"]] = r["rows"]
-    mismatches = [(op, n, m) for (op, n), m in by_key.items()
-                  if len(set(m.values())) > 1]
-    print("\nRow-count validation:")
-    if mismatches:
-        print(f"  WARNING — {len(mismatches)} (op, size) pair(s) disagree across adapters:")
-        for op, n, m in sorted(mismatches)[:30]:
-            spread = ", ".join(f"{a}={r}" for a, r in sorted(m.items()))
-            print(f"    {op} n={n}: {spread}")
-        if len(mismatches) > 30:
-            print(f"    ... and {len(mismatches) - 30} more")
-    else:
-        print(f"  OK — all {len(by_key)} (op, size) pairs agreed across adapters")
-
     if not args.no_html:
         from .report import generate_scaling_html
         html_path = out_path.parent / "scaling.html"

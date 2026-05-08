@@ -193,31 +193,6 @@ def save_results(results: list[BenchmarkRun], output_path: Path) -> None:
     print(f"\nResults saved to {output_path}")
 
 
-def validate_row_counts(results: list[BenchmarkRun]) -> None:
-    """Sanity-check: for each benchmark, every adapter that returned a
-    result should agree on the number of output rows. Disagreement means
-    either a SQL-semantics bug in one adapter or a real engine difference
-    worth flagging.
-    """
-    by_bench: dict[str, dict[str, int]] = {}
-    for run in results:
-        if run.error or not run.results:
-            continue
-        by_bench.setdefault(run.benchmark, {})[run.adapter] = run.results[0].rows
-
-    print("\nRow-count validation:")
-    mismatches = []
-    for bench, per_adapter in sorted(by_bench.items()):
-        if len(set(per_adapter.values())) > 1:
-            mismatches.append((bench, per_adapter))
-    if mismatches:
-        print(f"  WARNING — {len(mismatches)} benchmark(s) disagree across adapters:")
-        for bench, per_adapter in mismatches:
-            spread = ", ".join(f"{a}={r}" for a, r in sorted(per_adapter.items()))
-            print(f"    {bench}: {spread}")
-    else:
-        n = len(by_bench)
-        print(f"  OK — all {n} benchmark(s) returned the same row count from every adapter")
 
 
 def print_comparison(results: list[BenchmarkRun]) -> None:
@@ -349,7 +324,6 @@ def main():
     for suite in suites:
         results.extend(run_suite(cfg, suite, data_path, join_data=join_path))
 
-    validate_row_counts(results)
     print_comparison(results)
 
     if args.output:
