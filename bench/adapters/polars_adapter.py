@@ -163,5 +163,41 @@ class PolarsAdapter(Adapter):
             results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
         return results
 
+    def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
+        if op in ("join_inner", "join_left"):
+            how = "inner" if op == "join_inner" else "left"
+            joined = self._get_table("left").join(
+                pl.read_csv(right_path), on=["id1", "id2", "id3"], how=how
+            )
+            # Canonical schema: keep keys + left's id4..id6 + left.v1 + right.v2.
+            # Drop polars's `_right` suffixed duplicates so all adapters
+            # produce identical column sets for cross-engine compare.
+            keep = ["id1", "id2", "id3", "id4", "id5", "id6", "v1", "v2"]
+            return joined.select([c for c in keep if c in joined.columns])
+        df = self._get_table()
+        if op == "groupby_q1":
+            return df.group_by("id1").agg(pl.sum("v1"))
+        if op == "groupby_q2":
+            return df.group_by("id1", "id2").agg(pl.sum("v1"))
+        if op == "groupby_q3":
+            return df.group_by("id3").agg(pl.sum("v1"), pl.mean("v3"))
+        if op == "groupby_q4":
+            return df.group_by("id3").agg(pl.mean("v1"), pl.mean("v2"), pl.mean("v3"))
+        if op == "groupby_q5":
+            return df.group_by("id3").agg(pl.sum("v1"), pl.sum("v2"), pl.sum("v3"))
+        if op == "groupby_q6":
+            return df.group_by("id3").agg(
+                (pl.max("v1") - pl.min("v2")).alias("range")
+            )
+        if op == "groupby_q7":
+            return df.group_by(["id1", "id2", "id3", "id4", "id5", "id6"]).agg(
+                pl.sum("v3"), pl.col("v1").count().alias("cnt")
+            )
+        if op == "sort_single":
+            return df.sort("id1")
+        if op == "sort_multi":
+            return df.sort("id1", "id2", "id3")
+        raise ValueError(f"unknown op: {op}")
+
     def close(self) -> None:
         self._tables.clear()

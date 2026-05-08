@@ -9,6 +9,7 @@ one product.
 from pathlib import Path
 
 from datafusion import SessionContext
+import polars as pl
 
 from .base import Adapter, BenchmarkResult
 
@@ -182,6 +183,48 @@ class DataFusionAdapter(Adapter):
         except Exception:
             pass
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
+        t = self._get_table() if not op.startswith("join_") else None
+        sql_map = {
+            "groupby_q1": f"SELECT id1, sum(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q2": f"SELECT id1, id2, sum(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q3": f"SELECT id3, sum(v1) AS v1, avg(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q4": f"SELECT id3, avg(v1) AS v1, avg(v2) AS v2, avg(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q5": f"SELECT id3, sum(v1) AS v1, sum(v2) AS v2, sum(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q6": f"SELECT id3, max(v1) - min(v2) AS range FROM {t} GROUP BY id3",
+            "groupby_q7": (
+                f"SELECT id1, id2, id3, id4, id5, id6, "
+                f"sum(v3) AS v3, count(v1) AS cnt FROM {t} "
+                f"GROUP BY id1, id2, id3, id4, id5, id6"
+            ),
+            "sort_single": f"SELECT * FROM {t} ORDER BY id1",
+            "sort_multi":  f"SELECT * FROM {t} ORDER BY id1, id2, id3",
+        }
+        if op in sql_map:
+            sql = sql_map[op]
+        elif op in ("join_inner", "join_left"):
+            left = self._get_table("left")
+            right = self._register_right(right_path)
+            kind = "INNER" if op == "join_inner" else "LEFT"
+            # Canonical projection — see duckdb_adapter.materialize for rationale.
+            sql = (
+                f"SELECT {left}.id1, {left}.id2, {left}.id3, "
+                f"{left}.id4, {left}.id5, {left}.id6, {left}.v1, "
+                f"{right}.v2 "
+                f"FROM {left} {kind} JOIN {right} "
+                f"ON {left}.id1 = {right}.id1 "
+                f"AND {left}.id2 = {right}.id2 "
+                f"AND {left}.id3 = {right}.id3"
+            )
+        else:
+            raise ValueError(f"unknown op: {op}")
+        # Collect Arrow batches → polars via pyarrow (zero-copy where possible).
+        import pyarrow as pa
+        batches = self._ctx.sql(sql).collect()
+        if not batches:
+            return pl.DataFrame()
+        return pl.from_arrow(pa.Table.from_batches(batches))
 
     def close(self) -> None:
         if self._ctx is not None:

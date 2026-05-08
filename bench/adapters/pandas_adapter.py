@@ -9,6 +9,7 @@ pandas is slow" column makes the rest of the chart legible.
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 
 from .base import Adapter, BenchmarkResult
 
@@ -143,6 +144,47 @@ class PandasAdapter(Adapter):
             _, t = self._time_it(lambda: df.sort_values("v"))
             results.append(BenchmarkResult(f"sort_{dtype}", t, rows))
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
+        df = self._get() if op != "join_inner" and op != "join_left" else None
+        if op == "groupby_q1":
+            r = df.groupby("id1", as_index=False)["v1"].sum()
+        elif op == "groupby_q2":
+            r = df.groupby(["id1", "id2"], as_index=False)["v1"].sum()
+        elif op == "groupby_q3":
+            r = df.groupby("id3", as_index=False).agg(
+                v1=("v1", "sum"), v3=("v3", "mean"))
+        elif op == "groupby_q4":
+            r = df.groupby("id3", as_index=False).agg(
+                v1=("v1", "mean"), v2=("v2", "mean"), v3=("v3", "mean"))
+        elif op == "groupby_q5":
+            r = df.groupby("id3", as_index=False).agg(
+                v1=("v1", "sum"), v2=("v2", "sum"), v3=("v3", "sum"))
+        elif op == "groupby_q6":
+            g = df.groupby("id3", as_index=False)
+            r = pd.DataFrame({
+                "id3": g["v1"].max()["id3"],
+                "range": g["v1"].max()["v1"].values - g["v2"].min()["v2"].values,
+            })
+        elif op == "groupby_q7":
+            r = df.groupby(
+                ["id1", "id2", "id3", "id4", "id5", "id6"], as_index=False
+            ).agg(v3=("v3", "sum"), cnt=("v1", "count"))
+        elif op in ("join_inner", "join_left"):
+            how = "inner" if op == "join_inner" else "left"
+            merged = self._get("left").merge(
+                pd.read_csv(right_path), on=["id1", "id2", "id3"], how=how,
+                suffixes=("", "_right"))
+            # Canonical projection: keep keys + left.id4..id6 + left.v1 + right.v2.
+            keep = ["id1", "id2", "id3", "id4", "id5", "id6", "v1", "v2"]
+            r = merged[[c for c in keep if c in merged.columns]]
+        elif op == "sort_single":
+            r = df.sort_values("id1")
+        elif op == "sort_multi":
+            r = df.sort_values(["id1", "id2", "id3"])
+        else:
+            raise ValueError(f"unknown op: {op}")
+        return pl.from_pandas(r)
 
     def close(self) -> None:
         self._tables.clear()

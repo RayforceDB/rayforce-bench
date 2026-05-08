@@ -53,11 +53,12 @@ class RayforceAdapter(Adapter):
         """Use rayforce from PyPI."""
         try:
             import rayforce
-            from rayforce import Table, I64, F64
+            from rayforce import Table, Column, I64, F64
 
             self._rayforce = rayforce
             self._eval_str = rayforce.eval_str
             self._Table = Table
+            self._Column = Column
             self._I64 = I64
             self._F64 = F64
             self._Symbol = getattr(rayforce, "Symbol", None)
@@ -98,11 +99,12 @@ class RayforceAdapter(Adapter):
                 del sys.modules[mod]
 
         import rayforce
-        from rayforce import Table, I64, F64
+        from rayforce import Table, Column, I64, F64
 
         self._rayforce = rayforce
         self._eval_str = rayforce.eval_str
         self._Table = Table
+        self._Column = Column
         self._I64 = I64
         self._F64 = F64
         self._Symbol = getattr(rayforce, "Symbol", None)
@@ -114,13 +116,21 @@ class RayforceAdapter(Adapter):
         """Load CSV data using rayforce native Table.from_csv."""
         symbol_name = f"_bench_{table_name}"
 
-        # Determine column types from CSV header
         column_types = self._get_column_types(path)
-
-        # Use rayforce native CSV loading with column types
         rf_table = self._Table.from_csv(column_types, str(path))
         rf_table.save(symbol_name)
         self._table_names[table_name] = symbol_name
+        # Keep a Python-level Table handle for the chained API
+        # (.select().by().execute(), etc.) — canonical rayforce-py idiom
+        # per https://py.rayforcedb.com.
+        if not hasattr(self, "_tables"):
+            self._tables = {}
+        self._tables[table_name] = rf_table
+
+    def _get_table_obj(self, name: str = "data"):
+        if not hasattr(self, "_tables") or name not in self._tables:
+            raise ValueError(f"Table '{name}' not loaded")
+        return self._tables[name]
 
     def _get_column_types(self, path: Path) -> list:
         """Get column types for canonical H2O CSVs.
@@ -184,50 +194,93 @@ class RayforceAdapter(Adapter):
         rows = len(result) if result is not None else 0
         return BenchmarkResult(bench_name, time_ns, rows)
 
+    def _timed(self, fn, name: str) -> BenchmarkResult:
+        result, time_ns = self._time_it(fn)
+        rows = len(result) if result is not None else 0
+        return BenchmarkResult(name, time_ns, rows)
+
     def run_groupby_q1(self) -> BenchmarkResult:
         """Q1: sum(v1) group by id1"""
-        t = self._get_symbol()
-        query = f"(select {{v1: (sum v1) by: id1 from: {t}}})"
-        return self._run_timed_query(query, "groupby_q1")
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v1=C("v1").sum()).by("id1").execute(),
+            "groupby_q1",
+        )
 
     def run_groupby_q2(self) -> BenchmarkResult:
         """Q2: sum(v1) group by id1, id2"""
-        t = self._get_symbol()
-        query = f"(select {{v1: (sum v1) by: {{id1: id1 id2: id2}} from: {t}}})"
-        return self._run_timed_query(query, "groupby_q2")
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v1=C("v1").sum()).by("id1", "id2").execute(),
+            "groupby_q2",
+        )
 
     def run_groupby_q3(self) -> BenchmarkResult:
         """Q3: sum(v1), mean(v3) group by id3"""
-        t = self._get_symbol()
-        query = f"(select {{v1: (sum v1) v3: (avg v3) by: id3 from: {t}}})"
-        return self._run_timed_query(query, "groupby_q3")
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v1=C("v1").sum(),
+                             v3=C("v3").mean()).by("id3").execute(),
+            "groupby_q3",
+        )
 
     def run_groupby_q4(self) -> BenchmarkResult:
         """Q4: mean(v1), mean(v2), mean(v3) group by id3"""
-        t = self._get_symbol()
-        query = f"(select {{v1: (avg v1) v2: (avg v2) v3: (avg v3) by: id3 from: {t}}})"
-        return self._run_timed_query(query, "groupby_q4")
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v1=C("v1").mean(),
+                             v2=C("v2").mean(),
+                             v3=C("v3").mean()).by("id3").execute(),
+            "groupby_q4",
+        )
 
     def run_groupby_q5(self) -> BenchmarkResult:
         """Q5: sum(v1), sum(v2), sum(v3) group by id3"""
-        t = self._get_symbol()
-        query = f"(select {{v1: (sum v1) v2: (sum v2) v3: (sum v3) by: id3 from: {t}}})"
-        return self._run_timed_query(query, "groupby_q5")
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v1=C("v1").sum(),
+                             v2=C("v2").sum(),
+                             v3=C("v3").sum()).by("id3").execute(),
+            "groupby_q5",
+        )
 
     def run_groupby_q6(self) -> BenchmarkResult:
-        """Q6: max(v1) - min(v2) group by id3"""
-        t = self._get_symbol()
-        query = f"(select {{range: (- (max v1) (min v2)) by: id3 from: {t}}})"
-        return self._run_timed_query(query, "groupby_q6")
+        """Q6: max(v1) - min(v2) group by id3.
+
+        Two-stage because rayforce does not currently support arithmetic
+        across two per-group aggregates inside `.by(...)` — the
+        `Column("v1").max() - Column("v2").min()` expression is computed
+        globally and then broadcast, not per-group. Workaround: aggregate
+        max/min separately per group, then subtract in a follow-up
+        select with no `.by`.
+        """
+        t = self._get_table_obj()
+        C = self._Column
+
+        def query():
+            agg = t.select(v1m=C("v1").max(),
+                           v2m=C("v2").min()).by("id3").execute()
+            return agg.select("id3",
+                              range=C("v1m") - C("v2m")).execute()
+
+        return self._timed(query, "groupby_q6")
 
     def run_groupby_q7(self) -> BenchmarkResult:
         """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
-        t = self._get_symbol()
-        query = (
-            f"(select {{from: {t} v3: (sum v3) cnt: (count v1) "
-            f"by: {{id1: id1 id2: id2 id3: id3 id4: id4 id5: id5 id6: id6}}}})"
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v3=C("v3").sum(),
+                             cnt=C("v1").count()
+                             ).by("id1", "id2", "id3",
+                                  "id4", "id5", "id6").execute(),
+            "groupby_q7",
         )
-        return self._run_timed_query(query, "groupby_q7")
 
     def _load_table_from_csv(self, path: Path) -> object:
         """Load CSV file using rayforce native Table.from_csv."""
@@ -236,33 +289,34 @@ class RayforceAdapter(Adapter):
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
-        left_sym = self._get_symbol("left")
-        right_table = self._load_table_from_csv(right_path)
-        right_sym = "_bench_right_tmp"
-        right_table.save(right_sym)
-        query = f"(inner-join [id1 id2 id3] {left_sym} {right_sym})"
-        return self._run_timed_query(query, "join_inner")
+        L = self._get_table_obj("left")
+        R = self._load_table_from_csv(right_path)
+        return self._timed(
+            lambda: L.inner_join(R, on=["id1", "id2", "id3"]).execute(),
+            "join_inner",
+        )
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on (id1, id2, id3) — canonical H2O J1."""
-        left_sym = self._get_symbol("left")
-        right_table = self._load_table_from_csv(right_path)
-        right_sym = "_bench_right_tmp"
-        right_table.save(right_sym)
-        query = f"(left-join [id1 id2 id3] {left_sym} {right_sym})"
-        return self._run_timed_query(query, "join_left")
+        L = self._get_table_obj("left")
+        R = self._load_table_from_csv(right_path)
+        return self._timed(
+            lambda: L.left_join(R, on=["id1", "id2", "id3"]).execute(),
+            "join_left",
+        )
 
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""
-        t = self._get_symbol()
-        query = f"(xasc {t} 'id1)"
-        return self._run_timed_query(query, "sort_single")
+        t = self._get_table_obj()
+        return self._timed(lambda: t.order_by("id1").execute(), "sort_single")
 
     def run_sort_multi(self) -> BenchmarkResult:
         """Sort by multiple columns."""
-        t = self._get_symbol()
-        query = f"(xasc {t} [id1 id2 id3])"
-        return self._run_timed_query(query, "sort_multi")
+        t = self._get_table_obj()
+        return self._timed(
+            lambda: t.order_by("id1", "id2", "id3").execute(),
+            "sort_multi",
+        )
 
     _RF_TYPES_NAME = {
         "u8": "U8", "i16": "I16", "i32": "I32",
@@ -292,6 +346,60 @@ class RayforceAdapter(Adapter):
             time_ns = time.perf_counter_ns() - start
             results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None):
+        import polars as pl
+        C = self._Column
+        if op in ("join_inner", "join_left"):
+            L = self._get_table_obj("left")
+            R = self._load_table_from_csv(right_path)
+            kind = L.inner_join if op == "join_inner" else L.left_join
+            result = kind(R, on=["id1", "id2", "id3"]).execute()
+        else:
+            t = self._get_table_obj()
+            if op == "groupby_q1":
+                result = t.select(v1=C("v1").sum()).by("id1").execute()
+            elif op == "groupby_q2":
+                result = t.select(v1=C("v1").sum()).by("id1", "id2").execute()
+            elif op == "groupby_q3":
+                result = t.select(v1=C("v1").sum(),
+                                  v3=C("v3").mean()).by("id3").execute()
+            elif op == "groupby_q4":
+                result = t.select(v1=C("v1").mean(),
+                                  v2=C("v2").mean(),
+                                  v3=C("v3").mean()).by("id3").execute()
+            elif op == "groupby_q5":
+                result = t.select(v1=C("v1").sum(),
+                                  v2=C("v2").sum(),
+                                  v3=C("v3").sum()).by("id3").execute()
+            elif op == "groupby_q6":
+                # Two-stage workaround — see run_groupby_q6 for rationale.
+                agg = t.select(v1m=C("v1").max(),
+                               v2m=C("v2").min()).by("id3").execute()
+                result = agg.select("id3",
+                                    range=C("v1m") - C("v2m")).execute()
+            elif op == "groupby_q7":
+                result = t.select(v3=C("v3").sum(),
+                                  cnt=C("v1").count()
+                                  ).by("id1", "id2", "id3",
+                                       "id4", "id5", "id6").execute()
+            elif op == "sort_single":
+                result = t.order_by("id1").execute()
+            elif op == "sort_multi":
+                result = t.order_by("id1", "id2", "id3").execute()
+            else:
+                raise ValueError(f"unknown op: {op}")
+
+        if result is None:
+            return pl.DataFrame()
+        # to_dict() can return wrapped scalar types (I64(3), F64(...));
+        # polars treats those as Object dtype and refuses to write IPC.
+        # Unwrap via .to_python() each rayforce scalar provides.
+        d = result.to_dict()
+        for col, vals in d.items():
+            if vals and hasattr(vals[0], "to_python"):
+                d[col] = [v.to_python() for v in vals]
+        return pl.from_dict(d)
 
     def close(self) -> None:
         self._table_names.clear()

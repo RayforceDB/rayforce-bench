@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import duckdb
+import polars as pl
 
 from .base import Adapter, BenchmarkResult
 
@@ -38,7 +39,7 @@ class DuckDBAdapter(Adapter):
         t = self._get_table()
 
         def query():
-            return self._conn.execute(f"SELECT id1, SUM(v1) as v1_sum FROM {t} GROUP BY id1").fetchdf()
+            return self._conn.execute(f"SELECT id1, SUM(v1) as v1_sum FROM {t} GROUP BY id1").fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q1", time_ns, len(result))
@@ -50,7 +51,7 @@ class DuckDBAdapter(Adapter):
         def query():
             return self._conn.execute(
                 f"SELECT id1, id2, SUM(v1) as v1_sum FROM {t} GROUP BY id1, id2"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q2", time_ns, len(result))
@@ -62,7 +63,7 @@ class DuckDBAdapter(Adapter):
         def query():
             return self._conn.execute(
                 f"SELECT id3, SUM(v1) as v1_sum, AVG(v3) as v3_avg FROM {t} GROUP BY id3"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q3", time_ns, len(result))
@@ -74,7 +75,7 @@ class DuckDBAdapter(Adapter):
         def query():
             return self._conn.execute(
                 f"SELECT id3, AVG(v1) as v1_avg, AVG(v2) as v2_avg, AVG(v3) as v3_avg FROM {t} GROUP BY id3"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q4", time_ns, len(result))
@@ -86,7 +87,7 @@ class DuckDBAdapter(Adapter):
         def query():
             return self._conn.execute(
                 f"SELECT id3, SUM(v1) as v1_sum, SUM(v2) as v2_sum, SUM(v3) as v3_sum FROM {t} GROUP BY id3"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q5", time_ns, len(result))
@@ -98,7 +99,7 @@ class DuckDBAdapter(Adapter):
         def query():
             return self._conn.execute(
                 f"SELECT id3, MAX(v1) - MIN(v2) as range FROM {t} GROUP BY id3"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q6", time_ns, len(result))
@@ -112,7 +113,7 @@ class DuckDBAdapter(Adapter):
                 f"SELECT id1, id2, id3, id4, id5, id6, "
                 f"SUM(v3) as v3, COUNT(v1) as cnt "
                 f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q7", time_ns, len(result))
@@ -128,7 +129,7 @@ class DuckDBAdapter(Adapter):
                 f"ON {left}.id1 = bench_right_tmp.id1 "
                 f"AND {left}.id2 = bench_right_tmp.id2 "
                 f"AND {left}.id3 = bench_right_tmp.id3"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")
@@ -145,7 +146,7 @@ class DuckDBAdapter(Adapter):
                 f"ON {left}.id1 = bench_right_tmp.id1 "
                 f"AND {left}.id2 = bench_right_tmp.id2 "
                 f"AND {left}.id3 = bench_right_tmp.id3"
-            ).fetchdf()
+            ).fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")
@@ -156,7 +157,7 @@ class DuckDBAdapter(Adapter):
         t = self._get_table()
 
         def query():
-            return self._conn.execute(f"SELECT * FROM {t} ORDER BY id1").fetchdf()
+            return self._conn.execute(f"SELECT * FROM {t} ORDER BY id1").fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_single", time_ns, len(result))
@@ -166,7 +167,7 @@ class DuckDBAdapter(Adapter):
         t = self._get_table()
 
         def query():
-            return self._conn.execute(f"SELECT * FROM {t} ORDER BY id1, id2, id3").fetchdf()
+            return self._conn.execute(f"SELECT * FROM {t} ORDER BY id1, id2, id3").fetch_arrow_table()
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
@@ -203,6 +204,51 @@ class DuckDBAdapter(Adapter):
         self._conn.execute("DROP TABLE IF EXISTS sort_result")
         self._conn.execute("DROP TABLE IF EXISTS sort_data")
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
+        # 'data' table is only loaded for non-join ops; joins use 'left'.
+        # Defer _get_table() until we know which side we need.
+        t = self._get_table() if not op.startswith("join_") else None
+        sql_map = {
+            "groupby_q1": f"SELECT id1, SUM(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q2": f"SELECT id1, id2, SUM(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q3": f"SELECT id3, SUM(v1) AS v1, AVG(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q4": f"SELECT id3, AVG(v1) AS v1, AVG(v2) AS v2, AVG(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q5": f"SELECT id3, SUM(v1) AS v1, SUM(v2) AS v2, SUM(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q6": f"SELECT id3, MAX(v1) - MIN(v2) AS range FROM {t} GROUP BY id3",
+            "groupby_q7": (
+                f"SELECT id1, id2, id3, id4, id5, id6, "
+                f"SUM(v3) AS v3, COUNT(v1) AS cnt FROM {t} "
+                f"GROUP BY id1, id2, id3, id4, id5, id6"
+            ),
+            "sort_single": f"SELECT * FROM {t} ORDER BY id1",
+            "sort_multi":  f"SELECT * FROM {t} ORDER BY id1, id2, id3",
+        }
+        if op in sql_map:
+            return self._conn.execute(sql_map[op]).pl()
+        if op in ("join_inner", "join_left"):
+            left = self._get_table("left")
+            self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")
+            self._conn.execute(
+                f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')"
+            )
+            kind = "INNER" if op == "join_inner" else "LEFT"
+            # Explicit canonical projection: keys + left.id4..id6 + left.v1 + right.v2.
+            # Avoids engine-specific duplicate-column naming in cross-engine compare.
+            sql = (
+                f"SELECT {left}.id1, {left}.id2, {left}.id3, "
+                f"{left}.id4, {left}.id5, {left}.id6, {left}.v1, "
+                f"bench_right_tmp.v2 "
+                f"FROM {left} {kind} JOIN bench_right_tmp "
+                f"ON {left}.id1 = bench_right_tmp.id1 "
+                f"AND {left}.id2 = bench_right_tmp.id2 "
+                f"AND {left}.id3 = bench_right_tmp.id3"
+            )
+            try:
+                return self._conn.execute(sql).pl()
+            finally:
+                self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")
+        raise ValueError(f"unknown op: {op}")
 
     def close(self) -> None:
         if self._conn is not None:

@@ -8,6 +8,7 @@ within one adapter instance.
 from pathlib import Path
 
 from chdb import session
+import polars as pl
 
 from .base import Adapter, BenchmarkResult
 
@@ -44,20 +45,27 @@ class ChdbAdapter(Adapter):
             raise ValueError(f"Table '{name}' not loaded")
         return self._table_names[name]
 
-    def _query_rows(self, sql: str) -> int:
-        """Run a query and return its row count without measuring."""
-        res = self._sess.query(sql, "CSV")
+    def _time(self, sql: str, name: str) -> BenchmarkResult:
+        # ArrowStream is chdb's native binary materialization — much
+        # cheaper than CSV string serialization. Stays inside the timer
+        # so we measure engine + native materialization, on the same
+        # footing as duckdb's .arrow() and polars's native pl.DataFrame.
+        result, time_ns = self._time_it(
+            lambda: self._sess.query(sql, "ArrowStream")
+        )
+        rows = self._count_rows_from_arrow_stream(result)
+        return BenchmarkResult(name, time_ns, rows)
+
+    @staticmethod
+    def _count_rows_from_arrow_stream(res) -> int:
         if res is None:
             return 0
-        # chdb's CSV output: count newlines. Empty result has empty body.
-        text = str(res).strip()
-        return text.count("\n") + 1 if text else 0
-
-    def _time(self, sql: str, name: str) -> BenchmarkResult:
-        result, time_ns = self._time_it(lambda: self._sess.query(sql, "CSV"))
-        text = str(result).strip() if result is not None else ""
-        rows = (text.count("\n") + 1) if text else 0
-        return BenchmarkResult(name, time_ns, rows)
+        raw = res.bytes() if hasattr(res, "bytes") else bytes(res)
+        if not raw:
+            return 0
+        import io
+        import pyarrow.ipc as ipc
+        return ipc.open_stream(io.BytesIO(raw)).read_all().num_rows
 
     def run_groupby_q1(self) -> BenchmarkResult:
         t = self._get_table()
@@ -173,6 +181,54 @@ class ChdbAdapter(Adapter):
 
         sess.query("DROP TABLE IF EXISTS sort_data")
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None) -> pl.DataFrame:
+        t = self._get_table() if not op.startswith("join_") else None
+        sql_map = {
+            "groupby_q1": f"SELECT id1, sum(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q2": f"SELECT id1, id2, sum(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q3": f"SELECT id3, sum(v1) AS v1, avg(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q4": f"SELECT id3, avg(v1) AS v1, avg(v2) AS v2, avg(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q5": f"SELECT id3, sum(v1) AS v1, sum(v2) AS v2, sum(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q6": f"SELECT id3, max(v1) - min(v2) AS range FROM {t} GROUP BY id3",
+            "groupby_q7": (
+                f"SELECT id1, id2, id3, id4, id5, id6, "
+                f"sum(v3) AS v3, count(v1) AS cnt FROM {t} "
+                f"GROUP BY id1, id2, id3, id4, id5, id6"
+            ),
+            "sort_single": f"SELECT * FROM {t} ORDER BY id1",
+            "sort_multi":  f"SELECT * FROM {t} ORDER BY id1, id2, id3",
+        }
+        if op in sql_map:
+            sql = sql_map[op]
+        elif op in ("join_inner", "join_left"):
+            left = self._get_table("left")
+            right = self._load_right(right_path)
+            kind = "INNER" if op == "join_inner" else "LEFT"
+            # Canonical projection — see duckdb_adapter.materialize for rationale.
+            sql = (
+                f"SELECT {left}.id1 AS id1, {left}.id2 AS id2, {left}.id3 AS id3, "
+                f"{left}.id4 AS id4, {left}.id5 AS id5, {left}.id6 AS id6, "
+                f"{left}.v1 AS v1, {right}.v2 AS v2 "
+                f"FROM {left} {kind} JOIN {right} "
+                f"ON {left}.id1 = {right}.id1 "
+                f"AND {left}.id2 = {right}.id2 "
+                f"AND {left}.id3 = {right}.id3"
+            )
+        else:
+            raise ValueError(f"unknown op: {op}")
+        # chdb returns Arrow when format='ArrowStream'. The query_result
+        # object exposes .bytes() to get the raw IPC stream.
+        import io
+        import pyarrow.ipc as ipc
+        res = self._sess.query(sql, "ArrowStream")
+        if res is None:
+            return pl.DataFrame()
+        raw = res.bytes()
+        if not raw:
+            return pl.DataFrame()
+        reader = ipc.open_stream(io.BytesIO(raw))
+        return pl.from_arrow(reader.read_all())
 
     def close(self) -> None:
         if self._sess is not None:

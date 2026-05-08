@@ -98,93 +98,80 @@ class TimescaleAdapter(Adapter):
             raise ValueError(f"Table '{name}' not loaded")
         return self._table_names[name]
 
+    def _time_pg(self, sql: str, name: str) -> BenchmarkResult:
+        """Time `cur.execute(sql)` only — engine compute on the server.
+
+        The PG protocol completes the SELECT server-side before
+        returning control; `cur.rowcount` is populated immediately and
+        does not require fetching rows over the wire. Skipping fetchall
+        keeps the timer focused on engine work, not Python-side
+        materialization.
+        """
+        cur = self._conn.cursor()
+        try:
+            _, time_ns = self._time_it(lambda: cur.execute(sql))
+            rows = cur.rowcount
+        finally:
+            cur.close()
+        return BenchmarkResult(name, time_ns, rows)
+
     def run_groupby_q1(self) -> BenchmarkResult:
         """Q1: sum(v1) group by id1"""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id1, SUM(v1) as v1_sum FROM {t} GROUP BY id1")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q1", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id1, SUM(v1) as v1_sum FROM {t} GROUP BY id1",
+            "groupby_q1",
+        )
 
     def run_groupby_q2(self) -> BenchmarkResult:
         """Q2: sum(v1) group by id1, id2"""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id1, id2, SUM(v1) as v1_sum FROM {t} GROUP BY id1, id2")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q2", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id1, id2, SUM(v1) as v1_sum FROM {t} GROUP BY id1, id2",
+            "groupby_q2",
+        )
 
     def run_groupby_q3(self) -> BenchmarkResult:
         """Q3: sum(v1), mean(v3) group by id3"""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, SUM(v1) as v1_sum, AVG(v3) as v3_avg FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q3", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id3, SUM(v1) as v1_sum, AVG(v3) as v3_avg FROM {t} GROUP BY id3",
+            "groupby_q3",
+        )
 
     def run_groupby_q4(self) -> BenchmarkResult:
         """Q4: mean(v1), mean(v2), mean(v3) group by id3"""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, AVG(v1) as v1_avg, AVG(v2) as v2_avg, AVG(v3) as v3_avg FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q4", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id3, AVG(v1) as v1_avg, AVG(v2) as v2_avg, AVG(v3) as v3_avg FROM {t} GROUP BY id3",
+            "groupby_q4",
+        )
 
     def run_groupby_q5(self) -> BenchmarkResult:
         """Q5: sum(v1), sum(v2), sum(v3) group by id3"""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, SUM(v1) as v1_sum, SUM(v2) as v2_sum, SUM(v3) as v3_sum FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q5", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id3, SUM(v1) as v1_sum, SUM(v2) as v2_sum, SUM(v3) as v3_sum FROM {t} GROUP BY id3",
+            "groupby_q5",
+        )
 
     def run_groupby_q6(self) -> BenchmarkResult:
         """Q6: max(v1) - min(v2) group by id3"""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, MAX(v1) - MIN(v2) as range FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q6", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id3, MAX(v1) - MIN(v2) as range FROM {t} GROUP BY id3",
+            "groupby_q6",
+        )
 
     def run_groupby_q7(self) -> BenchmarkResult:
         """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT id1, id2, id3, id4, id5, id6, "
-                    f"SUM(v3) as v3, COUNT(v1) as cnt "
-                    f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6"
-                )
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q7", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id1, id2, id3, id4, id5, id6, "
+            f"SUM(v3) as v3, COUNT(v1) as cnt "
+            f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6",
+            "groupby_q7",
+        )
 
     def _load_right(self, right_path: Path) -> str:
         """Bulk-COPY the right table; return its SQL name."""
@@ -219,65 +206,43 @@ class TimescaleAdapter(Adapter):
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         right = self._load_right(right_path)
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT * FROM {left} INNER JOIN {right} "
-                    f"ON {left}.id1 = {right}.id1 "
-                    f"AND {left}.id2 = {right}.id2 "
-                    f"AND {left}.id3 = {right}.id3"
-                )
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
+        sql = (
+            f"SELECT * FROM {left} INNER JOIN {right} "
+            f"ON {left}.id1 = {right}.id1 "
+            f"AND {left}.id2 = {right}.id2 "
+            f"AND {left}.id3 = {right}.id3"
+        )
+        result = self._time_pg(sql, "join_inner")
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {right}")
-        return BenchmarkResult("join_inner", time_ns, len(result))
+        return result
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         right = self._load_right(right_path)
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT * FROM {left} LEFT JOIN {right} "
-                    f"ON {left}.id1 = {right}.id1 "
-                    f"AND {left}.id2 = {right}.id2 "
-                    f"AND {left}.id3 = {right}.id3"
-                )
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
+        sql = (
+            f"SELECT * FROM {left} LEFT JOIN {right} "
+            f"ON {left}.id1 = {right}.id1 "
+            f"AND {left}.id2 = {right}.id2 "
+            f"AND {left}.id3 = {right}.id3"
+        )
+        result = self._time_pg(sql, "join_left")
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {right}")
-        return BenchmarkResult("join_left", time_ns, len(result))
+        return result
 
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {t} ORDER BY id1")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("sort_single", time_ns, len(result))
+        return self._time_pg(f"SELECT * FROM {t} ORDER BY id1", "sort_single")
 
     def run_sort_multi(self) -> BenchmarkResult:
         """Sort by multiple columns."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {t} ORDER BY id1, id2, id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("sort_multi", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT * FROM {t} ORDER BY id1, id2, id3", "sort_multi",
+        )
 
     # PostgreSQL has no UINT8; SMALLINT covers 0..255 safely.
     _TIMESCALE_TYPES = {
@@ -327,6 +292,55 @@ class TimescaleAdapter(Adapter):
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None):
+        import polars as pl
+        t = self._get_table() if not op.startswith("join_") else None
+        sql_map = {
+            "groupby_q1": f"SELECT id1, SUM(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q2": f"SELECT id1, id2, SUM(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q3": f"SELECT id3, SUM(v1) AS v1, AVG(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q4": f"SELECT id3, AVG(v1) AS v1, AVG(v2) AS v2, AVG(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q5": f"SELECT id3, SUM(v1) AS v1, SUM(v2) AS v2, SUM(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q6": f"SELECT id3, MAX(v1) - MIN(v2) AS range FROM {t} GROUP BY id3",
+            "groupby_q7": (
+                f"SELECT id1, id2, id3, id4, id5, id6, "
+                f"SUM(v3) AS v3, COUNT(v1) AS cnt FROM {t} "
+                f"GROUP BY id1, id2, id3, id4, id5, id6"
+            ),
+            "sort_single": f"SELECT * FROM {t} ORDER BY id1",
+            "sort_multi":  f"SELECT * FROM {t} ORDER BY id1, id2, id3",
+        }
+        if op in sql_map:
+            sql = sql_map[op]
+            cleanup = None
+        elif op in ("join_inner", "join_left"):
+            left = self._get_table("left")
+            right = self._load_right(right_path)
+            kind = "INNER" if op == "join_inner" else "LEFT"
+            # Canonical projection — see duckdb_adapter.materialize for rationale.
+            sql = (
+                f"SELECT {left}.id1 AS id1, {left}.id2 AS id2, {left}.id3 AS id3, "
+                f"{left}.id4 AS id4, {left}.id5 AS id5, {left}.id6 AS id6, "
+                f"{left}.v1 AS v1, {right}.v2 AS v2 "
+                f"FROM {left} {kind} JOIN {right} "
+                f"ON {left}.id1 = {right}.id1 "
+                f"AND {left}.id2 = {right}.id2 "
+                f"AND {left}.id3 = {right}.id3"
+            )
+            cleanup = right
+        else:
+            raise ValueError(f"unknown op: {op}")
+        try:
+            with self._conn.cursor() as cur:
+                cur.execute(sql)
+                cols = [d.name for d in cur.description]
+                rows = cur.fetchall()
+            return pl.DataFrame(rows, schema=cols, orient="row")
+        finally:
+            if cleanup:
+                with self._conn.cursor() as cur:
+                    cur.execute(f"DROP TABLE IF EXISTS {cleanup}")
 
     def close(self) -> None:
         if self._conn is not None:
