@@ -252,13 +252,18 @@ class RayforceAdapter(Adapter):
     def run_groupby_q6(self) -> BenchmarkResult:
         """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O.
 
-        rayforce-py 2.0a1 has Column.median() but no std/sd/var/deviation
-        and no Column-level arithmetic to compute std manually
-        (no pow/sqrt/mul). NYI until upstream adds Column.std().
-        See REQUIREMENTS_CANONICAL_H2O.md (~/rayforce/) §1.1.
+        rayforce-py 2.0a1 exposes Column.median() and the engine has a
+        DEVIATION op (callable as Expression(Operation.DEVIATION, col)),
+        so individually both aggregates are available. But the engine
+        itself raises `RayforceNYIError: non-agg expression with
+        multi-key or computed group key` when median is combined with
+        a multi-key `.by(...)` — the canonical q6 groups by (id4, id5).
+        Single-key median works; multi-key median doesn't.
+        See REQUIREMENTS_CANONICAL_H2O.md §1.1.
         """
         raise NotImplementedError(
-            "rayforce-py has no Column.std(); canonical H2O q6 needs sd(v3)")
+            "rayforce engine NYI: 'median(...) with multi-key group-by' "
+            "(median+sd by id4,id5 needed for canonical H2O q6)")
 
     def run_groupby_q7(self) -> BenchmarkResult:
         """Q7: max(v1) - min(v2) by id3 — canonical H2O.
@@ -406,8 +411,9 @@ class RayforceAdapter(Adapter):
                                   v3=C("v3").sum()).by("id6").execute()
             elif op == "groupby_q6":
                 raise NotImplementedError(
-                    "rayforce-py has no Column.std(); "
-                    "canonical H2O q6 needs sd(v3)")
+                    "rayforce engine NYI: 'median(...) with multi-key "
+                    "group-by' (canonical H2O q6 needs median+sd by "
+                    "id4, id5)")
             elif op == "groupby_q7":
                 # Two-stage workaround — see run_groupby_q7 for rationale.
                 agg = t.select(v1m=C("v1").max(),
