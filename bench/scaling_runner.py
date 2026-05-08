@@ -94,12 +94,53 @@ def fmt_size(n: int) -> str:
     return str(n)
 
 
+def _manifest_matches(out: Path, generator: str, want: dict) -> bool:
+    """Check the dataset directory's manifest.json against the generator
+    parameters we are about to produce. Returns True only when EVERY
+    key in `want` is present and equal in the manifest. Missing manifest
+    or any mismatch → False (caller should regenerate).
+    """
+    mp = out / "manifest.json"
+    if not mp.exists():
+        return False
+    try:
+        m = json.loads(mp.read_text())
+    except Exception:
+        return False
+    # Generator metadata is stored under m["metadata"] (see DataGenerator).
+    meta = m.get("metadata") or {}
+    if meta.get("generator") != generator:
+        return False
+    return all(meta.get(k) == v for k, v in want.items())
+
+
+def _wipe_stale_csvs(out: Path) -> None:
+    """Drop CSV / manifest files in `out` that came from a previous
+    generator run with mismatching parameters. Leaves the directory
+    around but empty so the new generator can write fresh files."""
+    if not out.exists():
+        return
+    for child in out.iterdir():
+        if child.is_file() and (child.suffix == ".csv"
+                                or child.name == "manifest.json"):
+            child.unlink()
+
+
 def ensure_groupby(data_root: Path, n: int, k: int, seed: int) -> Path:
-    """Generate groupby dataset for size n if missing. Return its directory."""
+    """Generate groupby dataset for size n if missing or stale.
+
+    "Stale" means the manifest disagrees on n_rows / k / seed / schema
+    version with what the current generator would produce — files are
+    wiped and regenerated. This keeps `make bench` honest after a
+    generator change.
+    """
     name = f"groupby_{fmt_size(n)}_k{k}"
     out = data_root / name
-    if (out / "data.csv").exists():
+    want = {"n_rows": n, "k": k, "seed": seed,
+            "schema_version": "h2o-canonical-v1"}
+    if (out / "data.csv").exists() and _manifest_matches(out, "groupby", want):
         return out
+    _wipe_stale_csvs(out)
     gen = GroupByGenerator(n_rows=n, k=k, seed=seed)
     ds = gen.generate()
     ds.write(out, formats=["csv"])
@@ -109,8 +150,12 @@ def ensure_groupby(data_root: Path, n: int, k: int, seed: int) -> Path:
 def ensure_join(data_root: Path, n: int, k: int, seed: int) -> Path:
     name = f"join_{fmt_size(n)}x{fmt_size(n)}"
     out = data_root / name
-    if (out / "left.csv").exists() and (out / "right.csv").exists():
+    want = {"n_rows_left": n, "n_rows_right": n, "k": k, "seed": seed,
+            "schema_version": "h2o-canonical-v1"}
+    if ((out / "left.csv").exists() and (out / "right.csv").exists()
+            and _manifest_matches(out, "join", want)):
         return out
+    _wipe_stale_csvs(out)
     gen = JoinGenerator(n_rows_left=n, n_rows_right=n, k=k, seed=seed)
     ds = gen.generate()
     ds.write(out, formats=["csv"])
@@ -118,13 +163,22 @@ def ensure_join(data_root: Path, n: int, k: int, seed: int) -> Path:
 
 
 def ensure_canonical_join(data_root: Path, n: int, k: int, seed: int) -> Path:
-    """Generate canonical H2O J1 (x, small, medium, big) for size n."""
+    """Generate canonical H2O J1 (x, small, medium, big) for size n.
+
+    Regenerates if manifest doesn't match (or doesn't exist), so a
+    schema-version bump in the generator does not silently reuse old
+    CSVs.
+    """
     from .generators import CanonicalJoinGenerator
     name = f"join_canonical_{fmt_size(n)}_k{k}"
     out = data_root / name
     files = ["x.csv", "small.csv", "medium.csv", "big.csv"]
-    if all((out / f).exists() for f in files):
+    want = {"n_rows_x": n, "k": k, "seed": seed,
+            "schema_version": "h2o-canonical-j1-v1"}
+    if (all((out / f).exists() for f in files)
+            and _manifest_matches(out, "join_canonical_h2o", want)):
         return out
+    _wipe_stale_csvs(out)
     gen = CanonicalJoinGenerator(n_rows=n, k=k, seed=seed)
     ds = gen.generate()
     ds.write(out, formats=["csv"])
