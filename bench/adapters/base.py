@@ -72,13 +72,18 @@ class Adapter(ABC):
         pass
 
     @abstractmethod
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O 6-key)."""
+        pass
+
+    @abstractmethod
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         pass
 
     @abstractmethod
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         pass
 
     @abstractmethod
@@ -112,3 +117,35 @@ class Adapter(ABC):
         result = func()
         end = time.perf_counter_ns()
         return result, end - start
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a typed single-column CSV (extended sort grid).
+
+        Optional — adapters that participate in the sort grid override this.
+        Default raises NotImplementedError so questdb/timescale, which we
+        don't include in the grid, fail loudly if accidentally selected.
+        """
+        raise NotImplementedError(
+            f"{self.name} does not implement run_sort_typed_full; "
+            f"exclude it from --adapters when running sort-ext"
+        )
+
+    def run_full(self, bench_name: str, n_warmup: int, n_iter: int,
+                 right_path: Path | None = None) -> list[BenchmarkResult]:
+        """Run warmup + measured iterations for a single benchmark.
+
+        Default implementation invokes the bench method n_warmup + n_iter
+        times. Adapters that need to perform warmup and iterations in a
+        single external invocation override this method.
+        """
+        method = getattr(self, f"run_{bench_name}")
+        if bench_name.startswith("join_"):
+            if right_path is None:
+                raise ValueError(f"{bench_name} requires right_path")
+            invoke = lambda: method(right_path)
+        else:
+            invoke = method
+        for _ in range(n_warmup):
+            invoke()
+        return [invoke() for _ in range(n_iter)]

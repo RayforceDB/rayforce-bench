@@ -103,15 +103,31 @@ class DuckDBAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q6", time_ns, len(result))
 
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        t = self._get_table()
+
+        def query():
+            return self._conn.execute(
+                f"SELECT id1, id2, id3, id4, id5, id6, "
+                f"SUM(v3) as v3, COUNT(v1) as cnt "
+                f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6"
+            ).fetchdf()
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q7", time_ns, len(result))
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
 
         def query():
             return self._conn.execute(
-                f"SELECT * FROM {left} INNER JOIN bench_right_tmp ON {left}.id1 = bench_right_tmp.id1"
+                f"SELECT * FROM {left} INNER JOIN bench_right_tmp "
+                f"ON {left}.id1 = bench_right_tmp.id1 "
+                f"AND {left}.id2 = bench_right_tmp.id2 "
+                f"AND {left}.id3 = bench_right_tmp.id3"
             ).fetchdf()
 
         result, time_ns = self._time_it(query)
@@ -119,14 +135,16 @@ class DuckDBAdapter(Adapter):
         return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
 
         def query():
             return self._conn.execute(
-                f"SELECT * FROM {left} LEFT JOIN bench_right_tmp ON {left}.id1 = bench_right_tmp.id1"
+                f"SELECT * FROM {left} LEFT JOIN bench_right_tmp "
+                f"ON {left}.id1 = bench_right_tmp.id1 "
+                f"AND {left}.id2 = bench_right_tmp.id2 "
+                f"AND {left}.id3 = bench_right_tmp.id3"
             ).fetchdf()
 
         result, time_ns = self._time_it(query)
@@ -152,6 +170,39 @@ class DuckDBAdapter(Adapter):
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
+
+    _DUCKDB_TYPES = {
+        "u8": "UTINYINT", "i16": "SMALLINT", "i32": "INTEGER",
+        "i64": "BIGINT", "f64": "DOUBLE",
+        "str8": "VARCHAR", "str16": "VARCHAR",
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        cast = self._DUCKDB_TYPES[dtype]
+        if self._conn is None:
+            self._conn = duckdb.connect()
+        self._conn.execute("DROP TABLE IF EXISTS sort_data")
+        self._conn.execute(
+            f"CREATE TABLE sort_data AS "
+            f"SELECT CAST(v AS {cast}) AS v FROM read_csv_auto('{csv_path}')"
+        )
+        rows = self._conn.execute("SELECT COUNT(*) FROM sort_data").fetchone()[0]
+        sql = "CREATE OR REPLACE TABLE sort_result AS SELECT * FROM sort_data ORDER BY v"
+
+        for _ in range(n_warmup):
+            self._conn.execute(sql)
+
+        results = []
+        for _ in range(n_iter):
+            self._conn.execute("DROP TABLE IF EXISTS sort_result")
+            _, time_ns = self._time_it(lambda: self._conn.execute(sql))
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
+
+        self._conn.execute("DROP TABLE IF EXISTS sort_result")
+        self._conn.execute("DROP TABLE IF EXISTS sort_data")
+        return results
 
     def close(self) -> None:
         if self._conn is not None:

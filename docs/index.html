@@ -840,47 +840,6 @@
            Task Tabs - like project cards
            =================================== */
         
-        .task-tabs {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-            justify-content: center;
-        }
-        
-        .task-tab {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all var(--transition-normal);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        .task-tab:hover {
-            border-color: var(--accent-golden);
-            color: var(--accent-golden);
-            transform: translateY(-2px);
-        }
-        
-        .task-tab.active {
-            background: var(--accent-golden);
-            border-color: var(--accent-golden);
-            color: var(--primary-navy);
-        }
-        
-        .task-panel {
-            display: none;
-        }
-        
-        .task-panel.active {
-            display: block;
-        }
-        
         /* ===================================
            Footer - matching website
            =================================== */
@@ -1047,7 +1006,7 @@
             <div class="hero-meta">
                 <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    January 20, 2026 at 12:00
+                    <span id="generatedAt">—</span>
                 </span>
             </div>
         </div>
@@ -1056,21 +1015,21 @@
     <div class="perf-cards">
 
             <div class="perf-card lazy-load-scale">
-                <div class="metric">5</div>
+                <div class="metric" id="metricDatabases">—</div>
                 <div class="label">Databases</div>
                 <div class="sublabel">compared</div>
             </div>
 
 
             <div class="perf-card lazy-load-scale">
-                <div class="metric">6</div>
+                <div class="metric" id="metricQueries">—</div>
                 <div class="label">Queries</div>
                 <div class="sublabel">benchmarked</div>
             </div>
 
 
             <div class="perf-card lazy-load-scale">
-                <div class="metric">30</div>
+                <div class="metric" id="metricDataPoints">—</div>
                 <div class="label">Data Points</div>
                 <div class="sublabel">collected</div>
             </div>
@@ -1084,7 +1043,12 @@
                 <span class="section-badge">Median Time</span>
             </div>
             <div class="chart-card lazy-load">
-                <div id="main-chart" class="chart-container"></div>
+                <h3 style="margin: 0 0 12px 0; font-size: 14px; opacity: 0.7;">Fast queries (groupby q1–q6)</h3>
+                <div id="main-chart-fast" class="chart-container"></div>
+            </div>
+            <div class="chart-card lazy-load" style="margin-top: 24px;">
+                <h3 style="margin: 0 0 12px 0; font-size: 14px; opacity: 0.7;">Heavy queries (q7, joins, sorts)</h3>
+                <div id="main-chart-heavy" class="chart-container"></div>
             </div>
         </section>
 
@@ -1102,6 +1066,9 @@
                         <option value="rayforce">Rayforce</option>
                         <option value="duckdb">DuckDB</option>
                         <option value="polars">Polars</option>
+                        <option value="pandas">Pandas</option>
+                        <option value="chdb">chDB</option>
+                        <option value="datafusion">DataFusion</option>
                         <option value="questdb">QuestDB</option>
                         <option value="timescale">TimescaleDB</option>
                     </select>
@@ -1110,6 +1077,9 @@
                         <option value="duckdb">DuckDB</option>
                         <option value="rayforce">Rayforce</option>
                         <option value="polars">Polars</option>
+                        <option value="pandas">Pandas</option>
+                        <option value="chdb">chDB</option>
+                        <option value="datafusion">DataFusion</option>
                         <option value="questdb">QuestDB</option>
                         <option value="timescale">TimescaleDB</option>
                     </select>
@@ -1125,308 +1095,13 @@
                         <th>Database</th>
                         <th>Median (ms)</th>
                         <th>Min (ms)</th>
-                        <th>P95 (ms)</th>
-                        <th>Rows/sec</th>
+                        <th>Max (ms)</th>
                     </tr>
                 </thead>
-                <tbody>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.553</td>
-                <td class="mono">0.512</td>
-                <td class="mono">0.670</td>
-                <td class="mono">18,083,183</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">0.741</td>
-                <td class="mono">0.711</td>
-                <td class="mono">0.867</td>
-                <td class="mono">13,495,276</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">1.425</td>
-                <td class="mono">1.356</td>
-                <td class="mono">1.720</td>
-                <td class="mono">7,017,544</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">10.128</td>
-                <td class="mono">7.874</td>
-                <td class="mono">15.559</td>
-                <td class="mono">987,361</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q1</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">21.849</td>
-                <td class="mono">21.192</td>
-                <td class="mono">21.932</td>
-                <td class="mono">457,683</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">1.241</td>
-                <td class="mono">1.177</td>
-                <td class="mono">1.435</td>
-                <td class="mono">8,058,018</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">3.532</td>
-                <td class="mono">3.289</td>
-                <td class="mono">3.808</td>
-                <td class="mono">2,831,257</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">8.240</td>
-                <td class="mono">7.886</td>
-                <td class="mono">9.151</td>
-                <td class="mono">1,213,592</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">15.224</td>
-                <td class="mono">14.388</td>
-                <td class="mono">18.281</td>
-                <td class="mono">656,856</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q2</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">35.773</td>
-                <td class="mono">35.501</td>
-                <td class="mono">36.117</td>
-                <td class="mono">279,548</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.772</td>
-                <td class="mono">0.740</td>
-                <td class="mono">0.942</td>
-                <td class="mono">12,953,368</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">0.929</td>
-                <td class="mono">0.906</td>
-                <td class="mono">0.992</td>
-                <td class="mono">10,764,263</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">2.002</td>
-                <td class="mono">1.919</td>
-                <td class="mono">2.299</td>
-                <td class="mono">4,995,211</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">5.003</td>
-                <td class="mono">3.798</td>
-                <td class="mono">9.707</td>
-                <td class="mono">1,998,801</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q3</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">28.234</td>
-                <td class="mono">24.785</td>
-                <td class="mono">30.096</td>
-                <td class="mono">354,186</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">1.124</td>
-                <td class="mono">1.059</td>
-                <td class="mono">1.234</td>
-                <td class="mono">8,896,797</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">1.268</td>
-                <td class="mono">1.130</td>
-                <td class="mono">1.390</td>
-                <td class="mono">7,886,435</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">2.293</td>
-                <td class="mono">2.181</td>
-                <td class="mono">2.576</td>
-                <td class="mono">4,361,187</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">6.881</td>
-                <td class="mono">5.769</td>
-                <td class="mono">7.477</td>
-                <td class="mono">1,453,277</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q4</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">38.984</td>
-                <td class="mono">34.552</td>
-                <td class="mono">48.022</td>
-                <td class="mono">256,514</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.895</td>
-                <td class="mono">0.855</td>
-                <td class="mono">1.005</td>
-                <td class="mono">11,173,184</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">1.213</td>
-                <td class="mono">1.102</td>
-                <td class="mono">1.427</td>
-                <td class="mono">8,244,994</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">2.233</td>
-                <td class="mono">2.183</td>
-                <td class="mono">2.615</td>
-                <td class="mono">4,478,314</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">5.591</td>
-                <td class="mono">5.182</td>
-                <td class="mono">16.943</td>
-                <td class="mono">1,788,589</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q5</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">31.870</td>
-                <td class="mono">30.004</td>
-                <td class="mono">37.483</td>
-                <td class="mono">313,775</td>
-            </tr>
-            <tr class="rayforce-row">
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #e9a033; font-weight: 600;">rayforce</td>
-                <td class="best-value mono">0.730</td>
-                <td class="mono">0.702</td>
-                <td class="mono">0.793</td>
-                <td class="mono">13,698,630</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #1565C0;">duckdb</td>
-                <td class="mono">1.719</td>
-                <td class="mono">1.486</td>
-                <td class="mono">1.883</td>
-                <td class="mono">5,817,336</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #6366F1;">questdb</td>
-                <td class="mono">4.192</td>
-                <td class="mono">2.958</td>
-                <td class="mono">12.765</td>
-                <td class="mono">2,385,486</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #E91E63;">polars</td>
-                <td class="mono">4.376</td>
-                <td class="mono">4.214</td>
-                <td class="mono">4.775</td>
-                <td class="mono">2,285,208</td>
-            </tr>
-            <tr>
-                <td><strong>groupby_q6</strong></td>
-                <td style="color: #14B8A6;">timescale</td>
-                <td class="mono">31.747</td>
-                <td class="mono">29.875</td>
-                <td class="mono">34.189</td>
-                <td class="mono">315,091</td>
-            </tr>
-                </tbody>
+                <tbody id="results-tbody"></tbody>
             </table>
         </div>
     
-        </section>
-        
-        <section class="section">
-            <div class="section-header lazy-load">
-                <h2>Task Breakdown</h2>
-                <span class="section-badge">Per-Query</span>
-            </div>
-
-        <div class="task-tabs lazy-load">
-            <button class="task-tab active" onclick="showTask(0)">groupby_q1</button>
-            <button class="task-tab" onclick="showTask(1)">groupby_q2</button>
-            <button class="task-tab" onclick="showTask(2)">groupby_q3</button>
-            <button class="task-tab" onclick="showTask(3)">groupby_q4</button>
-            <button class="task-tab" onclick="showTask(4)">groupby_q5</button>
-            <button class="task-tab" onclick="showTask(5)">groupby_q6</button>
-        </div>
-
-            <div class="task-panel active">
-                <div class="chart-card">
-                    <div id="task-chart-0" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-1" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-2" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-3" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-4" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
-            <div class="task-panel">
-                <div class="chart-card">
-                    <div id="task-chart-5" class="chart-container" style="height: 300px;"></div>
-                </div>
-            </div>
-
         </section>
     </main>
 
@@ -1464,10 +1139,88 @@
         </div>
     </footer>
     
+    <script src="data.js"></script>
     <script>
-        // Chart data
-        const chartData = {"comparison": {"adapters": ["duckdb", "polars", "questdb", "rayforce", "timescale"], "tasks": ["groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4", "groupby_q5", "groupby_q6"], "values": [{"adapter": "rayforce", "task": "groupby_q1", "median_ms": 0.552999}, {"adapter": "rayforce", "task": "groupby_q2", "median_ms": 1.240999}, {"adapter": "rayforce", "task": "groupby_q3", "median_ms": 0.772}, {"adapter": "rayforce", "task": "groupby_q4", "median_ms": 1.124}, {"adapter": "rayforce", "task": "groupby_q5", "median_ms": 0.894999}, {"adapter": "rayforce", "task": "groupby_q6", "median_ms": 0.73}, {"adapter": "polars", "task": "groupby_q1", "median_ms": 1.425041}, {"adapter": "polars", "task": "groupby_q2", "median_ms": 8.240167}, {"adapter": "polars", "task": "groupby_q3", "median_ms": 2.001917}, {"adapter": "polars", "task": "groupby_q4", "median_ms": 2.293375}, {"adapter": "polars", "task": "groupby_q5", "median_ms": 2.232917}, {"adapter": "polars", "task": "groupby_q6", "median_ms": 4.375791}, {"adapter": "duckdb", "task": "groupby_q1", "median_ms": 0.740584}, {"adapter": "duckdb", "task": "groupby_q2", "median_ms": 3.532333}, {"adapter": "duckdb", "task": "groupby_q3", "median_ms": 0.928833}, {"adapter": "duckdb", "task": "groupby_q4", "median_ms": 1.268042}, {"adapter": "duckdb", "task": "groupby_q5", "median_ms": 1.212667}, {"adapter": "duckdb", "task": "groupby_q6", "median_ms": 1.719}, {"adapter": "questdb", "task": "groupby_q1", "median_ms": 10.127708}, {"adapter": "questdb", "task": "groupby_q2", "median_ms": 15.223959}, {"adapter": "questdb", "task": "groupby_q3", "median_ms": 5.002584}, {"adapter": "questdb", "task": "groupby_q4", "median_ms": 6.880875}, {"adapter": "questdb", "task": "groupby_q5", "median_ms": 5.5905}, {"adapter": "questdb", "task": "groupby_q6", "median_ms": 4.19225}, {"adapter": "timescale", "task": "groupby_q1", "median_ms": 21.848833}, {"adapter": "timescale", "task": "groupby_q2", "median_ms": 35.772584}, {"adapter": "timescale", "task": "groupby_q3", "median_ms": 28.233709}, {"adapter": "timescale", "task": "groupby_q4", "median_ms": 38.984292}, {"adapter": "timescale", "task": "groupby_q5", "median_ms": 31.869708}, {"adapter": "timescale", "task": "groupby_q6", "median_ms": 31.747}]}, "tasks": {"groupby_q1": [{"adapter": "duckdb", "values": [0.814083, 0.866791, 0.720167, 0.711042, 0.740584], "boxplot": [0.711042, 0.720167, 0.740584, 0.814083, 0.866791]}, {"adapter": "polars", "values": [1.607, 1.719792, 1.4195, 1.425041, 1.355666], "boxplot": [1.355666, 1.4195, 1.425041, 1.607, 1.719792]}, {"adapter": "questdb", "values": [10.127708, 7.882083, 11.281125, 15.559333, 7.873542], "boxplot": [7.873542, 7.882083, 10.127708, 11.281125, 15.559333]}, {"adapter": "rayforce", "values": [0.669999, 0.552999, 0.57, 0.512, 0.539999], "boxplot": [0.512, 0.539999, 0.552999, 0.57, 0.669999]}, {"adapter": "timescale", "values": [21.848833, 21.715875, 21.926208, 21.931833, 21.191833], "boxplot": [21.191833, 21.715875, 21.848833, 21.926208, 21.931833]}], "groupby_q2": [{"adapter": "duckdb", "values": [3.808292, 3.289375, 3.56025, 3.532333, 3.416375], "boxplot": [3.289375, 3.416375, 3.532333, 3.56025, 3.808292]}, {"adapter": "polars", "values": [8.568417, 9.1505, 8.072667, 8.240167, 7.886375], "boxplot": [7.886375, 8.072667, 8.240167, 8.568417, 9.1505]}, {"adapter": "questdb", "values": [16.317416, 15.223959, 18.28125, 14.387542, 14.45825], "boxplot": [14.387542, 14.45825, 15.223959, 16.317416, 18.28125]}, {"adapter": "rayforce", "values": [1.434999, 1.177, 1.240999, 1.347, 1.226], "boxplot": [1.177, 1.226, 1.240999, 1.347, 1.434999]}, {"adapter": "timescale", "values": [35.789042, 36.116917, 35.707958, 35.500833, 35.772584], "boxplot": [35.500833, 35.707958, 35.772584, 35.789042, 36.116917]}], "groupby_q3": [{"adapter": "duckdb", "values": [0.982917, 0.905666, 0.915667, 0.928833, 0.992417], "boxplot": [0.905666, 0.915667, 0.928833, 0.982917, 0.992417]}, {"adapter": "polars", "values": [2.299041, 2.001917, 1.989625, 1.918708, 2.126333], "boxplot": [1.918708, 1.989625, 2.001917, 2.126333, 2.299041]}, {"adapter": "questdb", "values": [9.706917, 5.190959, 5.002584, 3.797667, 4.089084], "boxplot": [3.797667, 4.089084, 5.002584, 5.190959, 9.706917]}, {"adapter": "rayforce", "values": [0.766, 0.772, 0.74, 0.775999, 0.942], "boxplot": [0.74, 0.766, 0.772, 0.775999, 0.942]}, {"adapter": "timescale", "values": [24.784542, 27.267958, 28.38075, 30.096208, 28.233709], "boxplot": [24.784542, 27.267958, 28.233709, 28.38075, 30.096208]}], "groupby_q4": [{"adapter": "duckdb", "values": [1.129541, 1.234542, 1.268042, 1.289042, 1.389542], "boxplot": [1.129541, 1.234542, 1.268042, 1.289042, 1.389542]}, {"adapter": "polars", "values": [2.575958, 2.293375, 2.181334, 2.264833, 2.322542], "boxplot": [2.181334, 2.264833, 2.293375, 2.322542, 2.575958]}, {"adapter": "questdb", "values": [6.247042, 5.768791, 7.160542, 6.880875, 7.47675], "boxplot": [5.768791, 6.247042, 6.880875, 7.160542, 7.47675]}, {"adapter": "rayforce", "values": [1.062, 1.059, 1.124, 1.216, 1.234], "boxplot": [1.059, 1.062, 1.124, 1.216, 1.234]}, {"adapter": "timescale", "values": [34.551791, 38.743, 38.984292, 48.021708, 42.765292], "boxplot": [34.551791, 38.743, 38.984292, 42.765292, 48.021708]}], "groupby_q5": [{"adapter": "duckdb", "values": [1.107958, 1.102291, 1.234833, 1.212667, 1.426625], "boxplot": [1.102291, 1.107958, 1.212667, 1.234833, 1.426625]}, {"adapter": "polars", "values": [2.365042, 2.614584, 2.211041, 2.182875, 2.232917], "boxplot": [2.182875, 2.211041, 2.232917, 2.365042, 2.614584]}, {"adapter": "questdb", "values": [16.943042, 7.459041, 5.5905, 5.277625, 5.182292], "boxplot": [5.182292, 5.277625, 5.5905, 7.459041, 16.943042]}, {"adapter": "rayforce", "values": [0.855, 0.894999, 0.87, 0.957, 1.004999], "boxplot": [0.855, 0.87, 0.894999, 0.957, 1.004999]}, {"adapter": "timescale", "values": [31.09675, 37.482625, 30.003708, 31.869708, 34.545209], "boxplot": [30.003708, 31.09675, 31.869708, 34.545209, 37.482625]}], "groupby_q6": [{"adapter": "duckdb", "values": [1.485708, 1.52025, 1.883459, 1.733667, 1.719], "boxplot": [1.485708, 1.52025, 1.719, 1.733667, 1.883459]}, {"adapter": "polars", "values": [4.375791, 4.7745, 4.369458, 4.5975, 4.213792], "boxplot": [4.213792, 4.369458, 4.375791, 4.5975, 4.7745]}, {"adapter": "questdb", "values": [12.765042, 4.19225, 4.967125, 4.019083, 2.957708], "boxplot": [2.957708, 4.019083, 4.19225, 4.967125, 12.765042]}, {"adapter": "rayforce", "values": [0.779999, 0.702, 0.72, 0.73, 0.792999], "boxplot": [0.702, 0.72, 0.73, 0.779999, 0.792999]}, {"adapter": "timescale", "values": [32.865209, 31.747, 29.874709, 29.969833, 34.189291], "boxplot": [29.874709, 29.969833, 31.747, 32.865209, 34.189291]}]}};
-        
+        const chartData = window.chartData;
+
+        // Show when this data was written (set by bench/report.py).
+        if (chartData && chartData.generated_at) {
+            const el = document.getElementById('generatedAt');
+            if (el) el.textContent = chartData.generated_at;
+        }
+
+        // Hero counters reflect what's actually in the data set.
+        if (chartData && chartData.comparison) {
+            const c = chartData.comparison;
+            const dbs = (c.adapters || []).length;
+            const qs  = (c.tasks    || []).length;
+            const pts = (c.values   || []).length;
+            const set = (id, n) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = n;
+            };
+            set('metricDatabases',  dbs);
+            set('metricQueries',    qs);
+            set('metricDataPoints', pts);
+        }
+
+        // Build the results table dynamically from chartData.
+        // Columns: Task | Database | Median (ms) | Min (ms) | Max (ms)
+        const ADAPTER_COLORS = {
+            rayforce:   '#e9a033',
+            duckdb:     '#1565C0',
+            polars:     '#2ca02c',
+            chdb:       '#E91E63',
+            datafusion: '#17becf',
+            pandas:     '#8c564b',
+            questdb:    '#6366F1',
+            timescale:  '#14B8A6',
+        };
+        if (chartData && chartData.comparison && chartData.tasks) {
+            const tbody = document.getElementById('results-tbody');
+            if (tbody) {
+                const tasksMeta = chartData.comparison.tasks || [];
+                const fmt = (n) => (n == null ? '—' : n.toFixed(3));
+                const rowsHtml = [];
+                for (const task of tasksMeta) {
+                    const taskRows = chartData.tasks[task] || [];
+                    const enriched = taskRows.map(r => ({
+                        adapter: r.adapter,
+                        median: r.boxplot ? r.boxplot[2] : null,
+                        min:    r.boxplot ? r.boxplot[0] : null,
+                        max:    r.boxplot ? r.boxplot[4] : null,
+                    }));
+                    enriched.sort((a, b) => {
+                        if (a.adapter === 'rayforce') return -1;
+                        if (b.adapter === 'rayforce') return 1;
+                        return (a.median ?? Infinity) - (b.median ?? Infinity);
+                    });
+                    const bestMedian = Math.min(...enriched
+                        .map(e => e.median ?? Infinity));
+                    for (const e of enriched) {
+                        const color = ADAPTER_COLORS[e.adapter] || '#666';
+                        const isRayforce = e.adapter === 'rayforce';
+                        const isBest = e.median === bestMedian;
+                        const rowCls = isRayforce ? ' class="rayforce-row"' : '';
+                        const medCls = isBest ? 'best-value mono' : 'mono';
+                        const adapterStyle = isRayforce
+                            ? `color: ${color}; font-weight: 600;`
+                            : `color: ${color};`;
+                        rowsHtml.push(
+                            `<tr${rowCls}>` +
+                            `<td><strong>${task}</strong></td>` +
+                            `<td style="${adapterStyle}">${e.adapter}</td>` +
+                            `<td class="${medCls}">${fmt(e.median)}</td>` +
+                            `<td class="mono">${fmt(e.min)}</td>` +
+                            `<td class="mono">${fmt(e.max)}</td>` +
+                            `</tr>`
+                        );
+                    }
+                }
+                tbody.innerHTML = rowsHtml.join('\n');
+            }
+        }
+
         // Theme management - default to light
         const themeToggle = document.querySelector('.theme-toggle');
         
@@ -1530,51 +1283,54 @@
             };
         }
         
-        // Main comparison chart
-        let mainChart = null;
-        
+        // Main comparison charts — split fast vs heavy so q7/join/sort
+        // (multi-second) don't flatten the q1..q6 (sub-second) group.
+        let mainChartFast = null;
+        let mainChartHeavy = null;
+
+        const FAST_TASKS = new Set([
+            "groupby_q1", "groupby_q2", "groupby_q3",
+            "groupby_q4", "groupby_q5", "groupby_q6"
+        ]);
+
         function initMainChart() {
-            const container = document.getElementById('main-chart');
-            if (!container) return;
-            
-            mainChart = echarts.init(container);
+            const fast = document.getElementById('main-chart-fast');
+            const heavy = document.getElementById('main-chart-heavy');
+            if (fast) {
+                mainChartFast = echarts.init(fast);
+                window.addEventListener('resize', () => mainChartFast.resize());
+            }
+            if (heavy) {
+                mainChartHeavy = echarts.init(heavy);
+                window.addEventListener('resize', () => mainChartHeavy.resize());
+            }
             updateMainChart();
-            
-            window.addEventListener('resize', () => mainChart.resize());
         }
         
-        function updateMainChart() {
-            if (!mainChart || !chartData.comparison) return;
-            
-            const theme = getChartTheme();
-            const data = chartData.comparison;
-            
-            const series = data.adapters.map(adapter => ({
+        function _buildBarOption(theme, adapters, tasks, values) {
+            const series = adapters.map(adapter => ({
                 name: adapter,
                 type: 'bar',
-                data: data.tasks.map(task => {
-                    const entry = data.values.find(v => v.adapter === adapter && v.task === task);
-                    return entry ? entry.median_ms : null;
+                data: tasks.map(task => {
+                    const entry = values.find(v => v.adapter === adapter && v.task === task);
+                    return entry && entry.median_ms > 0 ? entry.median_ms : null;
                 }),
                 itemStyle: {
                     color: getAdapterColor(adapter),
                     borderRadius: [4, 4, 0, 0],
                 },
                 emphasis: {
-                    itemStyle: {
-                        shadowBlur: 10,
-                        shadowColor: 'rgba(0, 0, 0, 0.3)',
-                    }
+                    itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' }
                 }
             }));
-            
-            const option = {
+
+            return {
                 backgroundColor: theme.backgroundColor,
                 textStyle: { color: theme.textColor },
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: 'rgba(0,0,0,0.8)',
                     borderColor: 'transparent',
                     textStyle: { color: '#fff' },
                     formatter: function(params) {
@@ -1593,27 +1349,18 @@
                     }
                 },
                 legend: {
-                    data: data.adapters,
-                    bottom: 0,
+                    data: adapters, bottom: 0,
                     textStyle: { color: theme.textColor },
                     itemStyle: { borderWidth: 0 }
                 },
-                grid: {
-                    left: '3%',
-                    right: '4%',
-                    bottom: '15%',
-                    top: '10%',
-                    containLabel: true
-                },
+                grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
                 xAxis: {
-                    type: 'category',
-                    data: data.tasks,
+                    type: 'category', data: tasks,
                     axisLine: { lineStyle: { color: theme.axisLineColor } },
-                    axisLabel: { color: theme.textColor, rotate: data.tasks.length > 5 ? 30 : 0 }
+                    axisLabel: { color: theme.textColor, rotate: tasks.length > 5 ? 30 : 0 }
                 },
                 yAxis: {
-                    type: 'value',
-                    name: 'Time (ms)',
+                    type: 'value', name: 'Time (ms)',
                     nameTextStyle: { color: theme.textColor },
                     axisLine: { lineStyle: { color: theme.axisLineColor } },
                     axisLabel: { color: theme.textColor },
@@ -1622,129 +1369,29 @@
                 },
                 series: series
             };
-            
-            mainChart.setOption(option);
         }
-        
-        // Task detail charts
-        const taskCharts = {};
-        
-        function initTaskCharts() {
-            if (!chartData.tasks) return;
-            
-            Object.keys(chartData.tasks).forEach((taskId, idx) => {
-                const containerId = 'task-chart-' + idx;
-                const container = document.getElementById(containerId);
-                if (!container) return;
-                
-                const chart = echarts.init(container);
-                taskCharts[taskId] = chart;
-                updateTaskChart(taskId, chart);
-                
-                window.addEventListener('resize', () => chart.resize());
-            });
-        }
-        
-        function updateTaskChart(taskId, chart) {
-            if (!chart || !chartData.tasks[taskId]) return;
 
+        function updateMainChart() {
+            if (!chartData.comparison) return;
             const theme = getChartTheme();
-            const data = chartData.tasks[taskId];
+            const { adapters, tasks, values } = chartData.comparison;
 
-            // Sort data by median (middle value of boxplot)
-            const sortedData = [...data].sort((a, b) => a.boxplot[2] - b.boxplot[2]);
+            const fastTasks  = tasks.filter(t => FAST_TASKS.has(t));
+            const heavyTasks = tasks.filter(t => !FAST_TASKS.has(t));
 
-            const option = {
-                backgroundColor: theme.backgroundColor,
-                textStyle: { color: theme.textColor },
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                    borderColor: 'transparent',
-                    textStyle: { color: '#fff' },
-                    formatter: function(params) {
-                        const p = params[0];
-                        const adapterData = sortedData[p.dataIndex];
-                        return `<div style="font-weight:600;margin-bottom:8px">${adapterData.adapter}</div>
-                            <div>Median: <strong>${adapterData.boxplot[2].toFixed(3)} ms</strong></div>
-                            <div>Min: ${adapterData.boxplot[0].toFixed(3)} ms</div>
-                            <div>Max: ${adapterData.boxplot[4].toFixed(3)} ms</div>
-                            <div>Q1: ${adapterData.boxplot[1].toFixed(3)} ms</div>
-                            <div>Q3: ${adapterData.boxplot[3].toFixed(3)} ms</div>`;
-                    }
-                },
-                grid: {
-                    left: '3%',
-                    right: '4%',
-                    bottom: '10%',
-                    top: '15%',
-                    containLabel: true
-                },
-                xAxis: {
-                    type: 'category',
-                    data: sortedData.map(d => d.adapter),
-                    axisLine: { lineStyle: { color: theme.axisLineColor } },
-                    axisLabel: { color: theme.textColor, fontWeight: 500 }
-                },
-                yAxis: {
-                    type: 'value',
-                    name: 'Time (ms)',
-                    nameTextStyle: { color: theme.textColor },
-                    axisLine: { lineStyle: { color: theme.axisLineColor } },
-                    axisLabel: { color: theme.textColor },
-                    splitLine: { lineStyle: { color: theme.splitLineColor } },
-                    min: 0
-                },
-                series: [{
-                    name: 'Median Time',
-                    type: 'bar',
-                    data: sortedData.map(d => ({
-                        value: d.boxplot[2], // median
-                        itemStyle: {
-                            color: getAdapterColor(d.adapter),
-                            borderRadius: [4, 4, 0, 0]
-                        }
-                    })),
-                    barWidth: '60%',
-                    label: {
-                        show: true,
-                        position: 'top',
-                        formatter: function(params) {
-                            return params.value.toFixed(2) + ' ms';
-                        },
-                        color: theme.textColor,
-                        fontSize: 11
-                    }
-                }]
-            };
-
-            chart.setOption(option);
+            if (mainChartFast && fastTasks.length) {
+                mainChartFast.setOption(_buildBarOption(theme, adapters, fastTasks, values));
+            }
+            if (mainChartHeavy && heavyTasks.length) {
+                mainChartHeavy.setOption(_buildBarOption(theme, adapters, heavyTasks, values));
+            }
         }
         
         function updateCharts() {
-            setTimeout(() => {
-                updateMainChart();
-                Object.entries(taskCharts).forEach(([taskId, chart]) => {
-                    updateTaskChart(taskId, chart);
-                });
-            }, 50);
+            setTimeout(updateMainChart, 50);
         }
-        
-        // Task tabs
-        function showTask(idx) {
-            document.querySelectorAll('.task-tab').forEach((tab, i) => {
-                tab.classList.toggle('active', i === idx);
-            });
-            document.querySelectorAll('.task-panel').forEach((panel, i) => {
-                panel.classList.toggle('active', i === idx);
-                if (i === idx) {
-                    const chart = Object.values(taskCharts)[idx];
-                    if (chart) chart.resize();
-                }
-            });
-        }
-        
+
+
         // Lazy Loading with IntersectionObserver
         function initLazyLoading() {
             const observerOptions = {
@@ -1762,12 +1409,12 @@
                         const chartContainer = entry.target.querySelector('.chart-container');
                         if (chartContainer) {
                             setTimeout(() => {
-                                if (mainChart && chartContainer.id === 'main-chart') {
-                                    mainChart.resize();
+                                if (mainChartFast && chartContainer.id === 'main-chart-fast') {
+                                    mainChartFast.resize();
                                 }
-                                Object.values(taskCharts).forEach(chart => {
-                                    if (chart) chart.resize();
-                                });
+                                if (mainChartHeavy && chartContainer.id === 'main-chart-heavy') {
+                                    mainChartHeavy.resize();
+                                }
                             }, 100);
                         }
 
@@ -1873,7 +1520,6 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             initMainChart();
-            initTaskCharts();
             initLazyLoading();
             updateComparison();
         });

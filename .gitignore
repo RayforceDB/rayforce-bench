@@ -1,6 +1,7 @@
 __pycache__/
 .claude/
 data/
+.deps/
 
 # Python
 *.py[cod]
@@ -39,9 +40,6 @@ ENV/
 
 # Old reports folder (deprecated, use docs/ for GitHub Pages)
 reports/
-
-# Keep docs/ (GitHub Pages output) tracked
-# docs/
 
 # Generated datasets (keep manifests and .gitkeep)
 datasets/*/*.csv

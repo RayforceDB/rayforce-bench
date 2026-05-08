@@ -170,14 +170,27 @@ class TimescaleAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q6", time_ns, len(result))
 
-    def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        t = self._get_table()
+
+        def query():
+            with self._conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT id1, id2, id3, id4, id5, id6, "
+                    f"SUM(v3) as v3, COUNT(v1) as cnt "
+                    f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6"
+                )
+                return cur.fetchall()
+
+        result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q7", time_ns, len(result))
+
+    def _load_right(self, right_path: Path) -> str:
+        """Bulk-COPY the right table; return its SQL name."""
         import io
         import polars as pl
 
-        left = self._get_table("left")
-
-        # Load right table and materialize in memory before timing
         df = pl.read_csv(right_path)
         right_table = "bench_right_tmp"
 
@@ -200,60 +213,46 @@ class TimescaleAdapter(Adapter):
             cur.execute(f"CREATE TABLE {right_table} ({', '.join(columns)})")
             with cur.copy(f"COPY {right_table} FROM STDIN WITH CSV") as copy:
                 copy.write(buffer.read())
+        return right_table
+
+    def run_join_inner(self, right_path: Path) -> BenchmarkResult:
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
+        left = self._get_table("left")
+        right = self._load_right(right_path)
 
         def query():
             with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {left} INNER JOIN {right_table} ON {left}.id1 = {right_table}.id1")
+                cur.execute(
+                    f"SELECT * FROM {left} INNER JOIN {right} "
+                    f"ON {left}.id1 = {right}.id1 "
+                    f"AND {left}.id2 = {right}.id2 "
+                    f"AND {left}.id3 = {right}.id3"
+                )
                 return cur.fetchall()
 
         result, time_ns = self._time_it(query)
-
         with self._conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
-
+            cur.execute(f"DROP TABLE IF EXISTS {right}")
         return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
-        import io
-        import polars as pl
-
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-
-        # Load right table and materialize in memory before timing
-        df = pl.read_csv(right_path)
-        right_table = "bench_right_tmp"
-
-        with self._conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
-
-        columns = []
-        for name, dtype in df.schema.items():
-            if dtype == pl.Int64:
-                columns.append(f"{name} BIGINT")
-            elif dtype == pl.Float64:
-                columns.append(f"{name} DOUBLE PRECISION")
-            else:
-                columns.append(f"{name} TEXT")
-
-        buffer = io.StringIO()
-        df.write_csv(buffer, include_header=False)
-        buffer.seek(0)
-        with self._conn.cursor() as cur:
-            cur.execute(f"CREATE TABLE {right_table} ({', '.join(columns)})")
-            with cur.copy(f"COPY {right_table} FROM STDIN WITH CSV") as copy:
-                copy.write(buffer.read())
+        right = self._load_right(right_path)
 
         def query():
             with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {left} LEFT JOIN {right_table} ON {left}.id1 = {right_table}.id1")
+                cur.execute(
+                    f"SELECT * FROM {left} LEFT JOIN {right} "
+                    f"ON {left}.id1 = {right}.id1 "
+                    f"AND {left}.id2 = {right}.id2 "
+                    f"AND {left}.id3 = {right}.id3"
+                )
                 return cur.fetchall()
 
         result, time_ns = self._time_it(query)
-
         with self._conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {right_table}")
-
+            cur.execute(f"DROP TABLE IF EXISTS {right}")
         return BenchmarkResult("join_left", time_ns, len(result))
 
     def run_sort_single(self) -> BenchmarkResult:
@@ -279,6 +278,55 @@ class TimescaleAdapter(Adapter):
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
+
+    # PostgreSQL has no UINT8; SMALLINT covers 0..255 safely.
+    _TIMESCALE_TYPES = {
+        "u8": "SMALLINT", "i16": "SMALLINT", "i32": "INTEGER",
+        "i64": "BIGINT", "f64": "DOUBLE PRECISION",
+        "str8": "TEXT", "str16": "TEXT",
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        import io
+        import polars as pl
+
+        col_type = self._TIMESCALE_TYPES[dtype]
+        sort_table = "bench_sort_tmp"
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
+            cur.execute(f"CREATE TABLE {sort_table} (v {col_type})")
+
+        # Stream CSV body (sans header) into the typed table via COPY.
+        df = pl.read_csv(csv_path)
+        buffer = io.StringIO()
+        df.write_csv(buffer, include_header=False)
+        buffer.seek(0)
+        with self._conn.cursor() as cur:
+            with cur.copy(f"COPY {sort_table} FROM STDIN WITH CSV") as copy:
+                copy.write(buffer.read())
+
+        sql = f"SELECT * FROM {sort_table} ORDER BY v"
+
+        for _ in range(n_warmup):
+            with self._conn.cursor() as cur:
+                cur.execute(sql)
+                cur.fetchall()
+
+        results = []
+        for _ in range(n_iter):
+            def query():
+                with self._conn.cursor() as cur:
+                    cur.execute(sql)
+                    return cur.fetchall()
+            r, time_ns = self._time_it(query)
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, len(r)))
+
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
+        return results
 
     def close(self) -> None:
         if self._conn is not None:

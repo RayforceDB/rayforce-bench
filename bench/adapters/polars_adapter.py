@@ -91,28 +91,34 @@ class PolarsAdapter(Adapter):
         result, time_ns = self._time_it(query)
         return BenchmarkResult("groupby_q6", time_ns, len(result))
 
-    def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
-        left = self._get_table("left")
-        # Load right table and materialize in memory before timing
-        right = pl.read_csv(right_path)
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        df = self._get_table()
 
         def query():
-            return left.join(right, on="id1", how="inner")
+            return df.group_by(["id1", "id2", "id3", "id4", "id5", "id6"]).agg(
+                pl.sum("v3"), pl.col("v1").count().alias("cnt")
+            )
 
         result, time_ns = self._time_it(query)
+        return BenchmarkResult("groupby_q7", time_ns, len(result))
+
+    def run_join_inner(self, right_path: Path) -> BenchmarkResult:
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
+        left = self._get_table("left")
+        right = pl.read_csv(right_path)
+        result, time_ns = self._time_it(
+            lambda: left.join(right, on=["id1", "id2", "id3"], how="inner")
+        )
         return BenchmarkResult("join_inner", time_ns, len(result))
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
-        # Load right table and materialize in memory before timing
         right = pl.read_csv(right_path)
-
-        def query():
-            return left.join(right, on="id1", how="left")
-
-        result, time_ns = self._time_it(query)
+        result, time_ns = self._time_it(
+            lambda: left.join(right, on=["id1", "id2", "id3"], how="left")
+        )
         return BenchmarkResult("join_left", time_ns, len(result))
 
     def run_sort_single(self) -> BenchmarkResult:
@@ -134,6 +140,28 @@ class PolarsAdapter(Adapter):
 
         result, time_ns = self._time_it(query)
         return BenchmarkResult("sort_multi", time_ns, len(result))
+
+    _POLARS_DTYPES = {
+        "u8": pl.UInt8, "i16": pl.Int16, "i32": pl.Int32,
+        "i64": pl.Int64, "f64": pl.Float64,
+        "str8": pl.Utf8, "str16": pl.Utf8,
+    }
+
+    def run_sort_typed_full(self, csv_path: Path, dtype: str,
+                             n_warmup: int, n_iter: int) -> list[BenchmarkResult]:
+        """Sort a single typed column for the extended sort grid."""
+        pl_dtype = self._POLARS_DTYPES[dtype]
+        df = pl.read_csv(csv_path, schema={"v": pl_dtype})
+        rows = df.height
+
+        for _ in range(n_warmup):
+            df.sort("v")
+
+        results = []
+        for _ in range(n_iter):
+            _, time_ns = self._time_it(lambda: df.sort("v"))
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
+        return results
 
     def close(self) -> None:
         self._tables.clear()

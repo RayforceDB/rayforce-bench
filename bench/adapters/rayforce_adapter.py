@@ -1,9 +1,12 @@
 """Rayforce native adapter for benchmarks.
 
-Measures pure rayforce core execution time using eval_str("(timeit ...)").
-No Python API overhead included in measurements.
+Measures end-to-end execution time with time.perf_counter_ns around
+eval_str() — same convention as the other adapters, so the comparison is
+fair. Does NOT use the engine's internal (timeit ...), which would hide
+Python-binding overhead and tilt results in rayforce's favor.
 """
 
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -57,6 +60,8 @@ class RayforceAdapter(Adapter):
             self._Table = Table
             self._I64 = I64
             self._F64 = F64
+            self._Symbol = getattr(rayforce, "Symbol", None)
+            self._STR = getattr(rayforce, "STR", None) or getattr(rayforce, "Str", None)
             self.version = f"{rayforce.version} (pypi)"
         except ImportError as e:
             raise ImportError(
@@ -100,6 +105,8 @@ class RayforceAdapter(Adapter):
         self._Table = Table
         self._I64 = I64
         self._F64 = F64
+        self._Symbol = getattr(rayforce, "Symbol", None)
+        self._STR = getattr(rayforce, "STR", None) or getattr(rayforce, "Str", None)
         self.version = f"{rayforce.version} (local: {self._local_path})"
         print(f"Using rayforce {self.version}")
 
@@ -116,16 +123,41 @@ class RayforceAdapter(Adapter):
         self._table_names[table_name] = symbol_name
 
     def _get_column_types(self, path: Path) -> list:
-        """Get column types for CSV based on header."""
+        """Get column types for canonical H2O CSVs.
+
+        groupby:  id1..id3 string-symbol, id4..id6 i64, v1/v2 i64, v3 f64
+        join:     id1..id3 i64,           id4..id6 string-symbol, v float
+        """
         with open(path) as f:
-            header = f.readline().strip().split(",")
+            header = [c.strip().strip('"') for c in f.readline().strip().split(",")]
+
+        sym = self._Symbol or self._STR
+        if sym is None:
+            raise RuntimeError(
+                "rayforce-py lacks Symbol/STR types; "
+                "canonical H2O schema requires string IDs. "
+                "Upgrade rayforce-py."
+            )
+
+        # Look at the first data row to disambiguate (groupby vs join layout).
+        with open(path) as f:
+            f.readline()
+            first_row = [c.strip().strip('"') for c in f.readline().strip().split(",")]
 
         types = []
-        for col in header:
+        for col, val in zip(header, first_row):
             if col.startswith("id"):
-                types.append(self._I64)
-            elif col.startswith("v"):
+                # Strings start with "id" prefix in our generator output.
+                types.append(sym if val.startswith("id") else self._I64)
+            elif col == "v3":
                 types.append(self._F64)
+            elif col.startswith("v"):
+                # join-side v is float; groupby v1/v2 are int. Sniff.
+                try:
+                    int(val)
+                    types.append(self._I64)
+                except ValueError:
+                    types.append(self._F64)
             else:
                 types.append(self._I64)
         return types
@@ -137,32 +169,19 @@ class RayforceAdapter(Adapter):
         return self._table_names[name]
 
     def _run_timed_query(self, query: str, bench_name: str) -> BenchmarkResult:
-        """Run a query with timeit and return result.
+        """Execute a query and time it externally with perf_counter_ns.
 
         Args:
-            query: The rayforce query WITHOUT timeit wrapper
+            query: The rayforce query (rayfall expression as a string)
             bench_name: Name of the benchmark
 
         Returns:
             BenchmarkResult with timing in nanoseconds
         """
-        timed_query = f"(timeit {query})"
-        result = self._eval_str(timed_query)
-
-        # timeit returns time in milliseconds
-        if hasattr(result, "value"):
-            time_ms = result.value
-        elif hasattr(result, "to_python"):
-            time_ms = result.to_python()
-        else:
-            time_ms = float(result)
-
-        time_ns = int(time_ms * 1_000_000)  # milliseconds to nanoseconds
-
-        # Get row count by running query without timeit
-        result_table = self._eval_str(query)
-        rows = len(result_table)
-
+        start = time.perf_counter_ns()
+        result = self._eval_str(query)
+        time_ns = time.perf_counter_ns() - start
+        rows = len(result) if result is not None else 0
         return BenchmarkResult(bench_name, time_ns, rows)
 
     def run_groupby_q1(self) -> BenchmarkResult:
@@ -201,44 +220,78 @@ class RayforceAdapter(Adapter):
         query = f"(select {{range: (- (max v1) (min v2)) by: id3 from: {t}}})"
         return self._run_timed_query(query, "groupby_q6")
 
+    def run_groupby_q7(self) -> BenchmarkResult:
+        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        t = self._get_symbol()
+        query = (
+            f"(select {{from: {t} v3: (sum v3) cnt: (count v1) "
+            f"by: {{id1: id1 id2: id2 id3: id3 id4: id4 id5: id5 id6: id6}}}})"
+        )
+        return self._run_timed_query(query, "groupby_q7")
+
     def _load_table_from_csv(self, path: Path) -> object:
         """Load CSV file using rayforce native Table.from_csv."""
         column_types = self._get_column_types(path)
         return self._Table.from_csv(column_types, str(path))
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on id1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left_sym = self._get_symbol("left")
-        # Load right table and materialize in memory before timing
         right_table = self._load_table_from_csv(right_path)
         right_sym = "_bench_right_tmp"
         right_table.save(right_sym)
-
-        query = f"(ij `id1 {left_sym} {right_sym})"
+        query = f"(inner-join [id1 id2 id3] {left_sym} {right_sym})"
         return self._run_timed_query(query, "join_inner")
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on id1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1."""
         left_sym = self._get_symbol("left")
-        # Load right table and materialize in memory before timing
         right_table = self._load_table_from_csv(right_path)
         right_sym = "_bench_right_tmp"
         right_table.save(right_sym)
-
-        query = f"(lj `id1 {left_sym} {right_sym})"
+        query = f"(left-join [id1 id2 id3] {left_sym} {right_sym})"
         return self._run_timed_query(query, "join_left")
 
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""
         t = self._get_symbol()
-        query = f"(xasc {t} `id1)"
+        query = f"(xasc {t} 'id1)"
         return self._run_timed_query(query, "sort_single")
 
     def run_sort_multi(self) -> BenchmarkResult:
         """Sort by multiple columns."""
         t = self._get_symbol()
-        query = f"(xasc {t} `id1`id2`id3)"
+        query = f"(xasc {t} [id1 id2 id3])"
         return self._run_timed_query(query, "sort_multi")
+
+    _RF_TYPES_NAME = {
+        "u8": "U8", "i16": "I16", "i32": "I32",
+        "i64": "I64", "f64": "F64",
+        # rayforce-py 1.0.0 has rf.String but it's a Vector wrapper without
+        # the .ray_name attribute Table.from_csv() expects, so we can't
+        # request a RAY_STR column at load time. Fall back to Symbol — same
+        # underlying scan path that ~/rayforce/bench/h2o/q*.rfl uses.
+        "str8": "Symbol", "str16": "Symbol",
+    }
+
+    def run_sort_typed_full(self, csv_path, dtype: str,
+                             n_warmup: int, n_iter: int):
+        """Sort a single typed column for the extended sort grid."""
+        type_name = self._RF_TYPES_NAME[dtype]
+        rf_type = getattr(self._rayforce, type_name)
+        t = self._Table.from_csv([rf_type], str(csv_path))
+        rows = len(t)
+
+        for _ in range(n_warmup):
+            t.order_by("v").execute()
+
+        results = []
+        for _ in range(n_iter):
+            start = time.perf_counter_ns()
+            t.order_by("v").execute()
+            time_ns = time.perf_counter_ns() - start
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
+        return results
 
     def close(self) -> None:
         self._table_names.clear()
