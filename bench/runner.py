@@ -64,12 +64,26 @@ BENCHMARKS = {
     # big=N). Adapter loads x/small/medium/big from the canonical-join
     # dataset directory (data path is the dir, not a CSV).
     "canonical_join": [f"join_q{i}" for i in range(1, 6)],
-    # Bonus stress tests — kept for now under the existing "join"/"sort"
-    # suite names. Phase 3 of the canonical refactor will rename these
-    # to bonus_3key_inner / bonus_3key_left / bonus_sort_single / bonus_sort_multi.
+    # Bonus stress tests — *outside* of canonical H2O. Kept as separate
+    # ops so the report can label them distinctly:
+    #   join_inner / join_left : 3-key compound joins on equal-size tables
+    #   sort_single / sort_multi: full-table sort (1-key / 3-key)
     "join":           ["join_inner", "join_left"],
     "sort":           ["sort_single", "sort_multi"],
 }
+
+# Suite category — "canonical" vs "bonus". Used by reporters to group
+# ops in the comparison table and HTML report.
+SUITE_CATEGORY = {
+    "groupby":        "canonical",
+    "canonical_join": "canonical",
+    "join":           "bonus",
+    "sort":           "bonus",
+}
+
+# Logical "bonus" group — alias used by `make bench-bonus` so users can
+# run all bonus ops in one shot.
+BONUS_OPS = BENCHMARKS["join"] + BENCHMARKS["sort"]
 
 
 @dataclass

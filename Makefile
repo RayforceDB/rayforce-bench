@@ -20,7 +20,8 @@
 #   SORT_MAX=1m            Max length on the extended sort scaling curve
 #   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
 
-.PHONY: setup data bench bench-join bench-sort bench-all bench-scaling \
+.PHONY: setup data bench bench-join bench-canonical-join bench-sort \
+        bench-bonus bench-all bench-scaling \
         bench-sort-ext sort-grid-data check clean help _clean-cache
 
 VENV_PY := .venv/bin/python
@@ -150,6 +151,9 @@ bench-join: _clean-cache $(JOIN_DATA)/left.csv
 # Data path is the canonical-join directory (x/small/medium/big.csv).
 bench-canonical-join: _clean-cache $(CANONICAL_JOIN_DATA)/x.csv
 	@$(PYTHON) -m bench.runner canonical_join -d $(CANONICAL_JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+
+# Bonus stress tests outside of canonical H2O — 3-key joins + full-row sorts.
+bench-bonus: bench-join bench-sort
 
 bench-sort: _clean-cache $(GROUPBY_DATA)/data.csv
 	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
