@@ -358,6 +358,7 @@ def generate_scaling_html(input_json: Path, output_path: Path,
         "engine_colors": ENGINE_COLORS,
         "op_dashes":     {op: _dash_for_op(op) for op in ops},
         "op_markers":    {op: _marker_for_op(op) for op in ops},
+        "op_groups":     {op: _OP_GROUPS.get(op, "other") for op in ops},
         "rayforce_label": meta.get("rayforce_label", ""),
     }
 
@@ -437,6 +438,13 @@ _SCALING_TEMPLATE = r"""<!DOCTYPE html>
   .btn-row button { font-size: 11px; padding: 2px 8px; cursor: pointer;
                      border: 1px solid #ccc; border-radius: 3px; background: #f5f5f5; }
   .btn-row button:hover { background: #e0e0e0; }
+  /* Operations panel — 3 sub-columns (groupby / join / sort) so the
+     full op list fits without vertical scroll. */
+  .control-group-ops { min-width: auto; }
+  .op-grid { display: grid; grid-template-columns: repeat(3, max-content);
+              gap: 0 28px; align-items: start; }
+  .op-col-title { font-size: 11px; color: #888; text-transform: uppercase;
+                   letter-spacing: 0.4px; margin: 0 0 4px 0; font-weight: 600; }
   #chart { background: white; border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 8px; }
 </style>
@@ -454,12 +462,25 @@ _SCALING_TEMPLATE = r"""<!DOCTYPE html>
     </div>
     <div id="engine-checks"></div>
   </div>
-  <div class="control-group">
+  <div class="control-group control-group-ops">
     <h3>Operations</h3>
     <div class="btn-row">
       <button onclick="toggleAll('op', false)">None</button>
     </div>
-    <div id="op-checks"></div>
+    <div class="op-grid">
+      <div>
+        <div class="op-col-title">Group-by</div>
+        <div id="op-checks-groupby"></div>
+      </div>
+      <div>
+        <div class="op-col-title">Joins</div>
+        <div id="op-checks-join"></div>
+      </div>
+      <div>
+        <div class="op-col-title">Sorts</div>
+        <div id="op-checks-sort"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -473,21 +494,19 @@ const OPS = PAYLOAD.ops;
 const ENGINE_COLORS = PAYLOAD.engine_colors;
 const OP_DASHES = PAYLOAD.op_dashes;
 const OP_MARKERS = PAYLOAD.op_markers;
+const OP_GROUPS = PAYLOAD.op_groups || {};
 
 document.getElementById('meta').textContent =
   PAYLOAD.rayforce_label ? "rayforce: " + PAYLOAD.rayforce_label : "";
 
-const OP_GROUPS = {
-  "groupby_q1": "groupby", "groupby_q2": "groupby", "groupby_q3": "groupby",
-  "groupby_q4": "groupby", "groupby_q5": "groupby", "groupby_q6": "groupby",
-  "groupby_q7": "groupby",
-  "join_inner": "join", "join_left": "join",
-  "sort_single": "sort", "sort_multi": "sort",
-  "sort_u8": "sort_typed", "sort_i16": "sort_typed",
-  "sort_i32": "sort_typed", "sort_i64": "sort_typed",
-  "sort_f64": "sort_typed", "sort_str8": "sort_typed",
-  "sort_str16": "sort_typed",
-};
+// Bucket each op into one of the 3 visible columns. sort + sort_typed
+// share a column, anything unbucketed lands under "Sorts" too.
+function bucketOf(op) {
+  const g = OP_GROUPS[op];
+  if (g === 'groupby') return 'groupby';
+  if (g === 'join')    return 'join';
+  return 'sort';
+}
 
 const enabled = { engine: {}, op: {} };
 ENGINES.forEach(e => enabled.engine[e] = true);
@@ -525,21 +544,17 @@ function buildChecks(containerId, items, category, swatchFn) {
 
 buildChecks('engine-checks', ENGINES, 'engine',
   e => ENGINE_COLORS[e] || '#666');
-buildChecks('op-checks', OPS, 'op', null);
+const opsByBucket = { groupby: [], join: [], sort: [] };
+OPS.forEach(o => opsByBucket[bucketOf(o)].push(o));
+buildChecks('op-checks-groupby', opsByBucket.groupby, 'op', null);
+buildChecks('op-checks-join',    opsByBucket.join,    'op', null);
+buildChecks('op-checks-sort',    opsByBucket.sort,    'op', null);
 
 function toggleAll(category, val) {
   const items = category === 'engine' ? ENGINES : OPS;
   items.forEach(item => enabled[category][item] = val);
   document.querySelectorAll(`input[data-category="${category}"]`)
     .forEach(cb => cb.checked = val);
-  redraw();
-}
-
-function presetOps(group) {
-  OPS.forEach(o => enabled.op[o] = (OP_GROUPS[o] === group));
-  document.querySelectorAll('input[data-category="op"]').forEach(cb => {
-    cb.checked = enabled.op[cb.dataset.item];
-  });
   redraw();
 }
 
