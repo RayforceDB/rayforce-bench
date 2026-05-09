@@ -44,14 +44,17 @@ SORT_GRID_ADAPTERS = {"rayforce", "duckdb", "polars", "chdb",
 H2O_OPS = [
     "groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4",
     "groupby_q5", "groupby_q6", "groupby_q7",
+    "groupby_q8", "groupby_q9", "groupby_q10",
     "join_inner", "join_left",
+    "join_q1", "join_q2", "join_q3", "join_q4", "join_q5",
     "sort_single", "sort_multi",
 ]
 
-# Skip join under this row count — both sides are tiny, the timing is
-# pure overhead and the curve adds nothing.
-JOIN_MIN_ROWS = 1000
 
+def _is_canonical_join_op(op: str) -> bool:
+    """Canonical H2O J1 ops are named join_q1..join_q5 — distinct from
+    the bonus join_inner/join_left which use the old left/right tables."""
+    return op.startswith("join_q") and op[len("join_q"):].isdigit()
 
 def parse_size(s: str) -> int:
     s = s.lower().strip()
@@ -197,14 +200,19 @@ class ScalingConfig:
 
 
 def _spawn_h2o(cfg: ScalingConfig, adapter: str, op: str, n: int,
-               groupby_dir: Path, join_dir: Path | None) -> dict:
+               groupby_dir: Path, join_dir: Path | None,
+               canonical_join_dir: Path | None) -> dict:
     """Run one H2O (adapter, op) at size n via bench.worker."""
     fd, result_path = tempfile.mkstemp(prefix=f"sc_h2o_{adapter}_{op}_{n}_",
                                        suffix=".json")
     os.close(fd)
 
     n_iter, n_warmup = iter_counts(n)
-    if op.startswith("join_"):
+    if _is_canonical_join_op(op):
+        # Canonical H2O J1: worker loads x/small/medium/big from this dir.
+        primary = canonical_join_dir
+        right = None
+    elif op.startswith("join_"):
         primary = join_dir / "left.csv"
         right = join_dir / "right.csv"
     else:
@@ -324,8 +332,8 @@ def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
         print(f"\n══════ size = {size:,} ══════")
         # Generate datasets for this size before any subprocess starts.
         gb_dir = ensure_groupby(data_root, size, cfg.k, cfg.seed)
-        join_dir = ensure_join(data_root, size, cfg.k, cfg.seed) \
-            if size >= JOIN_MIN_ROWS else None
+        join_dir = ensure_join(data_root, size, cfg.k, cfg.seed)
+        cj_dir = ensure_canonical_join(data_root, size, cfg.k, cfg.seed)
         # Sort-grid CSVs: one per dtype, only for the sizes we need.
         gen_sort_grid(sort_grid_root, cfg.sort_dtypes, [size],
                       seed=cfg.seed, verbose=False)
@@ -333,10 +341,9 @@ def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
         # ── H2O ops ─────────────────────────────────────────────────────
         for adapter in cfg.adapters:
             for op in cfg.h2o_ops:
-                if op.startswith("join_") and size < JOIN_MIN_ROWS:
-                    continue
                 swap_before = SwapSample.now()
-                data = _spawn_h2o(cfg, adapter, op, size, gb_dir, join_dir)
+                data = _spawn_h2o(cfg, adapter, op, size, gb_dir,
+                                  join_dir, cj_dir)
                 warn_if_grew(swap_before, SwapSample.now(),
                              f"{adapter}/{op}/n={size}")
                 if data.get("error"):
@@ -402,8 +409,9 @@ def main():
     ap.add_argument("-a", "--adapters", nargs="+",
                     default=list(DEFAULT_ADAPTERS),
                     help=f"Adapters (default: {' '.join(DEFAULT_ADAPTERS)})")
-    ap.add_argument("--sizes", default="10,100,1k,10k,100k,1m",
-                    help="Comma-separated sizes (default: 10,100,1k,10k,100k,1m)")
+    ap.add_argument("--sizes",
+                    default="10,20,50,100,200,500,1k,2k,5k,10k,20k,50k,100k,200k,500k,1m,2m,5m,10m",
+                    help="Comma-separated sizes (default: 1-2-5 sequence 10..10m)")
     ap.add_argument("-k", type=int, default=100,
                     help="Group cardinality K (default: 100)")
     ap.add_argument("--seed", type=int, default=0)

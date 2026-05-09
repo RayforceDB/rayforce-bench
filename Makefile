@@ -32,8 +32,9 @@ RAYFORCE_LOCAL ?= ~/rayforce-py
 ITERATIONS ?= 5
 WARMUP ?= 2
 
-# bench-scaling defaults
-SIZES ?= 10,100,1k,10k,100k,1m,10m
+# bench-scaling defaults — 1-2-5 sequence, three points per decade so
+# minor log-axis ticks (10/20/50/100/...) all have measured datapoints.
+SIZES ?= 10,20,50,100,200,500,1k,2k,5k,10k,20k,50k,100k,200k,500k,1m,2m,5m,10m
 
 # check defaults — full size sweep against polars as reference.
 CHECK_SIZES ?= 10,100,1k,10k,100k,1m,10m
@@ -162,11 +163,13 @@ bench-all: _clean-cache $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv $(CANONIC
 	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) --canonical-join-data $(CANONICAL_JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 # Scaling sweep generates its own CSVs at every size as it runs.
+# Iterations omitted on purpose so the runner falls back to adaptive_iter
+# (21 → 7 → 5 → 3 by size) — fixed counts waste time at small n and
+# under-sample at large n.
 bench-scaling: _clean-cache $(VENV_PY)
 	@$(PYTHON) -u -m bench.scaling_runner \
 		--sizes $(SIZES) -a $(ADAPTERS) \
 		--data-dir $(DATA_DIR) \
-		-i $(ITERATIONS) -w $(WARMUP) \
 		$(RAYFORCE_FLAGS) $(STOP_INFRA)
 
 # Cross-adapter result-equivalence check. polars is the reference; every
