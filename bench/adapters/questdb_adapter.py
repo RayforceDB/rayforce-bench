@@ -6,7 +6,7 @@ Install client: pip install psycopg[binary]
 
 from pathlib import Path
 
-from .base import Adapter, BenchmarkResult
+from .base import Adapter, BenchmarkResult, _dedupe_col_names
 
 
 class QuestDBAdapter(Adapter):
@@ -17,6 +17,28 @@ class QuestDBAdapter(Adapter):
     """
 
     name = "questdb"
+
+    QUERY_STRINGS = {
+        "groupby_q1":  "SELECT id1, SUM(v1) FROM data GROUP BY id1",
+        "groupby_q2":  "SELECT id1, id2, SUM(v1) FROM data GROUP BY id1, id2",
+        "groupby_q3":  "SELECT id3, SUM(v1), AVG(v3) FROM data GROUP BY id3",
+        "groupby_q4":  "SELECT id4, AVG(v1), AVG(v2), AVG(v3) FROM data GROUP BY id4",
+        "groupby_q5":  "SELECT id6, SUM(v1), SUM(v2), SUM(v3) FROM data GROUP BY id6",
+        "groupby_q6":  "-- NYI: QuestDB has no exact median(); only approx_median",
+        "groupby_q7":  "SELECT id3, MAX(v1) - MIN(v2) FROM data GROUP BY id3",
+        "groupby_q8":  "SELECT id6, v3 FROM (SELECT id6, v3, row_number() OVER (PARTITION BY id6 ORDER BY v3 DESC) rn FROM data WHERE v3 IS NOT NULL) WHERE rn <= 2",
+        "groupby_q9":  "SELECT id2, id4, POWER(corr(v1, v2), 2) FROM data GROUP BY id2, id4",
+        "groupby_q10": "SELECT id1, id2, id3, id4, id5, id6, SUM(v3), COUNT(v1) FROM data GROUP BY id1, id2, id3, id4, id5, id6",
+        "join_q1":     "SELECT * FROM x INNER JOIN small  ON x.id1 = small.id1",
+        "join_q2":     "SELECT * FROM x INNER JOIN medium ON x.id2 = medium.id2",
+        "join_q3":     "SELECT * FROM x LEFT  JOIN medium ON x.id2 = medium.id2",
+        "join_q4":     "SELECT * FROM x INNER JOIN medium ON x.id5 = medium.id5",
+        "join_q5":     "SELECT * FROM x INNER JOIN big    ON x.id3 = big.id3",
+        "join_inner":  "SELECT * FROM left INNER JOIN right ON left.id1=right.id1 AND left.id2=right.id2 AND left.id3=right.id3",
+        "join_left":   "SELECT * FROM left LEFT  JOIN right ON left.id1=right.id1 AND left.id2=right.id2 AND left.id3=right.id3",
+        "sort_single": "SELECT * FROM data ORDER BY id1",
+        "sort_multi":  "SELECT * FROM data ORDER BY id1, id2, id3",
+    }
 
     def __init__(self, host: str = "localhost", pg_port: int = 8812, ilp_port: int = 9009):
         self._host = host
@@ -120,93 +142,101 @@ class QuestDBAdapter(Adapter):
             raise ValueError(f"Table '{name}' not loaded")
         return self._table_names[name]
 
+    def _time_pg(self, sql: str, name: str) -> BenchmarkResult:
+        """Time `cur.execute(sql)` only — engine compute on the server.
+
+        QuestDB completes the SELECT before returning control over the
+        PG protocol; `cur.rowcount` is populated immediately and does
+        not require fetching rows. Skipping fetchall keeps the timer
+        focused on engine work, not Python-side row materialization.
+        """
+        cur = self._conn.cursor()
+        try:
+            _, time_ns = self._time_it(lambda: cur.execute(sql))
+            rows = cur.rowcount
+        finally:
+            cur.close()
+        return BenchmarkResult(name, time_ns, rows)
+
     def run_groupby_q1(self) -> BenchmarkResult:
-        """Q1: sum(v1) group by id1"""
+        """Q1: sum(v1) by id1 — canonical H2O."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id1, SUM(v1) as v1_sum FROM {t} GROUP BY id1")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q1", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id1, SUM(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q1")
 
     def run_groupby_q2(self) -> BenchmarkResult:
-        """Q2: sum(v1) group by id1, id2"""
+        """Q2: sum(v1) by id1, id2 — canonical H2O."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id1, id2, SUM(v1) as v1_sum FROM {t} GROUP BY id1, id2")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q2", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id1, id2, SUM(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q2")
 
     def run_groupby_q3(self) -> BenchmarkResult:
-        """Q3: sum(v1), mean(v3) group by id3"""
+        """Q3: sum(v1), mean(v3) by id3 — canonical H2O."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, SUM(v1) as v1_sum, AVG(v3) as v3_avg FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q3", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id3, SUM(v1) AS v1, AVG(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q3")
 
     def run_groupby_q4(self) -> BenchmarkResult:
-        """Q4: mean(v1), mean(v2), mean(v3) group by id3"""
+        """Q4: mean(v1), mean(v2), mean(v3) by id4 — canonical H2O."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, AVG(v1) as v1_avg, AVG(v2) as v2_avg, AVG(v3) as v3_avg FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q4", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id4, AVG(v1) AS v1, AVG(v2) AS v2, AVG(v3) AS v3 "
+            f"FROM {t} GROUP BY id4", "groupby_q4")
 
     def run_groupby_q5(self) -> BenchmarkResult:
-        """Q5: sum(v1), sum(v2), sum(v3) group by id3"""
+        """Q5: sum(v1), sum(v2), sum(v3) by id6 — canonical H2O."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, SUM(v1) as v1_sum, SUM(v2) as v2_sum, SUM(v3) as v3_sum FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q5", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT id6, SUM(v1) AS v1, SUM(v2) AS v2, SUM(v3) AS v3 "
+            f"FROM {t} GROUP BY id6", "groupby_q5")
 
     def run_groupby_q6(self) -> BenchmarkResult:
-        """Q6: max(v1) - min(v2) group by id3"""
-        t = self._get_table()
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O.
 
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT id3, MAX(v1) - MIN(v2) as range FROM {t} GROUP BY id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q6", time_ns, len(result))
+        QuestDB has only `approx_median` / `approx_percentile`, no exact
+        median. The canonical H2O bench compares exact median values, so
+        we report NYI rather than ship an approximate result that would
+        fail the equivalence check.
+        """
+        raise NotImplementedError(
+            "QuestDB has no exact median (only approx_median); "
+            "canonical H2O q6 needs exact median(v3)")
 
     def run_groupby_q7(self) -> BenchmarkResult:
-        """Q7: sum(v3), count(v1) group by id1..id6 (canonical H2O)."""
+        """Q7: max(v1) - min(v2) by id3 — canonical H2O."""
         t = self._get_table()
+        return self._time_pg(
+            f"SELECT id3, MAX(v1) - MIN(v2) AS range_v1_v2 "
+            f"FROM {t} GROUP BY id3", "groupby_q7")
 
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT id1, id2, id3, id4, id5, id6, "
-                    f"SUM(v3) as v3, COUNT(v1) as cnt "
-                    f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6"
-                )
-                return cur.fetchall()
+    def run_groupby_q8(self) -> BenchmarkResult:
+        """Q8: largest two v3 by id6 — canonical H2O."""
+        t = self._get_table()
+        return self._time_pg(
+            f"SELECT id6, v3 AS largest2_v3 FROM ("
+            f"  SELECT id6, v3, "
+            f"  row_number() OVER (PARTITION BY id6 ORDER BY v3 DESC) AS rn "
+            f"  FROM {t} WHERE v3 IS NOT NULL"
+            f") sub WHERE rn <= 2", "groupby_q8")
 
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("groupby_q7", time_ns, len(result))
+    def run_groupby_q9(self) -> BenchmarkResult:
+        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O."""
+        t = self._get_table()
+        return self._time_pg(
+            f"SELECT id2, id4, POWER(corr(v1, v2), 2) AS r2 "
+            f"FROM {t} GROUP BY id2, id4", "groupby_q9")
+
+    def run_groupby_q10(self) -> BenchmarkResult:
+        """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
+        t = self._get_table()
+        return self._time_pg(
+            f"SELECT id1, id2, id3, id4, id5, id6, "
+            f"SUM(v3) AS v3, COUNT(v1) AS cnt "
+            f"FROM {t} GROUP BY id1, id2, id3, id4, id5, id6",
+            "groupby_q10")
 
     def _load_right(self, path: Path) -> str:
         """Stream right table into QuestDB via ILP, wait for commit."""
@@ -251,69 +281,73 @@ class QuestDBAdapter(Adapter):
             _time.sleep(0.1)
         return right_table
 
+    # Canonical H2O J1 — 5 single-key joins.
+
+    def _canon_join(self, right_name: str, key: str, kind: str,
+                    op_name: str) -> BenchmarkResult:
+        x = self._get_table("x")
+        r = self._get_table(right_name)
+        # QuestDB's PG protocol doesn't support USING; use ON.
+        return self._time_pg(
+            f"SELECT * FROM {x} {kind} JOIN {r} ON {x}.{key} = {r}.{key}",
+            op_name)
+
+    def run_join_q1(self) -> BenchmarkResult:
+        return self._canon_join("small", "id1", "INNER", "join_q1")
+
+    def run_join_q2(self) -> BenchmarkResult:
+        return self._canon_join("medium", "id2", "INNER", "join_q2")
+
+    def run_join_q3(self) -> BenchmarkResult:
+        return self._canon_join("medium", "id2", "LEFT", "join_q3")
+
+    def run_join_q4(self) -> BenchmarkResult:
+        return self._canon_join("medium", "id5", "INNER", "join_q4")
+
+    def run_join_q5(self) -> BenchmarkResult:
+        return self._canon_join("big", "id3", "INNER", "join_q5")
+
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         right = self._load_right(right_path)
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT * FROM {left} INNER JOIN {right} "
-                    f"ON {left}.id1 = {right}.id1 "
-                    f"AND {left}.id2 = {right}.id2 "
-                    f"AND {left}.id3 = {right}.id3"
-                )
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
+        sql = (
+            f"SELECT * FROM {left} INNER JOIN {right} "
+            f"ON {left}.id1 = {right}.id1 "
+            f"AND {left}.id2 = {right}.id2 "
+            f"AND {left}.id3 = {right}.id3"
+        )
+        result = self._time_pg(sql, "join_inner")
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {right}")
-        return BenchmarkResult("join_inner", time_ns, len(result))
+        return result
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         right = self._load_right(right_path)
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT * FROM {left} LEFT JOIN {right} "
-                    f"ON {left}.id1 = {right}.id1 "
-                    f"AND {left}.id2 = {right}.id2 "
-                    f"AND {left}.id3 = {right}.id3"
-                )
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
+        sql = (
+            f"SELECT * FROM {left} LEFT JOIN {right} "
+            f"ON {left}.id1 = {right}.id1 "
+            f"AND {left}.id2 = {right}.id2 "
+            f"AND {left}.id3 = {right}.id3"
+        )
+        result = self._time_pg(sql, "join_left")
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {right}")
-        return BenchmarkResult("join_left", time_ns, len(result))
+        return result
 
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {t} ORDER BY id1")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("sort_single", time_ns, len(result))
+        return self._time_pg(f"SELECT * FROM {t} ORDER BY id1", "sort_single")
 
     def run_sort_multi(self) -> BenchmarkResult:
         """Sort by multiple columns."""
         t = self._get_table()
-
-        def query():
-            with self._conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {t} ORDER BY id1, id2, id3")
-                return cur.fetchall()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("sort_multi", time_ns, len(result))
+        return self._time_pg(
+            f"SELECT * FROM {t} ORDER BY id1, id2, id3", "sort_multi",
+        )
 
     # u8 unsigned doesn't exist in QuestDB; SHORT covers 0..255 safely.
     _QUESTDB_TYPES = {
@@ -389,6 +423,84 @@ class QuestDBAdapter(Adapter):
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {sort_table}")
         return results
+
+    def materialize(self, op: str, right_path: Path | None = None):
+        import polars as pl
+        if op == "groupby_q6":
+            raise NotImplementedError(
+                "QuestDB has no exact median; canonical H2O q6 needs "
+                "exact median(v3), only approx_median is available.")
+        t = self._get_table() if not op.startswith("join_") else None
+        sql_map = {
+            "groupby_q1": f"SELECT id1, SUM(v1) AS v1 FROM {t} GROUP BY id1",
+            "groupby_q2": f"SELECT id1, id2, SUM(v1) AS v1 FROM {t} GROUP BY id1, id2",
+            "groupby_q3": f"SELECT id3, SUM(v1) AS v1, AVG(v3) AS v3 FROM {t} GROUP BY id3",
+            "groupby_q4": f"SELECT id4, AVG(v1) AS v1, AVG(v2) AS v2, AVG(v3) AS v3 FROM {t} GROUP BY id4",
+            "groupby_q5": f"SELECT id6, SUM(v1) AS v1, SUM(v2) AS v2, SUM(v3) AS v3 FROM {t} GROUP BY id6",
+            "groupby_q7": f"SELECT id3, MAX(v1) - MIN(v2) AS range_v1_v2 FROM {t} GROUP BY id3",
+            "groupby_q8": (
+                f"SELECT id6, v3 AS largest2_v3 FROM ("
+                f"  SELECT id6, v3, row_number() OVER "
+                f"  (PARTITION BY id6 ORDER BY v3 DESC) AS rn "
+                f"  FROM {t} WHERE v3 IS NOT NULL"
+                f") sub WHERE rn <= 2"
+            ),
+            "groupby_q9": (
+                f"SELECT id2, id4, POWER(corr(v1, v2), 2) AS r2 "
+                f"FROM {t} GROUP BY id2, id4"
+            ),
+            "groupby_q10": (
+                f"SELECT id1, id2, id3, id4, id5, id6, "
+                f"SUM(v3) AS v3, COUNT(v1) AS cnt FROM {t} "
+                f"GROUP BY id1, id2, id3, id4, id5, id6"
+            ),
+            "sort_single": f"SELECT * FROM {t} ORDER BY id1",
+            "sort_multi":  f"SELECT * FROM {t} ORDER BY id1, id2, id3",
+        }
+        if op in sql_map:
+            sql = sql_map[op]
+            cleanup = None
+        elif op.startswith("join_q") and op[len("join_q"):].isdigit():
+            x = self._get_table("x")
+            joins = {
+                "join_q1": (self._get_table("small"),  "INNER", "id1"),
+                "join_q2": (self._get_table("medium"), "INNER", "id2"),
+                "join_q3": (self._get_table("medium"), "LEFT",  "id2"),
+                "join_q4": (self._get_table("medium"), "INNER", "id5"),
+                "join_q5": (self._get_table("big"),    "INNER", "id3"),
+            }
+            r, kind, key = joins[op]
+            sql = (f"SELECT * FROM {x} {kind} JOIN {r} "
+                   f"ON {x}.{key} = {r}.{key}")
+            cleanup = None
+        elif op in ("join_inner", "join_left"):
+            left = self._get_table("left")
+            right = self._load_right(right_path)
+            kind = "INNER" if op == "join_inner" else "LEFT"
+            # Canonical projection — see duckdb_adapter.materialize for rationale.
+            sql = (
+                f"SELECT {left}.id1 AS id1, {left}.id2 AS id2, {left}.id3 AS id3, "
+                f"{left}.id4 AS id4, {left}.id5 AS id5, {left}.id6 AS id6, "
+                f"{left}.v1 AS v1, {right}.v2 AS v2 "
+                f"FROM {left} {kind} JOIN {right} "
+                f"ON {left}.id1 = {right}.id1 "
+                f"AND {left}.id2 = {right}.id2 "
+                f"AND {left}.id3 = {right}.id3"
+            )
+            cleanup = right
+        else:
+            raise ValueError(f"unknown op: {op}")
+        try:
+            with self._conn.cursor() as cur:
+                cur.execute(sql)
+                cols = [d.name for d in cur.description]
+                rows = cur.fetchall()
+            cols = _dedupe_col_names(cols)
+            return pl.DataFrame(rows, schema=cols, orient="row")
+        finally:
+            if cleanup:
+                with self._conn.cursor() as cur:
+                    cur.execute(f"DROP TABLE IF EXISTS {cleanup}")
 
     def close(self) -> None:
         if self._conn is not None:

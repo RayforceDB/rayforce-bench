@@ -719,6 +719,55 @@
             color: var(--text-primary);
         }
 
+        .comparison-sql {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .comparison-sql-task {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .comparison-sql-task-header {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+        }
+        .comparison-sql-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .comparison-query {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin: 0;
+            overflow-x: auto;
+        }
+        .comparison-query .cq-engine {
+            display: block;
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            opacity: 0.8;
+        }
+        @media (max-width: 720px) {
+            .comparison-sql-row { grid-template-columns: 1fr; }
+        }
+
         .comparison-speedup {
             display: inline-flex;
             align-items: center;
@@ -1043,11 +1092,11 @@
                 <span class="section-badge">Median Time</span>
             </div>
             <div class="chart-card lazy-load">
-                <h3 style="margin: 0 0 12px 0; font-size: 14px; opacity: 0.7;">Fast queries (groupby q1–q6)</h3>
+                <h3 style="margin: 0 0 12px 0; font-size: 14px; opacity: 0.7;">Group-by (q1–q10)</h3>
                 <div id="main-chart-fast" class="chart-container"></div>
             </div>
             <div class="chart-card lazy-load" style="margin-top: 24px;">
-                <h3 style="margin: 0 0 12px 0; font-size: 14px; opacity: 0.7;">Heavy queries (q7, joins, sorts)</h3>
+                <h3 style="margin: 0 0 12px 0; font-size: 14px; opacity: 0.7;">Joins &amp; sorts</h3>
                 <div id="main-chart-heavy" class="chart-container"></div>
             </div>
         </section>
@@ -1283,15 +1332,22 @@
             };
         }
         
-        // Main comparison charts — split fast vs heavy so q7/join/sort
-        // (multi-second) don't flatten the q1..q6 (sub-second) group.
+        // Main comparison charts — split into a "fast" set and a "heavy"
+        // set so multi-second bars don't flatten the sub-second group on
+        // a shared linear axis. Mostly groupby vs joins+sorts, with a
+        // couple of overrides where the per-op timing puts an op in the
+        // wrong bucket on this dataset (q10 is slow, join_inner is fast).
         let mainChartFast = null;
         let mainChartHeavy = null;
 
-        const FAST_TASKS = new Set([
-            "groupby_q1", "groupby_q2", "groupby_q3",
-            "groupby_q4", "groupby_q5", "groupby_q6"
-        ]);
+        const HEAVY_OVERRIDES = new Set(['groupby_q8', 'groupby_q9', 'groupby_q10']);
+        const FAST_OVERRIDES  = new Set();
+        const isFastTask = t => {
+            if (typeof t !== 'string') return false;
+            if (FAST_OVERRIDES.has(t))  return true;
+            if (HEAVY_OVERRIDES.has(t)) return false;
+            return t.startsWith('groupby_');
+        };
 
         function initMainChart() {
             const fast = document.getElementById('main-chart-fast');
@@ -1334,16 +1390,29 @@
                     borderColor: 'transparent',
                     textStyle: { color: '#fff' },
                     formatter: function(params) {
-                        let html = '<div style="font-weight:600;margin-bottom:8px">' + params[0].axisValue + '</div>';
-                        params.sort((a, b) => a.value - b.value);
-                        params.forEach(p => {
-                            if (p.value !== null) {
-                                html += '<div style="display:flex;justify-content:space-between;gap:24px;margin:4px 0">';
-                                html += '<span style="display:flex;align-items:center;gap:6px">';
-                                html += '<span style="width:10px;height:10px;border-radius:50%;background:' + p.color + '"></span>';
-                                html += p.seriesName + '</span>';
-                                html += '<span style="font-weight:600">' + p.value.toFixed(2) + ' ms</span></div>';
-                            }
+                        if (!params || !params.length) return '';
+                        const axisValue = params[0] && params[0].axisValue || '';
+                        let html = '<div style="font-weight:600;margin-bottom:8px">' + axisValue + '</div>';
+                        // Don't mutate params (ECharts may reuse the array
+                        // across renders) and treat null/undefined as NYI
+                        // sentinels instead of subtracting them in the sort.
+                        const isNum = v => typeof v === 'number' && !isNaN(v);
+                        const sorted = params.slice().sort((a, b) => {
+                            const an = isNum(a.value), bn = isNum(b.value);
+                            if (an && bn) return a.value - b.value;
+                            if (an) return -1;
+                            if (bn) return 1;
+                            return 0;
+                        });
+                        sorted.forEach(p => {
+                            const ok = isNum(p.value);
+                            html += '<div style="display:flex;justify-content:space-between;gap:24px;margin:4px 0">';
+                            html += '<span style="display:flex;align-items:center;gap:6px">';
+                            html += '<span style="width:10px;height:10px;border-radius:50%;background:' + p.color + '"></span>';
+                            html += p.seriesName + '</span>';
+                            html += '<span style="font-weight:600' + (ok ? '' : ';opacity:0.5') + '">'
+                                  + (ok ? (p.value.toFixed(2) + ' ms') : 'NYI')
+                                  + '</span></div>';
                         });
                         return html;
                     }
@@ -1376,8 +1445,8 @@
             const theme = getChartTheme();
             const { adapters, tasks, values } = chartData.comparison;
 
-            const fastTasks  = tasks.filter(t => FAST_TASKS.has(t));
-            const heavyTasks = tasks.filter(t => !FAST_TASKS.has(t));
+            const fastTasks  = tasks.filter(isFastTask);
+            const heavyTasks = tasks.filter(t => !isFastTask(t));
 
             if (mainChartFast && fastTasks.length) {
                 mainChartFast.setOption(_buildBarOption(theme, adapters, fastTasks, values));
@@ -1451,15 +1520,29 @@
             tasks.forEach(task => {
                 const db1Data = data.find(d => d.adapter === db1 && d.task === task);
                 const db2Data = data.find(d => d.adapter === db2 && d.task === task);
+                if (!db1Data || !db2Data) return;
 
-                if (db1Data && db2Data) {
-                    const speedup = db2Data.median_ms / db1Data.median_ms;
-                    comparisons.push({
-                        task: task,
-                        db1Time: db1Data.median_ms,
-                        db2Time: db2Data.median_ms,
-                        speedup: speedup
-                    });
+                const t1 = db1Data.median_ms, t2 = db2Data.median_ms;
+                const ok1 = typeof t1 === 'number' && t1 > 0;
+                const ok2 = typeof t2 === 'number' && t2 > 0;
+                if (!ok1 && !ok2) return;  // both NYI — nothing to show
+
+                // NYI on one side → mark a clean loss for that side
+                // instead of letting "X / 0" become Infinity.
+                let speedup = null;
+                let nyiSide = null;
+                if (ok1 && ok2) {
+                    speedup = t2 / t1;
+                } else if (!ok1) {
+                    nyiSide = 'db1';
+                } else {
+                    nyiSide = 'db2';
+                }
+                comparisons.push({
+                    task, db1Time: t1, db2Time: t2,
+                    speedup, nyiSide,
+                });
+                if (speedup !== null) {
                     totalSpeedup += speedup;
                     count++;
                 }
@@ -1491,11 +1574,21 @@
                 <div class="comparison-grid">
             `;
 
+            const fmtTime = (ms, ok) => ok ? `${ms.toFixed(2)}ms` : 'NYI';
             comparisons.forEach(comp => {
                 let speedupClass = 'equal';
                 let speedupText = '~1x';
+                const ok1 = comp.nyiSide !== 'db1';
+                const ok2 = comp.nyiSide !== 'db2';
 
-                if (comp.speedup > 1.05) {
+                if (comp.nyiSide === 'db1') {
+                    // db1 NYI → db1 loses
+                    speedupClass = 'slower';
+                    speedupText = 'NYI';
+                } else if (comp.nyiSide === 'db2') {
+                    speedupClass = 'faster';
+                    speedupText = 'NYI';
+                } else if (comp.speedup > 1.05) {
                     speedupClass = 'faster';
                     speedupText = `${comp.speedup.toFixed(1)}x`;
                 } else if (comp.speedup < 0.95) {
@@ -1507,14 +1600,47 @@
                     <div class="comparison-item">
                         <span class="comparison-task">${comp.task.replace('groupby_', 'Q')}</span>
                         <span class="comparison-speedup ${speedupClass}">${speedupText}</span>
-                        <span class="comparison-times">${comp.db1Time.toFixed(2)}ms vs ${comp.db2Time.toFixed(2)}ms</span>
+                        <span class="comparison-times">${fmtTime(comp.db1Time, ok1)} vs ${fmtTime(comp.db2Time, ok2)}</span>
                     </div>
                 `;
             });
 
             html += '</div>';
+
+            // SQL/expression inspector — rendered as a separate full-width
+            // block below the grid so each adapter's query is readable
+            // instead of squeezed into a 6-column card.
+            const queriesByTask = chartData.queries || {};
+            const sqlBlocks = [];
+            comparisons.forEach(comp => {
+                const queries = queriesByTask[comp.task] || {};
+                const q1 = queries[db1];
+                const q2 = queries[db2];
+                if (!q1 && !q2) return;
+                sqlBlocks.push(`
+                    <div class="comparison-sql-task">
+                      <div class="comparison-sql-task-header">${comp.task.replace('groupby_', 'Q')}</div>
+                      <div class="comparison-sql-row">
+                        ${q1 ? `<pre class="comparison-query"><span class="cq-engine" style="color:${db1Color}">${db1}</span><code>${escapeHtml(q1)}</code></pre>` : '<div></div>'}
+                        ${q2 ? `<pre class="comparison-query"><span class="cq-engine" style="color:${db2Color}">${db2}</span><code>${escapeHtml(q2)}</code></pre>` : '<div></div>'}
+                      </div>
+                    </div>`);
+            });
+            if (sqlBlocks.length) {
+                html += '<div class="comparison-sql">' + sqlBlocks.join('') + '</div>';
+            }
+
             resultsDiv.innerHTML = html;
             resultsDiv.classList.add('visible');
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // Initialize

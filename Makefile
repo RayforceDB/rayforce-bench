@@ -7,8 +7,9 @@
 #   make bench-join       Run H2O join benchmarks
 #   make bench-sort       Run H2O sort benchmarks (s1, s6 on groupby data)
 #   make bench-all        Run full H2O suite (groupby + join + sort)
-#   make bench-scaling    Run scaling sweep (10..1m by default) → docs/scaling.html
+#   make bench-scaling    Run scaling sweep (10..10m by default) → docs/scaling.html
 #   make bench-sort-ext   Run extended sort grid (typed × scaling)
+#   make check            Verify cross-adapter result equivalence (polars = ref)
 #   make clean            Clean generated data
 #
 # Options:
@@ -19,8 +20,9 @@
 #   SORT_MAX=1m            Max length on the extended sort scaling curve
 #   SORT_DTYPES=u8,...     Comma-separated dtypes for the sort grid
 
-.PHONY: setup data bench bench-join bench-sort bench-all bench-scaling \
-        bench-sort-ext sort-grid-data clean help _clean-cache
+.PHONY: setup data bench bench-join bench-canonical-join bench-sort \
+        bench-bonus bench-all bench-scaling \
+        bench-sort-ext sort-grid-data check clean help _clean-cache
 
 VENV_PY := .venv/bin/python
 PYTHON  ?= $(VENV_PY)
@@ -30,8 +32,12 @@ RAYFORCE_LOCAL ?= ~/rayforce-py
 ITERATIONS ?= 5
 WARMUP ?= 2
 
-# bench-scaling defaults
-SIZES ?= 10,100,1k,10k,100k,1m,10m
+# bench-scaling defaults — 1-2-5 sequence, three points per decade so
+# minor log-axis ticks (10/20/50/100/...) all have measured datapoints.
+SIZES ?= 10,20,50,100,200,500,1k,2k,5k,10k,20k,50k,100k,200k,500k,1m,2m,5m,10m
+
+# check defaults — full size sweep against polars as reference.
+CHECK_SIZES ?= 10,100,1k,10k,100k,1m,10m
 
 # Sort grid defaults
 SORT_MAX ?= 1m
@@ -57,23 +63,28 @@ endif
 
 RAYFORCE_FLAGS := $(LOCAL_FLAG)
 
-# H2O data paths. Canonical H2O J1 has equal-sized left and right tables.
+# H2O data paths. Bonus 3-key join uses equal-sized left/right tables.
+# Canonical H2O J1 uses one main `x` + 3 right tables (small/medium/big).
 ifeq ($(SIZE),10k)
-GROUPBY_DATA := $(DATA_DIR)/groupby_10k_k100
-JOIN_DATA := $(DATA_DIR)/join_10kx10k
-JOIN_RIGHT := 10k
+GROUPBY_DATA       := $(DATA_DIR)/groupby_10k_k100
+JOIN_DATA          := $(DATA_DIR)/join_10kx10k
+JOIN_RIGHT         := 10k
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_10k_k100
 else ifeq ($(SIZE),100k)
-GROUPBY_DATA := $(DATA_DIR)/groupby_100k_k100
-JOIN_DATA := $(DATA_DIR)/join_100kx100k
-JOIN_RIGHT := 100k
+GROUPBY_DATA       := $(DATA_DIR)/groupby_100k_k100
+JOIN_DATA          := $(DATA_DIR)/join_100kx100k
+JOIN_RIGHT         := 100k
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_100k_k100
 else ifeq ($(SIZE),1m)
-GROUPBY_DATA := $(DATA_DIR)/groupby_1m_k100
-JOIN_DATA := $(DATA_DIR)/join_1mx1m
-JOIN_RIGHT := 1m
+GROUPBY_DATA       := $(DATA_DIR)/groupby_1m_k100
+JOIN_DATA          := $(DATA_DIR)/join_1mx1m
+JOIN_RIGHT         := 1m
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_1m_k100
 else
-GROUPBY_DATA := $(DATA_DIR)/groupby_10m_k100
-JOIN_DATA := $(DATA_DIR)/join_10mx10m
-JOIN_RIGHT := 10m
+GROUPBY_DATA       := $(DATA_DIR)/groupby_10m_k100
+JOIN_DATA          := $(DATA_DIR)/join_10mx10m
+JOIN_RIGHT         := 10m
+CANONICAL_JOIN_DATA := $(DATA_DIR)/join_canonical_10m_k100
 endif
 
 # H2O sort uses the groupby dataset (s1=id1, s6=id1+id2+id3) — same convention
@@ -117,6 +128,10 @@ $(JOIN_DATA)/left.csv: $(VENV_PY)
 	@echo "==> Generating join dataset (SIZE=$(SIZE))"
 	@$(PYTHON) -m bench.generate -o $(DATA_DIR) join --left-rows $(SIZE) --right-rows $(JOIN_RIGHT)
 
+$(CANONICAL_JOIN_DATA)/x.csv: $(VENV_PY)
+	@echo "==> Generating canonical H2O J1 dataset (SIZE=$(SIZE))"
+	@$(PYTHON) -c "from pathlib import Path; from bench.scaling_runner import ensure_canonical_join, parse_size; ensure_canonical_join(Path('$(DATA_DIR)'), parse_size('$(SIZE)'), k=100, seed=0)"
+
 # ── User-facing aliases ─────────────────────────────────────────────────
 
 setup: $(VENV_PY)
@@ -133,18 +148,37 @@ bench: _clean-cache $(GROUPBY_DATA)/data.csv
 bench-join: _clean-cache $(JOIN_DATA)/left.csv
 	@$(PYTHON) -m bench.runner join -d $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
+# Canonical H2O J1 join suite (q1..q5, single-key, 3 right sizes).
+# Data path is the canonical-join directory (x/small/medium/big.csv).
+bench-canonical-join: _clean-cache $(CANONICAL_JOIN_DATA)/x.csv
+	@$(PYTHON) -m bench.runner canonical_join -d $(CANONICAL_JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+
+# Bonus stress tests outside of canonical H2O — 3-key joins + full-row sorts.
+bench-bonus: bench-join bench-sort
+
 bench-sort: _clean-cache $(GROUPBY_DATA)/data.csv
 	@$(PYTHON) -m bench.runner sort -d $(SORT_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
-bench-all: _clean-cache $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv
-	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
+bench-all: _clean-cache $(GROUPBY_DATA)/data.csv $(JOIN_DATA)/left.csv $(CANONICAL_JOIN_DATA)/x.csv
+	@$(PYTHON) -m bench.runner all -d $(GROUPBY_DATA) --join-data $(JOIN_DATA) --canonical-join-data $(CANONICAL_JOIN_DATA) -a $(ADAPTERS) $(RAYFORCE_FLAGS) -i $(ITERATIONS) -w $(WARMUP) $(STOP_INFRA)
 
 # Scaling sweep generates its own CSVs at every size as it runs.
+# Iterations omitted on purpose so the runner falls back to adaptive_iter
+# (21 → 7 → 5 → 3 by size) — fixed counts waste time at small n and
+# under-sample at large n.
 bench-scaling: _clean-cache $(VENV_PY)
 	@$(PYTHON) -u -m bench.scaling_runner \
 		--sizes $(SIZES) -a $(ADAPTERS) \
 		--data-dir $(DATA_DIR) \
-		-i $(ITERATIONS) -w $(WARMUP) \
+		$(RAYFORCE_FLAGS) $(STOP_INFRA)
+
+# Cross-adapter result-equivalence check. polars is the reference; every
+# other adapter's output is compared against it (rtol=1e-6, atol=1e-9).
+# Generates datasets for any size missing in $(DATA_DIR).
+check: _clean-cache $(VENV_PY)
+	@$(PYTHON) -u -m bench.check \
+		--sizes $(CHECK_SIZES) -a $(ADAPTERS) \
+		--data-dir $(DATA_DIR) \
 		$(RAYFORCE_FLAGS) $(STOP_INFRA)
 
 # Extended sort grid: typed columns × scaling lengths (random pattern only).

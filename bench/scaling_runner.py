@@ -44,14 +44,17 @@ SORT_GRID_ADAPTERS = {"rayforce", "duckdb", "polars", "chdb",
 H2O_OPS = [
     "groupby_q1", "groupby_q2", "groupby_q3", "groupby_q4",
     "groupby_q5", "groupby_q6", "groupby_q7",
+    "groupby_q8", "groupby_q9", "groupby_q10",
     "join_inner", "join_left",
+    "join_q1", "join_q2", "join_q3", "join_q4", "join_q5",
     "sort_single", "sort_multi",
 ]
 
-# Skip join under this row count — both sides are tiny, the timing is
-# pure overhead and the curve adds nothing.
-JOIN_MIN_ROWS = 1000
 
+def _is_canonical_join_op(op: str) -> bool:
+    """Canonical H2O J1 ops are named join_q1..join_q5 — distinct from
+    the bonus join_inner/join_left which use the old left/right tables."""
+    return op.startswith("join_q") and op[len("join_q"):].isdigit()
 
 def parse_size(s: str) -> int:
     s = s.lower().strip()
@@ -94,12 +97,53 @@ def fmt_size(n: int) -> str:
     return str(n)
 
 
+def _manifest_matches(out: Path, generator: str, want: dict) -> bool:
+    """Check the dataset directory's manifest.json against the generator
+    parameters we are about to produce. Returns True only when EVERY
+    key in `want` is present and equal in the manifest. Missing manifest
+    or any mismatch → False (caller should regenerate).
+    """
+    mp = out / "manifest.json"
+    if not mp.exists():
+        return False
+    try:
+        m = json.loads(mp.read_text())
+    except Exception:
+        return False
+    # Generator metadata is stored under m["metadata"] (see DataGenerator).
+    meta = m.get("metadata") or {}
+    if meta.get("generator") != generator:
+        return False
+    return all(meta.get(k) == v for k, v in want.items())
+
+
+def _wipe_stale_csvs(out: Path) -> None:
+    """Drop CSV / manifest files in `out` that came from a previous
+    generator run with mismatching parameters. Leaves the directory
+    around but empty so the new generator can write fresh files."""
+    if not out.exists():
+        return
+    for child in out.iterdir():
+        if child.is_file() and (child.suffix == ".csv"
+                                or child.name == "manifest.json"):
+            child.unlink()
+
+
 def ensure_groupby(data_root: Path, n: int, k: int, seed: int) -> Path:
-    """Generate groupby dataset for size n if missing. Return its directory."""
+    """Generate groupby dataset for size n if missing or stale.
+
+    "Stale" means the manifest disagrees on n_rows / k / seed / schema
+    version with what the current generator would produce — files are
+    wiped and regenerated. This keeps `make bench` honest after a
+    generator change.
+    """
     name = f"groupby_{fmt_size(n)}_k{k}"
     out = data_root / name
-    if (out / "data.csv").exists():
+    want = {"n_rows": n, "k": k, "seed": seed,
+            "schema_version": "h2o-canonical-v1"}
+    if (out / "data.csv").exists() and _manifest_matches(out, "groupby", want):
         return out
+    _wipe_stale_csvs(out)
     gen = GroupByGenerator(n_rows=n, k=k, seed=seed)
     ds = gen.generate()
     ds.write(out, formats=["csv"])
@@ -109,9 +153,36 @@ def ensure_groupby(data_root: Path, n: int, k: int, seed: int) -> Path:
 def ensure_join(data_root: Path, n: int, k: int, seed: int) -> Path:
     name = f"join_{fmt_size(n)}x{fmt_size(n)}"
     out = data_root / name
-    if (out / "left.csv").exists() and (out / "right.csv").exists():
+    want = {"n_rows_left": n, "n_rows_right": n, "k": k, "seed": seed,
+            "schema_version": "h2o-canonical-v1"}
+    if ((out / "left.csv").exists() and (out / "right.csv").exists()
+            and _manifest_matches(out, "join", want)):
         return out
+    _wipe_stale_csvs(out)
     gen = JoinGenerator(n_rows_left=n, n_rows_right=n, k=k, seed=seed)
+    ds = gen.generate()
+    ds.write(out, formats=["csv"])
+    return out
+
+
+def ensure_canonical_join(data_root: Path, n: int, k: int, seed: int) -> Path:
+    """Generate canonical H2O J1 (x, small, medium, big) for size n.
+
+    Regenerates if manifest doesn't match (or doesn't exist), so a
+    schema-version bump in the generator does not silently reuse old
+    CSVs.
+    """
+    from .generators import CanonicalJoinGenerator
+    name = f"join_canonical_{fmt_size(n)}_k{k}"
+    out = data_root / name
+    files = ["x.csv", "small.csv", "medium.csv", "big.csv"]
+    want = {"n_rows_x": n, "k": k, "seed": seed,
+            "schema_version": "h2o-canonical-j1-v2"}
+    if (all((out / f).exists() for f in files)
+            and _manifest_matches(out, "join_canonical_h2o", want)):
+        return out
+    _wipe_stale_csvs(out)
+    gen = CanonicalJoinGenerator(n_rows=n, k=k, seed=seed)
     ds = gen.generate()
     ds.write(out, formats=["csv"])
     return out
@@ -129,14 +200,19 @@ class ScalingConfig:
 
 
 def _spawn_h2o(cfg: ScalingConfig, adapter: str, op: str, n: int,
-               groupby_dir: Path, join_dir: Path | None) -> dict:
+               groupby_dir: Path, join_dir: Path | None,
+               canonical_join_dir: Path | None) -> dict:
     """Run one H2O (adapter, op) at size n via bench.worker."""
     fd, result_path = tempfile.mkstemp(prefix=f"sc_h2o_{adapter}_{op}_{n}_",
                                        suffix=".json")
     os.close(fd)
 
     n_iter, n_warmup = iter_counts(n)
-    if op.startswith("join_"):
+    if _is_canonical_join_op(op):
+        # Canonical H2O J1: worker loads x/small/medium/big from this dir.
+        primary = canonical_join_dir
+        right = None
+    elif op.startswith("join_"):
         primary = join_dir / "left.csv"
         right = join_dir / "right.csv"
     else:
@@ -256,8 +332,8 @@ def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
         print(f"\n══════ size = {size:,} ══════")
         # Generate datasets for this size before any subprocess starts.
         gb_dir = ensure_groupby(data_root, size, cfg.k, cfg.seed)
-        join_dir = ensure_join(data_root, size, cfg.k, cfg.seed) \
-            if size >= JOIN_MIN_ROWS else None
+        join_dir = ensure_join(data_root, size, cfg.k, cfg.seed)
+        cj_dir = ensure_canonical_join(data_root, size, cfg.k, cfg.seed)
         # Sort-grid CSVs: one per dtype, only for the sizes we need.
         gen_sort_grid(sort_grid_root, cfg.sort_dtypes, [size],
                       seed=cfg.seed, verbose=False)
@@ -265,10 +341,9 @@ def run(cfg: ScalingConfig, data_root: Path) -> list[dict]:
         # ── H2O ops ─────────────────────────────────────────────────────
         for adapter in cfg.adapters:
             for op in cfg.h2o_ops:
-                if op.startswith("join_") and size < JOIN_MIN_ROWS:
-                    continue
                 swap_before = SwapSample.now()
-                data = _spawn_h2o(cfg, adapter, op, size, gb_dir, join_dir)
+                data = _spawn_h2o(cfg, adapter, op, size, gb_dir,
+                                  join_dir, cj_dir)
                 warn_if_grew(swap_before, SwapSample.now(),
                              f"{adapter}/{op}/n={size}")
                 if data.get("error"):
@@ -334,8 +409,9 @@ def main():
     ap.add_argument("-a", "--adapters", nargs="+",
                     default=list(DEFAULT_ADAPTERS),
                     help=f"Adapters (default: {' '.join(DEFAULT_ADAPTERS)})")
-    ap.add_argument("--sizes", default="10,100,1k,10k,100k,1m",
-                    help="Comma-separated sizes (default: 10,100,1k,10k,100k,1m)")
+    ap.add_argument("--sizes",
+                    default="10,20,50,100,200,500,1k,2k,5k,10k,20k,50k,100k,200k,500k,1m,2m,5m,10m",
+                    help="Comma-separated sizes (default: 1-2-5 sequence 10..10m)")
     ap.add_argument("-k", type=int, default=100,
                     help="Group cardinality K (default: 100)")
     ap.add_argument("--seed", type=int, default=0)
@@ -418,23 +494,6 @@ def main():
     }
     out_path.write_text(json.dumps(payload, indent=2))
     print(f"\nResults saved to {out_path} ({len(results)} entries)")
-
-    # Row-count sanity check across adapters for each (op, size) pair.
-    by_key: dict[tuple, dict[str, int]] = {}
-    for r in results:
-        by_key.setdefault((r["op"], r["size"]), {})[r["adapter"]] = r["rows"]
-    mismatches = [(op, n, m) for (op, n), m in by_key.items()
-                  if len(set(m.values())) > 1]
-    print("\nRow-count validation:")
-    if mismatches:
-        print(f"  WARNING — {len(mismatches)} (op, size) pair(s) disagree across adapters:")
-        for op, n, m in sorted(mismatches)[:30]:
-            spread = ", ".join(f"{a}={r}" for a, r in sorted(m.items()))
-            print(f"    {op} n={n}: {spread}")
-        if len(mismatches) > 30:
-            print(f"    ... and {len(mismatches) - 30} more")
-    else:
-        print(f"  OK — all {len(by_key)} (op, size) pairs agreed across adapters")
 
     if not args.no_html:
         from .report import generate_scaling_html

@@ -55,11 +55,35 @@ class BenchmarkRun:
 
 
 BENCHMARKS = {
-    "groupby": ["groupby_q1", "groupby_q2", "groupby_q3",
-                "groupby_q4", "groupby_q5", "groupby_q6", "groupby_q7"],
-    "join":    ["join_inner", "join_left"],
-    "sort":    ["sort_single", "sort_multi"],
+    # Canonical H2O groupby suite (q1..q10 per db-benchmark/polars/groupby-polars.py).
+    # Engines that cannot run a particular op raise NotImplementedError;
+    # the worker reports it as "NYI: <reason>" without aborting the run.
+    "groupby":        [f"groupby_q{i}" for i in range(1, 11)],
+    # Canonical H2O join suite (q1..q5 per db-benchmark/polars/join-polars.py).
+    # Single-key joins on 3 right-table sizes (small=1e3, medium=N/1e3,
+    # big=N). Adapter loads x/small/medium/big from the canonical-join
+    # dataset directory (data path is the dir, not a CSV).
+    "canonical_join": [f"join_q{i}" for i in range(1, 6)],
+    # Bonus stress tests — *outside* of canonical H2O. Kept as separate
+    # ops so the report can label them distinctly:
+    #   join_inner / join_left : 3-key compound joins on equal-size tables
+    #   sort_single / sort_multi: full-table sort (1-key / 3-key)
+    "join":           ["join_inner", "join_left"],
+    "sort":           ["sort_single", "sort_multi"],
 }
+
+# Suite category — "canonical" vs "bonus". Used by reporters to group
+# ops in the comparison table and HTML report.
+SUITE_CATEGORY = {
+    "groupby":        "canonical",
+    "canonical_join": "canonical",
+    "join":           "bonus",
+    "sort":           "bonus",
+}
+
+# Logical "bonus" group — alias used by `make bench-bonus` so users can
+# run all bonus ops in one shot.
+BONUS_OPS = BENCHMARKS["join"] + BENCHMARKS["sort"]
 
 
 @dataclass
@@ -133,7 +157,11 @@ def _run_worker(cfg: OrchestratorConfig, adapter: str, benchmark: str,
 
 
 def _print_op_result(run: BenchmarkRun) -> None:
-    if run.error:
+    if run.error and run.error.startswith("NYI"):
+        # Canonical query the engine cannot run — report cleanly so the
+        # user sees the gap, not a stack trace.
+        print(f"  {run.benchmark:<20s} NYI: {run.error[len('NYI: '):]}")
+    elif run.error:
         print(f"  {run.benchmark:<20s} ERROR: {run.error}")
     elif not run.results:
         print(f"  {run.benchmark:<20s} (no results)")
@@ -143,14 +171,22 @@ def _print_op_result(run: BenchmarkRun) -> None:
 
 
 def run_suite(cfg: OrchestratorConfig, suite: str, data_path: Path,
-              join_data: Path | None = None) -> list[BenchmarkRun]:
-    """Run a named suite (groupby / join / sort) across all adapters.
+              join_data: Path | None = None,
+              canonical_join_data: Path | None = None) -> list[BenchmarkRun]:
+    """Run a named suite across all adapters.
 
-    For 'join' suite, the dataset has separate left/right tables. If
-    join_data is given (canonical case from `bench all`), use it; otherwise
-    fall back to data_path/left.csv (legacy `bench join -d <join_dir>`).
+    Suite → data layout:
+      groupby / sort  : <data_path>/data.csv (single CSV)
+      join (bonus)    : <data_path>/left.csv + right.csv (or join_data dir)
+      canonical_join  : <data_path>/{x,small,medium,big}.csv (directory)
     """
-    if suite == "join":
+    if suite == "canonical_join":
+        d = canonical_join_data if canonical_join_data is not None else data_path
+        # The worker takes "--data <dir>" for canonical join and calls
+        # adapter.load_canonical_join(dir) — pass the directory directly.
+        primary = d
+        right = None
+    elif suite == "join":
         d = join_data if join_data is not None else data_path
         primary = d / "left.csv"
         right = d / "right.csv"
@@ -193,31 +229,6 @@ def save_results(results: list[BenchmarkRun], output_path: Path) -> None:
     print(f"\nResults saved to {output_path}")
 
 
-def validate_row_counts(results: list[BenchmarkRun]) -> None:
-    """Sanity-check: for each benchmark, every adapter that returned a
-    result should agree on the number of output rows. Disagreement means
-    either a SQL-semantics bug in one adapter or a real engine difference
-    worth flagging.
-    """
-    by_bench: dict[str, dict[str, int]] = {}
-    for run in results:
-        if run.error or not run.results:
-            continue
-        by_bench.setdefault(run.benchmark, {})[run.adapter] = run.results[0].rows
-
-    print("\nRow-count validation:")
-    mismatches = []
-    for bench, per_adapter in sorted(by_bench.items()):
-        if len(set(per_adapter.values())) > 1:
-            mismatches.append((bench, per_adapter))
-    if mismatches:
-        print(f"  WARNING — {len(mismatches)} benchmark(s) disagree across adapters:")
-        for bench, per_adapter in mismatches:
-            spread = ", ".join(f"{a}={r}" for a, r in sorted(per_adapter.items()))
-            print(f"    {bench}: {spread}")
-    else:
-        n = len(by_bench)
-        print(f"  OK — all {n} benchmark(s) returned the same row count from every adapter")
 
 
 def print_comparison(results: list[BenchmarkRun]) -> None:
@@ -271,12 +282,16 @@ def print_comparison(results: list[BenchmarkRun]) -> None:
 def main():
     ap = argparse.ArgumentParser(description="Run rayforce benchmarks")
     ap.add_argument("benchmark", nargs="?",
-                    choices=["groupby", "join", "sort", "all"],
+                    choices=["groupby", "join", "canonical_join",
+                             "sort", "all"],
                     help="Benchmark suite to run")
     ap.add_argument("-d", "--data", help="Path to dataset directory")
     ap.add_argument("--join-data", help="Path to join dataset directory "
                     "(needed when running 'all' or when join's left/right "
                     "live elsewhere from -d)")
+    ap.add_argument("--canonical-join-data", help="Path to canonical-join "
+                    "dataset directory (containing x.csv, small.csv, "
+                    "medium.csv, big.csv) — used by `bench all`")
     ap.add_argument("-a", "--adapters", nargs="+",
                     default=["rayforce", "polars", "duckdb", "chdb",
                              "datafusion", "pandas"])
@@ -343,13 +358,18 @@ def main():
 
     warn_if_already_used(SwapSample.now())
 
-    suites = ["groupby", "join", "sort"] if args.benchmark == "all" else [args.benchmark]
+    suites = (["groupby", "canonical_join", "join", "sort"]
+              if args.benchmark == "all" else [args.benchmark])
     join_path = Path(args.join_data) if args.join_data else None
+    canonical_join_path = (Path(args.canonical_join_data)
+                           if getattr(args, "canonical_join_data", None)
+                           else None)
     results: list[BenchmarkRun] = []
     for suite in suites:
-        results.extend(run_suite(cfg, suite, data_path, join_data=join_path))
+        results.extend(run_suite(cfg, suite, data_path,
+                                 join_data=join_path,
+                                 canonical_join_data=canonical_join_path))
 
-    validate_row_counts(results)
     print_comparison(results)
 
     if args.output:

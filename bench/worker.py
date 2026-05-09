@@ -74,21 +74,33 @@ def main():
         output["version"] = adapter.version
 
         data_path = Path(args.data)
-        if args.benchmark.startswith("join_"):
+        # Canonical H2O joins (q1..q5) need 4 tables (x, small, medium,
+        # big) pre-loaded; data_path is the directory containing them.
+        is_canonical_join = (args.benchmark.startswith("join_q")
+                             and args.benchmark[len("join_q"):].isdigit())
+        if is_canonical_join:
+            adapter.load_canonical_join(data_path)
+        elif args.benchmark.startswith("join_"):
             adapter.load_data(data_path, "left")
         else:
             adapter.load_data(data_path)
 
         right = Path(args.right_data) if args.right_data else None
-        results = adapter.run_full(args.benchmark, args.warmup, args.iterations,
-                                   right_path=right)
-        for r in results:
-            output["results"].append({
-                "name": r.name,
-                "time_ns": r.time_ns,
-                "rows": r.rows,
-                "error": r.error,
-            })
+        try:
+            results = adapter.run_full(args.benchmark, args.warmup, args.iterations,
+                                       right_path=right)
+            for r in results:
+                output["results"].append({
+                    "name": r.name,
+                    "time_ns": r.time_ns,
+                    "rows": r.rows,
+                    "error": r.error,
+                })
+        except NotImplementedError as e:
+            # Engine doesn't support the canonical query — report as NYI
+            # without burning the run as a generic error.
+            output["error"] = f"NYI: {e}"
+            output["nyi"] = True
     except Exception as e:
         output["error"] = f"{type(e).__name__}: {e}"
         output["traceback"] = traceback.format_exc()
