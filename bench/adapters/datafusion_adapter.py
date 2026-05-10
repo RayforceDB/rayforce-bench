@@ -80,10 +80,27 @@ class DataFusionAdapter(Adapter):
         return self._table_names[name]
 
     def _time(self, sql: str, name: str) -> BenchmarkResult:
+        # Engine-only timing: drain `execute_stream()` so DataFusion
+        # fully runs the plan without buffering all RecordBatches in
+        # Python (as `.collect()` does) and without forcing a
+        # unique-schema target (CREATE TABLE rejects USING-join dup
+        # columns like duplicate `id4`). Each batch is dropped right
+        # after counting its rows. Row count is computed inside the
+        # drain — no extra query — and is *not* a count() rewrite the
+        # optimiser can simplify away from the actual join/groupby.
         def query():
-            return self._ctx.sql(sql).collect()
-        result, t = self._time_it(query)
-        rows = sum(b.num_rows for b in result) if result else 0
+            # DataFusion's stream yields a wrapper whose only useful
+            # method is `to_pyarrow()` — that gives a pyarrow
+            # RecordBatch (zero-copy view, just a Python handle around
+            # the Arrow buffer) on which we can read .num_rows for
+            # display. The actual draining (engine compute) happens via
+            # the iteration itself.
+            stream = self._ctx.sql(sql).execute_stream()
+            n = 0
+            for batch in stream:
+                n += batch.to_pyarrow().num_rows
+            return n
+        rows, t = self._time_it(query)
         return BenchmarkResult(name, t, rows)
 
     def run_groupby_q1(self) -> BenchmarkResult:
@@ -243,12 +260,19 @@ class DataFusionAdapter(Adapter):
         rows_batches = ctx.sql("SELECT count(*) FROM sort_data_raw").collect()
         rows = rows_batches[0].column(0)[0].as_py() if rows_batches else 0
 
+        # Engine-only timing: route into a temp table so DF fully runs
+        # the sort without materialising RecordBatches in Python.
+        create_sql = f"CREATE TABLE _bench_out AS {sql}"
+        drop_sql = "DROP TABLE IF EXISTS _bench_out"
         for _ in range(n_warmup):
-            ctx.sql(sql).collect()
+            ctx.sql(drop_sql).collect()
+            ctx.sql(create_sql).collect()
+        ctx.sql(drop_sql).collect()
 
         results = []
         for _ in range(n_iter):
-            _, t = self._time_it(lambda: ctx.sql(sql).collect())
+            _, t = self._time_it(lambda: ctx.sql(create_sql).collect())
+            ctx.sql(drop_sql).collect()
             results.append(BenchmarkResult(f"sort_{dtype}", t, rows))
 
         try:
@@ -319,10 +343,15 @@ class DataFusionAdapter(Adapter):
         else:
             raise ValueError(f"unknown op: {op}")
         # Collect Arrow batches → polars via pyarrow (zero-copy where possible).
+        # For empty results, build an empty table with the right schema —
+        # otherwise we lose the column list and `make check` reports a
+        # schema mismatch (e.g. join with no overlapping keys).
         import pyarrow as pa
-        batches = self._ctx.sql(sql).collect()
+        df = self._ctx.sql(sql)
+        schema = df.schema()
+        batches = df.collect()
         if not batches:
-            return pl.DataFrame()
+            return pl.from_arrow(pa.Table.from_batches([], schema=schema))
         tbl = pa.Table.from_batches(batches)
         # USING(...) keeps duplicate non-key cols; rename to dedupe so
         # polars from_arrow doesn't reject the schema.
