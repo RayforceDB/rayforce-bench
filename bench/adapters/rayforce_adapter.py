@@ -31,10 +31,10 @@ class RayforceAdapter(Adapter):
         "groupby_q3":  't.select(v1=Column("v1").sum(), v3=Column("v3").mean()).by("id3").execute()',
         "groupby_q4":  't.select(v1=Column("v1").mean(), v2=Column("v2").mean(), v3=Column("v3").mean()).by("id4").execute()',
         "groupby_q5":  't.select(v1=Column("v1").sum(), v2=Column("v2").sum(), v3=Column("v3").sum()).by("id6").execute()',
-        "groupby_q6":  '# NYI: rayforce engine does not support median + multi-key by()',
+        "groupby_q6":  't.select(v3_median=Column("v3").median(), v3_std=Column("v3").std()).by("id4","id5").execute()',
         "groupby_q7":  '# Two-stage workaround for engine NYI on arithmetic-of-aggregates per-group:\nagg = t.select(v1m=Column("v1").max(), v2m=Column("v2").min()).by("id3").execute()\nagg.select("id3", range_v1_v2=Column("v1m") - Column("v2m")).execute()',
-        "groupby_q8":  '# NYI: rayforce-py has no top-N / per-group head(n)',
-        "groupby_q9":  '# NYI: rayforce-py has no Column.corr / pearson_corr',
+        "groupby_q8":  't.select(largest2_v3=Column("v3").top(2)).by("id6").execute()',
+        "groupby_q9":  't.select(r2=Column("v1").pearson_corr(Column("v2"))**2).by("id2","id4").execute()',
         "groupby_q10": 't.select(v3=Column("v3").sum(), cnt=Column("v1").count()).by("id1","id2","id3","id4","id5","id6").execute()',
         "join_q1":     '# pre-project right to (key, v2) to avoid to_dict() collapse on dup cols\nx.inner_join(small.select("id1","v2").execute(), on=["id1"]).execute()',
         "join_q2":     'x.inner_join(medium.select("id2","v2").execute(), on=["id2"]).execute()',
@@ -272,20 +272,15 @@ class RayforceAdapter(Adapter):
         )
 
     def run_groupby_q6(self) -> BenchmarkResult:
-        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O.
-
-        rayforce-py 2.0a1 exposes Column.median() and the engine has a
-        DEVIATION op (callable as Expression(Operation.DEVIATION, col)),
-        so individually both aggregates are available. But the engine
-        itself raises `RayforceNYIError: non-agg expression with
-        multi-key or computed group key` when median is combined with
-        a multi-key `.by(...)` — the canonical q6 groups by (id4, id5).
-        Single-key median works; multi-key median doesn't.
-        See REQUIREMENTS_CANONICAL_H2O.md §1.1.
-        """
-        raise NotImplementedError(
-            "rayforce engine NYI: 'median(...) with multi-key group-by' "
-            "(median+sd by id4,id5 needed for canonical H2O q6)")
+        """Q6: median(v3), sd(v3) by id4, id5 — canonical H2O."""
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(v3_median=C("v3").median(),
+                             v3_std=C("v3").std()
+                             ).by("id4", "id5").execute(),
+            "groupby_q6",
+        )
 
     def run_groupby_q7(self) -> BenchmarkResult:
         """Q7: max(v1) - min(v2) by id3 — canonical H2O.
@@ -309,25 +304,29 @@ class RayforceAdapter(Adapter):
     def run_groupby_q8(self) -> BenchmarkResult:
         """Q8: largest two v3 by id6 — canonical H2O.
 
-        rayforce-py 2.0a1 has no head(N) / top-N / window functions;
-        cannot compute per-group top-N. NYI until upstream adds one of
-        Column.head(n) / per-group ROW_NUMBER. See REQUIREMENTS §1.3.
+        rayforce's `top(2)` per group returns a 2-element vector per
+        id6 (one row per group, list cell). Polars's reference shape
+        explodes this into two rows per group — that's a check-only
+        concern handled in materialize(); for bench timing the unexploded
+        per-group result is fair, since the work (per-group partial
+        sort) is identical.
         """
-        raise NotImplementedError(
-            "rayforce-py has no top-N / per-group head(n); "
-            "canonical H2O q8 needs largest two v3 by group")
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(largest2_v3=C("v3").top(2)).by("id6").execute(),
+            "groupby_q8",
+        )
 
     def run_groupby_q9(self) -> BenchmarkResult:
-        """Q9: corr(v1, v2)^2 by id2, id4 — canonical H2O.
-
-        rayforce-py 2.0a1 has no corr/pearson_corr/cov, and no
-        Column-level arithmetic to construct corr manually. NYI until
-        upstream adds Column.corr(other) or Column arithmetic +
-        sum/var. See REQUIREMENTS §1.4.
-        """
-        raise NotImplementedError(
-            "rayforce-py has no Column.corr / pearson_corr / cov; "
-            "canonical H2O q9 needs correlation by group")
+        """Q9: pearson_corr(v1, v2)**2 by id2, id4 — canonical H2O."""
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(r2=C("v1").pearson_corr(C("v2")) ** 2
+                             ).by("id2", "id4").execute(),
+            "groupby_q9",
+        )
 
     def run_groupby_q10(self) -> BenchmarkResult:
         """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
@@ -395,20 +394,38 @@ class RayforceAdapter(Adapter):
             lambda: x.inner_join(r, on=["id3"]).execute(), "join_q5")
 
     def run_join_inner(self, right_path: Path) -> BenchmarkResult:
-        """Inner join on (id1, id2, id3) — canonical H2O J1."""
+        """Inner join on (id1, id2, id3) — canonical H2O J1.
+
+        Pre-project right to (id1, id2, id3, v2) so the engine doesn't
+        emit duplicate-name columns (id4..id6, v1 exist on both sides);
+        Table.to_dict() collapses dup-name keys, which corrupts the
+        left-side values. This matches the canonical H2O answer
+        "left-side cols + right.v2" already enforced by check.py.
+        """
         L = self._get_table_obj("left")
         R = self._load_table_from_csv(right_path)
+        C = self._Column
         return self._timed(
-            lambda: L.inner_join(R, on=["id1", "id2", "id3"]).execute(),
+            lambda: L.inner_join(
+                R.select("id1", "id2", "id3", "v2").execute(),
+                on=["id1", "id2", "id3"],
+            ).execute(),
             "join_inner",
         )
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
-        """Left join on (id1, id2, id3) — canonical H2O J1."""
+        """Left join on (id1, id2, id3) — canonical H2O J1.
+
+        Same pre-project trick as run_join_inner — see its docstring.
+        """
         L = self._get_table_obj("left")
         R = self._load_table_from_csv(right_path)
+        C = self._Column
         return self._timed(
-            lambda: L.left_join(R, on=["id1", "id2", "id3"]).execute(),
+            lambda: L.left_join(
+                R.select("id1", "id2", "id3", "v2").execute(),
+                on=["id1", "id2", "id3"],
+            ).execute(),
             "join_left",
         )
 
@@ -475,8 +492,11 @@ class RayforceAdapter(Adapter):
         elif op in ("join_inner", "join_left"):
             L = self._get_table_obj("left")
             R = self._load_table_from_csv(right_path)
+            # Pre-project right to (keys, v2) — see run_join_inner for
+            # rationale (Table.to_dict() collapses dup-name columns).
+            R_proj = R.select("id1", "id2", "id3", "v2").execute()
             kind = L.inner_join if op == "join_inner" else L.left_join
-            result = kind(R, on=["id1", "id2", "id3"]).execute()
+            result = kind(R_proj, on=["id1", "id2", "id3"]).execute()
         else:
             t = self._get_table_obj()
             if op == "groupby_q1":
@@ -495,10 +515,16 @@ class RayforceAdapter(Adapter):
                                   v2=C("v2").sum(),
                                   v3=C("v3").sum()).by("id6").execute()
             elif op == "groupby_q6":
-                raise NotImplementedError(
-                    "rayforce engine NYI: 'median(...) with multi-key "
-                    "group-by' (canonical H2O q6 needs median+sd by "
-                    "id4, id5)")
+                # Extra `_cnt` column lets us reconstruct n<=1 nulls in
+                # v3_std after to_dict() — the wrapper drops the
+                # typed-null bit when materialising F64 vectors, so the
+                # engine's correct 0Nf for sample-std-of-1 surfaces here
+                # as 0.0. Post-process below replaces those with NaN
+                # which check.py's canonicalize folds to null.
+                result = t.select(v3_median=C("v3").median(),
+                                  v3_std=C("v3").std(),
+                                  _cnt=C("v3").count()
+                                  ).by("id4", "id5").execute()
             elif op == "groupby_q7":
                 # Two-stage workaround — see run_groupby_q7 for rationale.
                 agg = t.select(v1m=C("v1").max(),
@@ -506,13 +532,11 @@ class RayforceAdapter(Adapter):
                 result = agg.select("id3",
                                     range_v1_v2=C("v1m") - C("v2m")).execute()
             elif op == "groupby_q8":
-                raise NotImplementedError(
-                    "rayforce-py has no top-N / per-group head(n); "
-                    "canonical H2O q8 needs largest two v3 by group")
+                result = t.select(largest2_v3=C("v3").top(2)
+                                  ).by("id6").execute()
             elif op == "groupby_q9":
-                raise NotImplementedError(
-                    "rayforce-py has no Column.corr / pearson_corr; "
-                    "canonical H2O q9 needs correlation by group")
+                result = t.select(r2=C("v1").pearson_corr(C("v2")) ** 2
+                                  ).by("id2", "id4").execute()
             elif op == "groupby_q10":
                 result = t.select(v3=C("v3").sum(),
                                   cnt=C("v1").count()
@@ -533,8 +557,72 @@ class RayforceAdapter(Adapter):
         d = result.to_dict()
         for col, vals in d.items():
             if vals and hasattr(vals[0], "to_python"):
+                # Wrapper note: `.to_python()` on F64 silently drops the
+                # typed-null bit (engine returns 0Nf for e.g. stddev on
+                # n<=1, but Python sees 0.0). Per-query nil handling
+                # lives below — q6 reconstructs nulls via _cnt.
                 d[col] = [v.to_python() for v in vals]
-        return pl.from_dict(d)
+
+        # q6: replace v3_std with NaN where group size <= 1 (engine
+        # returns 0Nf, but the wrapper drops the null bit and surfaces
+        # 0.0). check.py's canonicalize will fold NaN→null.
+        if op == "groupby_q6" and "_cnt" in d:
+            import math
+            cnt = list(d["_cnt"])
+            std = list(d["v3_std"])
+            d["v3_std"] = [math.nan if c <= 1 else v for v, c in zip(std, cnt)]
+            del d["_cnt"]
+
+        # q8: rayforce's top(2) per group returns a 2-element rayforce
+        # Vector per row in `largest2_v3`; polars's reference shape
+        # explodes this into two rows per group. Match by repeating
+        # each id6 once per element and flattening the values. Handles
+        # Vector / list / tuple containers — the unwrap loop above
+        # leaves Vector objects intact because they lack to_python.
+        if op == "groupby_q8" and "largest2_v3" in d:
+            ids, vals = d["id6"], d["largest2_v3"]
+            new_ids, new_vals = [], []
+            for i, v in zip(ids, vals):
+                # Vector exposes __iter__ and to_list; lists/tuples are
+                # already iterable. Anything iterable here is the
+                # per-group list of top-N values.
+                if hasattr(v, "to_list"):
+                    inner = list(v.to_list())
+                elif isinstance(v, (list, tuple)):
+                    inner = list(v)
+                else:
+                    inner = None
+                if inner is not None:
+                    inner = [x.to_python() if hasattr(x, "to_python") else x
+                             for x in inner]
+                    new_ids.extend([i] * len(inner))
+                    new_vals.extend(inner)
+                else:
+                    new_ids.append(i)
+                    new_vals.append(
+                        v.to_python() if hasattr(v, "to_python") else v)
+            d = {"id6": new_ids, "largest2_v3": new_vals}
+
+        df = pl.from_dict(d)
+
+        # join_left: rayforce's left_join surfaces v2=0.0 for unmatched
+        # rows because the wrapper's to_dict() drops the F64 null bit.
+        # Reconstruct null v2 via a polars-side anti-match against the
+        # right CSV's keys.
+        if op == "join_left" and right_path is not None and "v2" in df.columns:
+            right_keys = (pl.read_csv(right_path)
+                            .select(["id1", "id2", "id3"])
+                            .unique()
+                            .with_columns(pl.lit(True).alias("_match")))
+            df = df.join(right_keys, on=["id1", "id2", "id3"], how="left")
+            df = df.with_columns(
+                pl.when(pl.col("_match").is_null())
+                  .then(None)
+                  .otherwise(pl.col("v2"))
+                  .alias("v2")
+            ).drop("_match")
+
+        return df
 
     def close(self) -> None:
         self._table_names.clear()
