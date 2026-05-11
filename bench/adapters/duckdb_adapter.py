@@ -57,9 +57,21 @@ class DuckDBAdapter(Adapter):
         return self._table_names[name]
 
     def _time_sql(self, sql: str, name: str) -> BenchmarkResult:
-        result, time_ns = self._time_it(
-            lambda: self._conn.execute(sql).fetch_arrow_table())
-        return BenchmarkResult(name, time_ns, len(result))
+        # Engine-only timing: run the query into a temp table so DuckDB
+        # fully computes the plan server-side without materializing rows
+        # back to Python. Mirrors QuestDB/Timescale's `cur.execute()`
+        # pattern — keeps the timer focused on engine work, not Arrow IPC
+        # / pandas conversion. Row count + cleanup happen outside the
+        # timer for display only. The pre-DROP keeps the timed CREATE
+        # plain (no implicit drop overhead inside the timer).
+        self._conn.execute("DROP TABLE IF EXISTS _bench_out")
+        create_sql = f"CREATE TEMPORARY TABLE _bench_out AS {sql}"
+        _, time_ns = self._time_it(
+            lambda: self._conn.execute(create_sql))
+        rows = self._conn.execute(
+            "SELECT count(*) FROM _bench_out").fetchone()[0]
+        self._conn.execute("DROP TABLE IF EXISTS _bench_out")
+        return BenchmarkResult(name, time_ns, rows)
 
     def run_groupby_q1(self) -> BenchmarkResult:
         """Q1: sum(v1) by id1 — canonical H2O."""
@@ -172,55 +184,37 @@ class DuckDBAdapter(Adapter):
         """Inner join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
-
-        def query():
-            return self._conn.execute(
-                f"SELECT * FROM {left} INNER JOIN bench_right_tmp "
-                f"ON {left}.id1 = bench_right_tmp.id1 "
-                f"AND {left}.id2 = bench_right_tmp.id2 "
-                f"AND {left}.id3 = bench_right_tmp.id3"
-            ).fetch_arrow_table()
-
-        result, time_ns = self._time_it(query)
+        sql = (f"SELECT * FROM {left} INNER JOIN bench_right_tmp "
+               f"ON {left}.id1 = bench_right_tmp.id1 "
+               f"AND {left}.id2 = bench_right_tmp.id2 "
+               f"AND {left}.id3 = bench_right_tmp.id3")
+        result = self._time_sql(sql, "join_inner")
         self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")
-        return BenchmarkResult("join_inner", time_ns, len(result))
+        return result
 
     def run_join_left(self, right_path: Path) -> BenchmarkResult:
         """Left join on (id1, id2, id3) — canonical H2O J1."""
         left = self._get_table("left")
         self._conn.execute(f"CREATE TABLE bench_right_tmp AS SELECT * FROM read_csv('{right_path}')")
-
-        def query():
-            return self._conn.execute(
-                f"SELECT * FROM {left} LEFT JOIN bench_right_tmp "
-                f"ON {left}.id1 = bench_right_tmp.id1 "
-                f"AND {left}.id2 = bench_right_tmp.id2 "
-                f"AND {left}.id3 = bench_right_tmp.id3"
-            ).fetch_arrow_table()
-
-        result, time_ns = self._time_it(query)
+        sql = (f"SELECT * FROM {left} LEFT JOIN bench_right_tmp "
+               f"ON {left}.id1 = bench_right_tmp.id1 "
+               f"AND {left}.id2 = bench_right_tmp.id2 "
+               f"AND {left}.id3 = bench_right_tmp.id3")
+        result = self._time_sql(sql, "join_left")
         self._conn.execute("DROP TABLE IF EXISTS bench_right_tmp")
-        return BenchmarkResult("join_left", time_ns, len(result))
+        return result
 
     def run_sort_single(self) -> BenchmarkResult:
         """Sort by single column."""
         t = self._get_table()
-
-        def query():
-            return self._conn.execute(f"SELECT * FROM {t} ORDER BY id1").fetch_arrow_table()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("sort_single", time_ns, len(result))
+        return self._time_sql(
+            f"SELECT * FROM {t} ORDER BY id1", "sort_single")
 
     def run_sort_multi(self) -> BenchmarkResult:
         """Sort by multiple columns."""
         t = self._get_table()
-
-        def query():
-            return self._conn.execute(f"SELECT * FROM {t} ORDER BY id1, id2, id3").fetch_arrow_table()
-
-        result, time_ns = self._time_it(query)
-        return BenchmarkResult("sort_multi", time_ns, len(result))
+        return self._time_sql(
+            f"SELECT * FROM {t} ORDER BY id1, id2, id3", "sort_multi")
 
     _DUCKDB_TYPES = {
         "u8": "UTINYINT", "i16": "SMALLINT", "i32": "INTEGER",

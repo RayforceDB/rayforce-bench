@@ -406,19 +406,20 @@ class QuestDBAdapter(Adapter):
 
         sql = f"SELECT * FROM {sort_table} ORDER BY v"
 
+        # Engine-only timing: only `cur.execute` is timed; `cur.rowcount`
+        # outside the timer gives the row count without paying for PG
+        # row materialization. Mirrors _time_pg used by canonical-suite
+        # queries.
         for _ in range(n_warmup):
             with self._conn.cursor() as cur:
                 cur.execute(sql)
-                cur.fetchall()
 
         results = []
         for _ in range(n_iter):
-            def query():
-                with self._conn.cursor() as cur:
-                    cur.execute(sql)
-                    return cur.fetchall()
-            r, time_ns = self._time_it(query)
-            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, len(r)))
+            with self._conn.cursor() as cur:
+                _, time_ns = self._time_it(lambda c=cur: c.execute(sql))
+                rows = cur.rowcount
+            results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
 
         with self._conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {sort_table}")

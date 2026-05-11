@@ -68,15 +68,29 @@ class ChdbAdapter(Adapter):
         return self._table_names[name]
 
     def _time(self, sql: str, name: str) -> BenchmarkResult:
-        # ArrowStream is chdb's native binary materialization — much
-        # cheaper than CSV string serialization. Stays inside the timer
-        # so we measure engine + native materialization, on the same
-        # footing as duckdb's .arrow() and polars's native pl.DataFrame.
-        result, time_ns = self._time_it(
-            lambda: self._sess.query(sql, "ArrowStream")
+        # Engine-only timing: ClickHouse "Null" output format runs the
+        # full plan but discards results — no Arrow IPC / CSV
+        # serialization in the timer. Row count is computed once per
+        # SQL (cached) outside the timer, since `count() FROM (<sql>)`
+        # itself re-runs the query.
+        _, time_ns = self._time_it(
+            lambda: self._sess.query(sql, "Null")
         )
-        rows = self._count_rows_from_arrow_stream(result)
-        return BenchmarkResult(name, time_ns, rows)
+        return BenchmarkResult(name, time_ns, self._row_count_cached(sql))
+
+    def _row_count_cached(self, sql: str) -> int:
+        if not hasattr(self, "_row_count_cache"):
+            self._row_count_cache = {}
+        if sql in self._row_count_cache:
+            return self._row_count_cache[sql]
+        try:
+            raw = self._sess.query(
+                f"SELECT count() FROM ({sql})", "CSV")
+            n = int(str(raw).strip() or 0)
+        except Exception:
+            n = 0
+        self._row_count_cache[sql] = n
+        return n
 
     @staticmethod
     def _count_rows_from_arrow_stream(res) -> int:
@@ -260,11 +274,13 @@ class ChdbAdapter(Adapter):
         sql = "SELECT * FROM sort_data ORDER BY v"
 
         for _ in range(n_warmup):
-            sess.query(sql, "CSV")
+            sess.query(sql, "Null")
 
         results = []
         for _ in range(n_iter):
-            _, time_ns = self._time_it(lambda: sess.query(sql, "CSV"))
+            # Engine-only timing: "Null" format runs the sort and discards
+            # output — matches the canonical-suite _time(...) policy.
+            _, time_ns = self._time_it(lambda: sess.query(sql, "Null"))
             results.append(BenchmarkResult(f"sort_{dtype}", time_ns, rows))
 
         sess.query("DROP TABLE IF EXISTS sort_data")
