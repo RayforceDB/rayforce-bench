@@ -33,8 +33,8 @@ class RayforceAdapter(Adapter):
         "groupby_q5":  't.select(v1=Column("v1").sum(), v2=Column("v2").sum(), v3=Column("v3").sum()).by("id6").execute()',
         "groupby_q6":  't.select(v3_median=Column("v3").median(), v3_std=Column("v3").std()).by("id4","id5").execute()',
         "groupby_q7":  '# Two-stage workaround for engine NYI on arithmetic-of-aggregates per-group:\nagg = t.select(v1m=Column("v1").max(), v2m=Column("v2").min()).by("id3").execute()\nagg.select("id3", range_v1_v2=Column("v1m") - Column("v2m")).execute()',
-        "groupby_q8":  't.select(largest2_v3=Column("v3").top(2)).by("id6").execute()',
-        "groupby_q9":  't.select(r2=Column("v1").pearson_corr(Column("v2"))**2).by("id2","id4").execute()',
+        "groupby_q8":  "(do (set _g (select {largest2_v3: (top v3 2) by: id6 from: t})) (set _ids (at _g 'id6)) (set _n (count _ids)) (table [id6 largest2_v3] (list (at _ids (div (til (* 2 _n)) 2)) (raze (at _g 'largest2_v3)))))",
+        "groupby_q9":  '# Two-stage: pearson_corr at top first, then square the result\nagg = t.select(r=Column("v1").pearson_corr(Column("v2"))).by("id2","id4").execute()\nagg.select("id2", "id4", r2=Column("r")*Column("r")).execute()',
         "groupby_q10": 't.select(v3=Column("v3").sum(), cnt=Column("v1").count()).by("id1","id2","id3","id4","id5","id6").execute()',
         "join_q1":     '# pre-project right to (key, v2) to avoid to_dict() collapse on dup cols\nx.inner_join(small.select("id1","v2").execute(), on=["id1"]).execute()',
         "join_q2":     'x.inner_join(medium.select("id2","v2").execute(), on=["id2"]).execute()',
@@ -304,29 +304,55 @@ class RayforceAdapter(Adapter):
     def run_groupby_q8(self) -> BenchmarkResult:
         """Q8: largest two v3 by id6 — canonical H2O.
 
-        rayforce's `top(2)` per group returns a 2-element vector per
-        id6 (one row per group, list cell). Polars's reference shape
-        explodes this into two rows per group — that's a check-only
-        concern handled in materialize(); for bench timing the unexploded
-        per-group result is fair, since the work (per-group partial
-        sort) is identical.
+        Engine-side explode so the timed result matches DuckDB/polars's
+        2-rows-per-group shape (200k rows for 100k id6 groups).
+        Without the explode rayforce returns 100k LIST cells; check
+        still passes via Python-side explode in materialize(), but the
+        bench timing would skip the row-materialisation that SQL
+        adapters pay for.  Engine-side `raze`/`map(take)` keeps the
+        explode inside the timer where it belongs.
         """
-        t = self._get_table_obj()
-        C = self._Column
-        return self._timed(
-            lambda: t.select(largest2_v3=C("v3").top(2)).by("id6").execute(),
+        tbl = self._get_symbol()
+        # Vectorised explode: replicate each id6 twice via
+        # `(at ids (div (til (* 2 N)) 2))` — all built-ins, no per-element
+        # lambda dispatch.  Assumes K=2 everywhere (true for canonical
+        # H2O 10m k100; groups always have ≥2 non-null v3).  raze of
+        # LIST<F64>[2] mirrors the same expansion on the value side.
+        return self._run_timed_query(
+            "(do "
+            "(set _g (select {largest2_v3: (top v3 2) by: id6 from: "
+            + tbl + "})) "
+            "(set _ids (at _g 'id6)) "
+            "(set _n (count _ids)) "
+            "(table [id6 largest2_v3] "
+            "(list (at _ids (div (til (* 2 _n)) 2)) "
+            "(raze (at _g 'largest2_v3)))))",
             "groupby_q8",
         )
 
     def run_groupby_q9(self) -> BenchmarkResult:
-        """Q9: pearson_corr(v1, v2)**2 by id2, id4 — canonical H2O."""
+        """Q9: pearson_corr(v1, v2)**2 by id2, id4 — canonical H2O.
+
+        Two-stage workaround mirroring run_groupby_q7: the planner only
+        lowers a *top-level* agg call to its hash-agg opcode.  Writing
+        ``C("v1").pearson_corr(...) ** 2`` puts ``pow`` at the head of
+        the select expression — pow is not an aggregator, so the inner
+        ``pearson_corr`` collapses through the eval-level scatter
+        fallback and never hits OP_PEARSON_CORR.  Splitting the squaring
+        into a second select against the aggregated result keeps the
+        first stage purely aggregatory (single ``pearson_corr`` per
+        group → OP_PEARSON_CORR vectorized hash-agg) and the second
+        stage trivial element-wise arithmetic.
+        """
         t = self._get_table_obj()
         C = self._Column
-        return self._timed(
-            lambda: t.select(r2=C("v1").pearson_corr(C("v2")) ** 2
-                             ).by("id2", "id4").execute(),
-            "groupby_q9",
-        )
+
+        def query():
+            agg = t.select(r=C("v1").pearson_corr(C("v2"))
+                           ).by("id2", "id4").execute()
+            return agg.select("id2", "id4", r2=C("r") * C("r")).execute()
+
+        return self._timed(query, "groupby_q9")
 
     def run_groupby_q10(self) -> BenchmarkResult:
         """Q10: sum(v3), count(v1) by id1..id6 — canonical H2O."""
@@ -532,11 +558,34 @@ class RayforceAdapter(Adapter):
                 result = agg.select("id3",
                                     range_v1_v2=C("v1m") - C("v2m")).execute()
             elif op == "groupby_q8":
-                result = t.select(largest2_v3=C("v3").top(2)
-                                  ).by("id6").execute()
+                # Match the timed run_groupby_q8 shape: engine-side
+                # explode via raze + map(take) so we land at 200k rows
+                # natively (no Python loop).  Same query string as in
+                # QUERY_STRINGS / run_groupby_q8.
+                tbl = self._get_symbol()
+                result = self._eval_str(
+                    "(do "
+                    "(set _g (select {largest2_v3: (top v3 2) by: id6 from: "
+                    + tbl + "})) "
+                    "(set _ids (at _g 'id6)) "
+                    "(set _n (count _ids)) "
+                    "(table [id6 largest2_v3] "
+                    "(list (at _ids (div (til (* 2 _n)) 2)) "
+                    "(raze (at _g 'largest2_v3)))))"
+                )
             elif op == "groupby_q9":
-                result = t.select(r2=C("v1").pearson_corr(C("v2")) ** 2
-                                  ).by("id2", "id4").execute()
+                # Two-stage to keep OP_PEARSON_CORR at the top of the
+                # first select (see run_groupby_q9 docstring).  Carry
+                # `_cnt` to reconstruct NaN where n<2 — pearson_corr is
+                # undefined and engine emits typed-null F64 (which the
+                # wrapper's to_python() surfaces as 0.0; cnt-based mask
+                # below restores polars-comparable NaN).
+                agg = t.select(r=C("v1").pearson_corr(C("v2")),
+                               _cnt=C("v1").count()
+                               ).by("id2", "id4").execute()
+                result = agg.select("id2", "id4",
+                                    r2=C("r") * C("r"),
+                                    _cnt=C("_cnt")).execute()
             elif op == "groupby_q10":
                 result = t.select(v3=C("v3").sum(),
                                   cnt=C("v1").count()
@@ -573,35 +622,17 @@ class RayforceAdapter(Adapter):
             d["v3_std"] = [math.nan if c <= 1 else v for v, c in zip(std, cnt)]
             del d["_cnt"]
 
-        # q8: rayforce's top(2) per group returns a 2-element rayforce
-        # Vector per row in `largest2_v3`; polars's reference shape
-        # explodes this into two rows per group. Match by repeating
-        # each id6 once per element and flattening the values. Handles
-        # Vector / list / tuple containers — the unwrap loop above
-        # leaves Vector objects intact because they lack to_python.
-        if op == "groupby_q8" and "largest2_v3" in d:
-            ids, vals = d["id6"], d["largest2_v3"]
-            new_ids, new_vals = [], []
-            for i, v in zip(ids, vals):
-                # Vector exposes __iter__ and to_list; lists/tuples are
-                # already iterable. Anything iterable here is the
-                # per-group list of top-N values.
-                if hasattr(v, "to_list"):
-                    inner = list(v.to_list())
-                elif isinstance(v, (list, tuple)):
-                    inner = list(v)
-                else:
-                    inner = None
-                if inner is not None:
-                    inner = [x.to_python() if hasattr(x, "to_python") else x
-                             for x in inner]
-                    new_ids.extend([i] * len(inner))
-                    new_vals.extend(inner)
-                else:
-                    new_ids.append(i)
-                    new_vals.append(
-                        v.to_python() if hasattr(v, "to_python") else v)
-            d = {"id6": new_ids, "largest2_v3": new_vals}
+        # q9: same wrapper-null trick — pearson_corr is undefined when
+        # n<2 (engine emits 0Nf, wrapper surfaces 0.0); also undefined
+        # when either side has zero variance (engine emits NaN already,
+        # passes through to_python unchanged).  Mask r² to NaN for the
+        # n<2 case.
+        if op == "groupby_q9" and "_cnt" in d:
+            import math
+            cnt = list(d["_cnt"])
+            r2  = list(d["r2"])
+            d["r2"] = [math.nan if c < 2 else v for v, c in zip(r2, cnt)]
+            del d["_cnt"]
 
         df = pl.from_dict(d)
 
