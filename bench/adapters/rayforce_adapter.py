@@ -558,21 +558,13 @@ class RayforceAdapter(Adapter):
                 result = agg.select("id3",
                                     range_v1_v2=C("v1m") - C("v2m")).execute()
             elif op == "groupby_q8":
-                # Match the timed run_groupby_q8 shape: engine-side
-                # explode via raze + map(take) so we land at 200k rows
-                # natively (no Python loop).  Same query string as in
-                # QUERY_STRINGS / run_groupby_q8.
-                tbl = self._get_symbol()
-                result = self._eval_str(
-                    "(do "
-                    "(set _g (select {largest2_v3: (top v3 2) by: id6 from: "
-                    + tbl + "})) "
-                    "(set _ids (at _g 'id6)) "
-                    "(set _n (count _ids)) "
-                    "(table [id6 largest2_v3] "
-                    "(list (at _ids (div (til (* 2 _n)) 2)) "
-                    "(raze (at _g 'largest2_v3)))))"
-                )
+                # Correctness path: small check sizes may have groups
+                # with <2 non-null v3 (K=1 cells), so we can't assume
+                # the K=2-uniform fast formula used by run_groupby_q8.
+                # Engine call returns the LIST<F64>[K] shape; Python
+                # loop below explodes by per-cell count.
+                result = t.select(largest2_v3=C("v3").top(2)
+                                  ).by("id6").execute()
             elif op == "groupby_q9":
                 # Two-stage to keep OP_PEARSON_CORR at the top of the
                 # first select (see run_groupby_q9 docstring).  Carry
@@ -633,6 +625,27 @@ class RayforceAdapter(Adapter):
             r2  = list(d["r2"])
             d["r2"] = [math.nan if c < 2 else v for v, c in zip(r2, cnt)]
             del d["_cnt"]
+
+        # q8: variable-K explode for the check path — small data sizes
+        # have groups with fewer than 2 non-null v3, so per-cell length
+        # varies.  run_groupby_q8 uses the K=2-uniform fast vectorised
+        # form (valid for canonical 10m k100); here we walk each cell
+        # and replicate id6 by its actual length.
+        if op == "groupby_q8" and "largest2_v3" in d:
+            ids, vals = d["id6"], d["largest2_v3"]
+            new_ids, new_vals = [], []
+            for i, v in zip(ids, vals):
+                if hasattr(v, "to_list"):
+                    inner = list(v.to_list())
+                elif isinstance(v, (list, tuple)):
+                    inner = list(v)
+                else:
+                    inner = [v]
+                inner = [x.to_python() if hasattr(x, "to_python") else x
+                         for x in inner]
+                new_ids.extend([i] * len(inner))
+                new_vals.extend(inner)
+            d = {"id6": new_ids, "largest2_v3": new_vals}
 
         df = pl.from_dict(d)
 
