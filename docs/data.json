@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-10T15:47:25+03:00",
+  "generated_at": "2026-05-15T15:50:16+03:00",
   "comparison": {
     "adapters": [
       "chdb",
@@ -36,327 +36,327 @@
       {
         "adapter": "rayforce",
         "task": "groupby_q1",
-        "median_ms": 5.648939
+        "median_ms": 5.432649
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q2",
-        "median_ms": 13.452131
+        "median_ms": 15.330663
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q3",
-        "median_ms": 55.347612
+        "median_ms": 36.801955
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q4",
-        "median_ms": 10.847255
+        "median_ms": 9.980981
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q5",
-        "median_ms": 89.530342
+        "median_ms": 60.95481
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q6",
-        "median_ms": 9447.316562
+        "median_ms": 116.838069
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q7",
-        "median_ms": 67.263035
+        "median_ms": 52.560073
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q8",
-        "median_ms": 473.452573
+        "median_ms": 43.71632
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q9",
-        "median_ms": 6501.738587
+        "median_ms": 44.297218
       },
       {
         "adapter": "rayforce",
         "task": "groupby_q10",
-        "median_ms": 184.820741
+        "median_ms": 142.106514
       },
       {
         "adapter": "polars",
         "task": "groupby_q1",
-        "median_ms": 69.039284
+        "median_ms": 30.399757
       },
       {
         "adapter": "polars",
         "task": "groupby_q2",
-        "median_ms": 309.79886
+        "median_ms": 231.558796
       },
       {
         "adapter": "polars",
         "task": "groupby_q3",
-        "median_ms": 349.218428
+        "median_ms": 264.75707
       },
       {
         "adapter": "polars",
         "task": "groupby_q4",
-        "median_ms": 66.598773
+        "median_ms": 29.187627
       },
       {
         "adapter": "polars",
         "task": "groupby_q5",
-        "median_ms": 252.859031
+        "median_ms": 159.081854
       },
       {
         "adapter": "polars",
         "task": "groupby_q6",
-        "median_ms": 321.612157
+        "median_ms": 228.993916
       },
       {
         "adapter": "polars",
         "task": "groupby_q7",
-        "median_ms": 349.792922
+        "median_ms": 261.610351
       },
       {
         "adapter": "polars",
         "task": "groupby_q8",
-        "median_ms": 663.255744
+        "median_ms": 501.297309
       },
       {
         "adapter": "polars",
         "task": "groupby_q9",
-        "median_ms": 585.096253
+        "median_ms": 396.981935
       },
       {
         "adapter": "polars",
         "task": "groupby_q10",
-        "median_ms": 2089.583403
+        "median_ms": 1992.657088
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q1",
-        "median_ms": 36.783824
+        "median_ms": 35.846985
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q2",
-        "median_ms": 53.231193
+        "median_ms": 55.826273
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q3",
-        "median_ms": 111.078593
+        "median_ms": 97.597745
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q4",
-        "median_ms": 8.547262
+        "median_ms": 8.419355
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q5",
-        "median_ms": 132.591674
+        "median_ms": 103.933377
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q6",
-        "median_ms": 193.852902
+        "median_ms": 173.183848
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q7",
-        "median_ms": 105.644674
+        "median_ms": 99.50334
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q8",
-        "median_ms": 163.864023
+        "median_ms": 150.318978
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q9",
-        "median_ms": 75.630648
+        "median_ms": 77.082025
       },
       {
         "adapter": "duckdb",
         "task": "groupby_q10",
-        "median_ms": 387.660672
+        "median_ms": 364.383042
       },
       {
         "adapter": "chdb",
         "task": "groupby_q1",
-        "median_ms": 43.848184
+        "median_ms": 29.446581
       },
       {
         "adapter": "chdb",
         "task": "groupby_q2",
-        "median_ms": 179.888671
+        "median_ms": 163.814254
       },
       {
         "adapter": "chdb",
         "task": "groupby_q3",
-        "median_ms": 223.233171
+        "median_ms": 205.686589
       },
       {
         "adapter": "chdb",
         "task": "groupby_q4",
-        "median_ms": 59.008594
+        "median_ms": 43.932083
       },
       {
         "adapter": "chdb",
         "task": "groupby_q5",
-        "median_ms": 188.764697
+        "median_ms": 182.107518
       },
       {
         "adapter": "chdb",
         "task": "groupby_q6",
-        "median_ms": 466.187475
+        "median_ms": 453.087787
       },
       {
         "adapter": "chdb",
         "task": "groupby_q7",
-        "median_ms": 235.302985
+        "median_ms": 211.374778
       },
       {
         "adapter": "chdb",
         "task": "groupby_q8",
-        "median_ms": 581.626291
+        "median_ms": 506.077265
       },
       {
         "adapter": "chdb",
         "task": "groupby_q9",
-        "median_ms": 206.361847
+        "median_ms": 197.809132
       },
       {
         "adapter": "chdb",
         "task": "groupby_q10",
-        "median_ms": 757.94004
+        "median_ms": 679.365983
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q1",
-        "median_ms": 113.68986
+        "median_ms": 20.638356
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q2",
-        "median_ms": 201.716634
+        "median_ms": 45.564036
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q3",
-        "median_ms": 271.339905
+        "median_ms": 163.989011
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q4",
-        "median_ms": 155.606422
+        "median_ms": 22.24055
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q5",
-        "median_ms": 312.230788
+        "median_ms": 143.45224
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q6",
-        "median_ms": 270.020864
+        "median_ms": 144.69545
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q7",
-        "median_ms": 251.641367
+        "median_ms": 144.114944
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q8",
-        "median_ms": 359.246195
+        "median_ms": 258.800138
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q9",
-        "median_ms": 228.741086
+        "median_ms": 68.358554
       },
       {
         "adapter": "datafusion",
         "task": "groupby_q10",
-        "median_ms": 605.816967
+        "median_ms": 418.288108
       },
       {
         "adapter": "pandas",
         "task": "groupby_q1",
-        "median_ms": 266.856016
+        "median_ms": 231.501744
       },
       {
         "adapter": "pandas",
         "task": "groupby_q2",
-        "median_ms": 697.052088
+        "median_ms": 604.279904
       },
       {
         "adapter": "pandas",
         "task": "groupby_q3",
-        "median_ms": 836.507523
+        "median_ms": 819.528352
       },
       {
         "adapter": "pandas",
         "task": "groupby_q4",
-        "median_ms": 243.865604
+        "median_ms": 257.008619
       },
       {
         "adapter": "pandas",
         "task": "groupby_q5",
-        "median_ms": 406.412566
+        "median_ms": 383.290091
       },
       {
         "adapter": "pandas",
         "task": "groupby_q6",
-        "median_ms": 691.906659
+        "median_ms": 684.798864
       },
       {
         "adapter": "pandas",
         "task": "groupby_q7",
-        "median_ms": 867.738697
+        "median_ms": 817.886259
       },
       {
         "adapter": "pandas",
         "task": "groupby_q8",
-        "median_ms": 6353.91252
+        "median_ms": 6764.323433
       },
       {
         "adapter": "pandas",
         "task": "groupby_q9",
-        "median_ms": 7491.130648
+        "median_ms": 7358.763911
       },
       {
         "adapter": "pandas",
         "task": "groupby_q10",
-        "median_ms": 6837.016711
+        "median_ms": 6764.417859
       },
       {
         "adapter": "questdb",
         "task": "groupby_q1",
-        "median_ms": 22.385192
+        "median_ms": 12.33835
       },
       {
         "adapter": "questdb",
         "task": "groupby_q2",
-        "median_ms": 190.267687
+        "median_ms": 44.71871
       },
       {
         "adapter": "questdb",
         "task": "groupby_q3",
-        "median_ms": 334.350289
+        "median_ms": 289.078964
       },
       {
         "adapter": "questdb",
         "task": "groupby_q4",
-        "median_ms": 129.105358
+        "median_ms": 49.079076
       },
       {
         "adapter": "questdb",
         "task": "groupby_q5",
-        "median_ms": 762.28347
+        "median_ms": 182.346686
       },
       {
         "adapter": "questdb",
@@ -366,432 +366,432 @@
       {
         "adapter": "questdb",
         "task": "groupby_q7",
-        "median_ms": 219.950529
+        "median_ms": 202.718069
       },
       {
         "adapter": "questdb",
         "task": "groupby_q8",
-        "median_ms": 31508.071142
+        "median_ms": 30421.238441
       },
       {
         "adapter": "questdb",
         "task": "groupby_q9",
-        "median_ms": 119.655048
+        "median_ms": 77.287295
       },
       {
         "adapter": "questdb",
         "task": "groupby_q10",
-        "median_ms": 9961.305179
+        "median_ms": 6090.440108
       },
       {
         "adapter": "timescale",
         "task": "groupby_q1",
-        "median_ms": 609.092884
+        "median_ms": 441.803273
       },
       {
         "adapter": "timescale",
         "task": "groupby_q2",
-        "median_ms": 776.554711
+        "median_ms": 644.619321
       },
       {
         "adapter": "timescale",
         "task": "groupby_q3",
-        "median_ms": 1952.327277
+        "median_ms": 1826.894533
       },
       {
         "adapter": "timescale",
         "task": "groupby_q4",
-        "median_ms": 616.808131
+        "median_ms": 459.410086
       },
       {
         "adapter": "timescale",
         "task": "groupby_q5",
-        "median_ms": 1777.648185
+        "median_ms": 1665.354621
       },
       {
         "adapter": "timescale",
         "task": "groupby_q6",
-        "median_ms": 4343.443243
+        "median_ms": 4230.389915
       },
       {
         "adapter": "timescale",
         "task": "groupby_q7",
-        "median_ms": 1333.510931
+        "median_ms": 1207.686664
       },
       {
         "adapter": "timescale",
         "task": "groupby_q8",
-        "median_ms": 3454.785854
+        "median_ms": 3331.245013
       },
       {
         "adapter": "timescale",
         "task": "groupby_q9",
-        "median_ms": 766.003944
+        "median_ms": 637.856987
       },
       {
         "adapter": "timescale",
         "task": "groupby_q10",
-        "median_ms": 27924.232743
+        "median_ms": 23407.077279
       },
       {
         "adapter": "rayforce",
         "task": "join_q1",
-        "median_ms": 151.521339
+        "median_ms": 144.039665
       },
       {
         "adapter": "rayforce",
         "task": "join_q2",
-        "median_ms": 159.783744
+        "median_ms": 142.318494
       },
       {
         "adapter": "rayforce",
         "task": "join_q3",
-        "median_ms": 148.632613
+        "median_ms": 139.398495
       },
       {
         "adapter": "rayforce",
         "task": "join_q4",
-        "median_ms": 149.290883
+        "median_ms": 129.674419
       },
       {
         "adapter": "rayforce",
         "task": "join_q5",
-        "median_ms": 371.122031
+        "median_ms": 321.044684
       },
       {
         "adapter": "polars",
         "task": "join_q1",
-        "median_ms": 360.540581
+        "median_ms": 227.047278
       },
       {
         "adapter": "polars",
         "task": "join_q2",
-        "median_ms": 499.947691
+        "median_ms": 340.820397
       },
       {
         "adapter": "polars",
         "task": "join_q3",
-        "median_ms": 256.278358
+        "median_ms": 176.877041
       },
       {
         "adapter": "polars",
         "task": "join_q4",
-        "median_ms": 502.031644
+        "median_ms": 468.458587
       },
       {
         "adapter": "polars",
         "task": "join_q5",
-        "median_ms": 924.750399
+        "median_ms": 844.780382
       },
       {
         "adapter": "duckdb",
         "task": "join_q1",
-        "median_ms": 189.078106
+        "median_ms": 175.509406
       },
       {
         "adapter": "duckdb",
         "task": "join_q2",
-        "median_ms": 241.00555
+        "median_ms": 214.091979
       },
       {
         "adapter": "duckdb",
         "task": "join_q3",
-        "median_ms": 268.574366
+        "median_ms": 246.125441
       },
       {
         "adapter": "duckdb",
         "task": "join_q4",
-        "median_ms": 257.178825
+        "median_ms": 233.351365
       },
       {
         "adapter": "duckdb",
         "task": "join_q5",
-        "median_ms": 659.490842
+        "median_ms": 613.277146
       },
       {
         "adapter": "chdb",
         "task": "join_q1",
-        "median_ms": 162.751644
+        "median_ms": 132.655831
       },
       {
         "adapter": "chdb",
         "task": "join_q2",
-        "median_ms": 221.980773
+        "median_ms": 174.420515
       },
       {
         "adapter": "chdb",
         "task": "join_q3",
-        "median_ms": 202.915108
+        "median_ms": 171.845838
       },
       {
         "adapter": "chdb",
         "task": "join_q4",
-        "median_ms": 253.040547
+        "median_ms": 182.332681
       },
       {
         "adapter": "chdb",
         "task": "join_q5",
-        "median_ms": 1813.041727
+        "median_ms": 1658.177736
       },
       {
         "adapter": "datafusion",
         "task": "join_q1",
-        "median_ms": 623.914781
+        "median_ms": 99.345774
       },
       {
         "adapter": "datafusion",
         "task": "join_q2",
-        "median_ms": 619.231973
+        "median_ms": 103.748767
       },
       {
         "adapter": "datafusion",
         "task": "join_q3",
-        "median_ms": 609.604849
+        "median_ms": 101.14655
       },
       {
         "adapter": "datafusion",
         "task": "join_q4",
-        "median_ms": 716.531551
+        "median_ms": 106.45929
       },
       {
         "adapter": "datafusion",
         "task": "join_q5",
-        "median_ms": 1117.924887
+        "median_ms": 755.655539
       },
       {
         "adapter": "pandas",
         "task": "join_q1",
-        "median_ms": 1073.219927
+        "median_ms": 1080.004436
       },
       {
         "adapter": "pandas",
         "task": "join_q2",
-        "median_ms": 1282.715123
+        "median_ms": 1216.390376
       },
       {
         "adapter": "pandas",
         "task": "join_q3",
-        "median_ms": 923.832433
+        "median_ms": 741.148991
       },
       {
         "adapter": "pandas",
         "task": "join_q4",
-        "median_ms": 1625.2432
+        "median_ms": 1598.403628
       },
       {
         "adapter": "pandas",
         "task": "join_q5",
-        "median_ms": 7341.243806
+        "median_ms": 7670.759169
       },
       {
         "adapter": "questdb",
         "task": "join_q1",
-        "median_ms": 16313.354288
+        "median_ms": 14309.449067
       },
       {
         "adapter": "questdb",
         "task": "join_q2",
-        "median_ms": 18156.964444
+        "median_ms": 16111.858509
       },
       {
         "adapter": "questdb",
         "task": "join_q3",
-        "median_ms": 18249.050062
+        "median_ms": 16046.214371
       },
       {
         "adapter": "questdb",
         "task": "join_q4",
-        "median_ms": 18553.707245
+        "median_ms": 16394.185625
       },
       {
         "adapter": "questdb",
         "task": "join_q5",
-        "median_ms": 40322.616774
+        "median_ms": 37866.247345
       },
       {
         "adapter": "timescale",
         "task": "join_q1",
-        "median_ms": 13184.282993
+        "median_ms": 11597.968047
       },
       {
         "adapter": "timescale",
         "task": "join_q2",
-        "median_ms": 21876.092598
+        "median_ms": 13293.619332
       },
       {
         "adapter": "timescale",
         "task": "join_q3",
-        "median_ms": 21658.052858
+        "median_ms": 13601.151587
       },
       {
         "adapter": "timescale",
         "task": "join_q4",
-        "median_ms": 30342.673817
+        "median_ms": 14057.200478
       },
       {
         "adapter": "timescale",
         "task": "join_q5",
-        "median_ms": 36804.534961
+        "median_ms": 26270.215698
       },
       {
         "adapter": "rayforce",
         "task": "join_inner",
-        "median_ms": 81.348005
+        "median_ms": 71.737685
       },
       {
         "adapter": "rayforce",
         "task": "join_left",
-        "median_ms": 354.402484
+        "median_ms": 294.930163
       },
       {
         "adapter": "polars",
         "task": "join_inner",
-        "median_ms": 416.538297
+        "median_ms": 379.361764
       },
       {
         "adapter": "polars",
         "task": "join_left",
-        "median_ms": 1190.993986
+        "median_ms": 633.201003
       },
       {
         "adapter": "duckdb",
         "task": "join_inner",
-        "median_ms": 292.445105
+        "median_ms": 272.939404
       },
       {
         "adapter": "duckdb",
         "task": "join_left",
-        "median_ms": 416.39568
+        "median_ms": 376.457753
       },
       {
         "adapter": "chdb",
         "task": "join_inner",
-        "median_ms": 972.088772
+        "median_ms": 998.131234
       },
       {
         "adapter": "chdb",
         "task": "join_left",
-        "median_ms": 1005.09269
+        "median_ms": 1074.450237
       },
       {
         "adapter": "datafusion",
         "task": "join_inner",
-        "median_ms": 709.193493
+        "median_ms": 555.225294
       },
       {
         "adapter": "datafusion",
         "task": "join_left",
-        "median_ms": 798.253563
+        "median_ms": 656.455689
       },
       {
         "adapter": "pandas",
         "task": "join_inner",
-        "median_ms": 5189.288591
+        "median_ms": 5129.918475
       },
       {
         "adapter": "pandas",
         "task": "join_left",
-        "median_ms": 6224.312358
+        "median_ms": 6399.53636
       },
       {
         "adapter": "questdb",
         "task": "join_inner",
-        "median_ms": 4277.010157
+        "median_ms": 4235.046959
       },
       {
         "adapter": "questdb",
         "task": "join_left",
-        "median_ms": 15569.756519
+        "median_ms": 15768.783768
       },
       {
         "adapter": "timescale",
         "task": "join_inner",
-        "median_ms": 15523.338924
+        "median_ms": 2231.055977
       },
       {
         "adapter": "timescale",
         "task": "join_left",
-        "median_ms": 24879.076162
+        "median_ms": 24685.523838
       },
       {
         "adapter": "rayforce",
         "task": "sort_single",
-        "median_ms": 113.875671
+        "median_ms": 84.759846
       },
       {
         "adapter": "rayforce",
         "task": "sort_multi",
-        "median_ms": 285.188761
+        "median_ms": 261.426378
       },
       {
         "adapter": "polars",
         "task": "sort_single",
-        "median_ms": 803.520472
+        "median_ms": 570.439905
       },
       {
         "adapter": "polars",
         "task": "sort_multi",
-        "median_ms": 2098.159706
+        "median_ms": 2009.47697
       },
       {
         "adapter": "duckdb",
         "task": "sort_single",
-        "median_ms": 377.423913
+        "median_ms": 348.810142
       },
       {
         "adapter": "duckdb",
         "task": "sort_multi",
-        "median_ms": 1152.045091
+        "median_ms": 1124.145129
       },
       {
         "adapter": "chdb",
         "task": "sort_single",
-        "median_ms": 574.788223
+        "median_ms": 532.063402
       },
       {
         "adapter": "chdb",
         "task": "sort_multi",
-        "median_ms": 5205.11515
+        "median_ms": 5380.389279
       },
       {
         "adapter": "datafusion",
         "task": "sort_single",
-        "median_ms": 1238.655734
+        "median_ms": 1100.132101
       },
       {
         "adapter": "datafusion",
         "task": "sort_multi",
-        "median_ms": 2039.132937
+        "median_ms": 1980.648815
       },
       {
         "adapter": "pandas",
         "task": "sort_single",
-        "median_ms": 9307.864031
+        "median_ms": 9499.166645
       },
       {
         "adapter": "pandas",
         "task": "sort_multi",
-        "median_ms": 8274.461746
+        "median_ms": 8587.095275
       },
       {
         "adapter": "questdb",
         "task": "sort_single",
-        "median_ms": 18630.266256
+        "median_ms": 19581.008101
       },
       {
         "adapter": "questdb",
         "task": "sort_multi",
-        "median_ms": 22566.508323
+        "median_ms": 23213.641959
       },
       {
         "adapter": "timescale",
         "task": "sort_single",
-        "median_ms": 13514.783628
+        "median_ms": 13138.568813
       },
       {
         "adapter": "timescale",
         "task": "sort_multi",
-        "median_ms": 22693.532475
+        "median_ms": 21783.745466
       }
     ]
   },
@@ -800,105 +800,121 @@
       {
         "adapter": "chdb",
         "values": [
-          43.848184
+          29.446581,
+          27.48969,
+          52.146085
         ],
         "boxplot": [
-          43.848184,
-          43.848184,
-          43.848184,
-          43.848184,
-          43.848184
+          27.48969,
+          27.48969,
+          29.446581,
+          52.146085,
+          52.146085
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          113.68986
+          19.9536,
+          20.638356,
+          21.067714
         ],
         "boxplot": [
-          113.68986,
-          113.68986,
-          113.68986,
-          113.68986,
-          113.68986
+          19.9536,
+          19.9536,
+          20.638356,
+          21.067714,
+          21.067714
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          36.783824
+          35.846985,
+          37.853912,
+          35.532846
         ],
         "boxplot": [
-          36.783824,
-          36.783824,
-          36.783824,
-          36.783824,
-          36.783824
+          35.532846,
+          35.532846,
+          35.846985,
+          37.853912,
+          37.853912
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          266.856016
+          226.802102,
+          232.725508,
+          231.501744
         ],
         "boxplot": [
-          266.856016,
-          266.856016,
-          266.856016,
-          266.856016,
-          266.856016
+          226.802102,
+          226.802102,
+          231.501744,
+          232.725508,
+          232.725508
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          69.039284
+          30.885654,
+          30.399757,
+          29.930583
         ],
         "boxplot": [
-          69.039284,
-          69.039284,
-          69.039284,
-          69.039284,
-          69.039284
+          29.930583,
+          29.930583,
+          30.399757,
+          30.885654,
+          30.885654
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          22.385192
+          13.806058,
+          10.867594,
+          12.33835
         ],
         "boxplot": [
-          22.385192,
-          22.385192,
-          22.385192,
-          22.385192,
-          22.385192
+          10.867594,
+          10.867594,
+          12.33835,
+          13.806058,
+          13.806058
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          5.648939
+          4.913499,
+          5.432649,
+          5.511229
         ],
         "boxplot": [
-          5.648939,
-          5.648939,
-          5.648939,
-          5.648939,
-          5.648939
+          4.913499,
+          4.913499,
+          5.432649,
+          5.511229,
+          5.511229
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          609.092884
+          448.24005,
+          441.803273,
+          438.473873
         ],
         "boxplot": [
-          609.092884,
-          609.092884,
-          609.092884,
-          609.092884,
-          609.092884
+          438.473873,
+          438.473873,
+          441.803273,
+          448.24005,
+          448.24005
         ]
       }
     ],
@@ -906,105 +922,121 @@
       {
         "adapter": "chdb",
         "values": [
-          757.94004
+          695.147176,
+          667.207929,
+          679.365983
         ],
         "boxplot": [
-          757.94004,
-          757.94004,
-          757.94004,
-          757.94004,
-          757.94004
+          667.207929,
+          667.207929,
+          679.365983,
+          695.147176,
+          695.147176
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          605.816967
+          413.917543,
+          419.870936,
+          418.288108
         ],
         "boxplot": [
-          605.816967,
-          605.816967,
-          605.816967,
-          605.816967,
-          605.816967
+          413.917543,
+          413.917543,
+          418.288108,
+          419.870936,
+          419.870936
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          387.660672
+          371.78174,
+          364.383042,
+          363.104704
         ],
         "boxplot": [
-          387.660672,
-          387.660672,
-          387.660672,
-          387.660672,
-          387.660672
+          363.104704,
+          363.104704,
+          364.383042,
+          371.78174,
+          371.78174
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          6837.016711
+          6769.007377,
+          6690.704371,
+          6764.417859
         ],
         "boxplot": [
-          6837.016711,
-          6837.016711,
-          6837.016711,
-          6837.016711,
-          6837.016711
+          6690.704371,
+          6690.704371,
+          6764.417859,
+          6769.007377,
+          6769.007377
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          2089.583403
+          1992.657088,
+          1975.125991,
+          2040.081034
         ],
         "boxplot": [
-          2089.583403,
-          2089.583403,
-          2089.583403,
-          2089.583403,
-          2089.583403
+          1975.125991,
+          1975.125991,
+          1992.657088,
+          2040.081034,
+          2040.081034
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          9961.305179
+          6033.165753,
+          6090.440108,
+          6251.031326
         ],
         "boxplot": [
-          9961.305179,
-          9961.305179,
-          9961.305179,
-          9961.305179,
-          9961.305179
+          6033.165753,
+          6033.165753,
+          6090.440108,
+          6251.031326,
+          6251.031326
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          184.820741
+          142.106514,
+          141.395339,
+          142.540442
         ],
         "boxplot": [
-          184.820741,
-          184.820741,
-          184.820741,
-          184.820741,
-          184.820741
+          141.395339,
+          141.395339,
+          142.106514,
+          142.540442,
+          142.540442
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          27924.232743
+          23616.956168,
+          23326.226787,
+          23407.077279
         ],
         "boxplot": [
-          27924.232743,
-          27924.232743,
-          27924.232743,
-          27924.232743,
-          27924.232743
+          23326.226787,
+          23326.226787,
+          23407.077279,
+          23616.956168,
+          23616.956168
         ]
       }
     ],
@@ -1012,105 +1044,121 @@
       {
         "adapter": "chdb",
         "values": [
-          179.888671
+          163.301346,
+          163.814254,
+          175.934866
         ],
         "boxplot": [
-          179.888671,
-          179.888671,
-          179.888671,
-          179.888671,
-          179.888671
+          163.301346,
+          163.301346,
+          163.814254,
+          175.934866,
+          175.934866
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          201.716634
+          35.691591,
+          45.982123,
+          45.564036
         ],
         "boxplot": [
-          201.716634,
-          201.716634,
-          201.716634,
-          201.716634,
-          201.716634
+          35.691591,
+          35.691591,
+          45.564036,
+          45.982123,
+          45.982123
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          53.231193
+          57.050117,
+          55.631161,
+          55.826273
         ],
         "boxplot": [
-          53.231193,
-          53.231193,
-          53.231193,
-          53.231193,
-          53.231193
+          55.631161,
+          55.631161,
+          55.826273,
+          57.050117,
+          57.050117
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          697.052088
+          604.279904,
+          592.17444,
+          619.969002
         ],
         "boxplot": [
-          697.052088,
-          697.052088,
-          697.052088,
-          697.052088,
-          697.052088
+          592.17444,
+          592.17444,
+          604.279904,
+          619.969002,
+          619.969002
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          309.79886
+          231.558796,
+          226.698308,
+          234.409652
         ],
         "boxplot": [
-          309.79886,
-          309.79886,
-          309.79886,
-          309.79886,
-          309.79886
+          226.698308,
+          226.698308,
+          231.558796,
+          234.409652,
+          234.409652
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          190.267687
+          45.170742,
+          44.71871,
+          43.820927
         ],
         "boxplot": [
-          190.267687,
-          190.267687,
-          190.267687,
-          190.267687,
-          190.267687
+          43.820927,
+          43.820927,
+          44.71871,
+          45.170742,
+          45.170742
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          13.452131
+          13.841023,
+          15.894347,
+          15.330663
         ],
         "boxplot": [
-          13.452131,
-          13.452131,
-          13.452131,
-          13.452131,
-          13.452131
+          13.841023,
+          13.841023,
+          15.330663,
+          15.894347,
+          15.894347
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          776.554711
+          654.538429,
+          644.619321,
+          643.156095
         ],
         "boxplot": [
-          776.554711,
-          776.554711,
-          776.554711,
-          776.554711,
-          776.554711
+          643.156095,
+          643.156095,
+          644.619321,
+          654.538429,
+          654.538429
         ]
       }
     ],
@@ -1118,105 +1166,121 @@
       {
         "adapter": "chdb",
         "values": [
-          223.233171
+          202.751252,
+          205.686589,
+          217.116395
         ],
         "boxplot": [
-          223.233171,
-          223.233171,
-          223.233171,
-          223.233171,
-          223.233171
+          202.751252,
+          202.751252,
+          205.686589,
+          217.116395,
+          217.116395
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          271.339905
+          163.989011,
+          170.009712,
+          157.444732
         ],
         "boxplot": [
-          271.339905,
-          271.339905,
-          271.339905,
-          271.339905,
-          271.339905
+          157.444732,
+          157.444732,
+          163.989011,
+          170.009712,
+          170.009712
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          111.078593
+          99.493541,
+          97.284698,
+          97.597745
         ],
         "boxplot": [
-          111.078593,
-          111.078593,
-          111.078593,
-          111.078593,
-          111.078593
+          97.284698,
+          97.284698,
+          97.597745,
+          99.493541,
+          99.493541
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          836.507523
+          821.40526,
+          812.654403,
+          819.528352
         ],
         "boxplot": [
-          836.507523,
-          836.507523,
-          836.507523,
-          836.507523,
-          836.507523
+          812.654403,
+          812.654403,
+          819.528352,
+          821.40526,
+          821.40526
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          349.218428
+          238.280874,
+          264.75707,
+          287.404705
         ],
         "boxplot": [
-          349.218428,
-          349.218428,
-          349.218428,
-          349.218428,
-          349.218428
+          238.280874,
+          238.280874,
+          264.75707,
+          287.404705,
+          287.404705
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          334.350289
+          299.146553,
+          289.078964,
+          277.116962
         ],
         "boxplot": [
-          334.350289,
-          334.350289,
-          334.350289,
-          334.350289,
-          334.350289
+          277.116962,
+          277.116962,
+          289.078964,
+          299.146553,
+          299.146553
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          55.347612
+          40.69109,
+          36.801955,
+          36.671035
         ],
         "boxplot": [
-          55.347612,
-          55.347612,
-          55.347612,
-          55.347612,
-          55.347612
+          36.671035,
+          36.671035,
+          36.801955,
+          40.69109,
+          40.69109
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          1952.327277
+          1842.684533,
+          1826.081947,
+          1826.894533
         ],
         "boxplot": [
-          1952.327277,
-          1952.327277,
-          1952.327277,
-          1952.327277,
-          1952.327277
+          1826.081947,
+          1826.081947,
+          1826.894533,
+          1842.684533,
+          1842.684533
         ]
       }
     ],
@@ -1224,105 +1288,121 @@
       {
         "adapter": "chdb",
         "values": [
-          59.008594
+          43.932083,
+          41.688245,
+          72.097672
         ],
         "boxplot": [
-          59.008594,
-          59.008594,
-          59.008594,
-          59.008594,
-          59.008594
+          41.688245,
+          41.688245,
+          43.932083,
+          72.097672,
+          72.097672
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          155.606422
+          18.326998,
+          22.24055,
+          23.150165
         ],
         "boxplot": [
-          155.606422,
-          155.606422,
-          155.606422,
-          155.606422,
-          155.606422
+          18.326998,
+          18.326998,
+          22.24055,
+          23.150165,
+          23.150165
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          8.547262
+          8.146845,
+          8.419355,
+          8.528893
         ],
         "boxplot": [
-          8.547262,
-          8.547262,
-          8.547262,
-          8.547262,
-          8.547262
+          8.146845,
+          8.146845,
+          8.419355,
+          8.528893,
+          8.528893
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          243.865604
+          294.779645,
+          244.362953,
+          257.008619
         ],
         "boxplot": [
-          243.865604,
-          243.865604,
-          243.865604,
-          243.865604,
-          243.865604
+          244.362953,
+          244.362953,
+          257.008619,
+          294.779645,
+          294.779645
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          66.598773
+          29.399971,
+          28.103369,
+          29.187627
         ],
         "boxplot": [
-          66.598773,
-          66.598773,
-          66.598773,
-          66.598773,
-          66.598773
+          28.103369,
+          28.103369,
+          29.187627,
+          29.399971,
+          29.399971
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          129.105358
+          35.741731,
+          49.079076,
+          52.617224
         ],
         "boxplot": [
-          129.105358,
-          129.105358,
-          129.105358,
-          129.105358,
-          129.105358
+          35.741731,
+          35.741731,
+          49.079076,
+          52.617224,
+          52.617224
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          10.847255
+          9.861334,
+          10.133974,
+          9.980981
         ],
         "boxplot": [
-          10.847255,
-          10.847255,
-          10.847255,
-          10.847255,
-          10.847255
+          9.861334,
+          9.861334,
+          9.980981,
+          10.133974,
+          10.133974
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          616.808131
+          459.410086,
+          460.220843,
+          449.976306
         ],
         "boxplot": [
-          616.808131,
-          616.808131,
-          616.808131,
-          616.808131,
-          616.808131
+          449.976306,
+          449.976306,
+          459.410086,
+          460.220843,
+          460.220843
         ]
       }
     ],
@@ -1330,105 +1410,121 @@
       {
         "adapter": "chdb",
         "values": [
-          188.764697
+          182.107518,
+          185.141644,
+          150.449651
         ],
         "boxplot": [
-          188.764697,
-          188.764697,
-          188.764697,
-          188.764697,
-          188.764697
+          150.449651,
+          150.449651,
+          182.107518,
+          185.141644,
+          185.141644
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          312.230788
+          133.72477,
+          143.45224,
+          148.095173
         ],
         "boxplot": [
-          312.230788,
-          312.230788,
-          312.230788,
-          312.230788,
-          312.230788
+          133.72477,
+          133.72477,
+          143.45224,
+          148.095173,
+          148.095173
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          132.591674
+          102.711277,
+          104.682616,
+          103.933377
         ],
         "boxplot": [
-          132.591674,
-          132.591674,
-          132.591674,
-          132.591674,
-          132.591674
+          102.711277,
+          102.711277,
+          103.933377,
+          104.682616,
+          104.682616
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          406.412566
+          383.290091,
+          378.594827,
+          388.342716
         ],
         "boxplot": [
-          406.412566,
-          406.412566,
-          406.412566,
-          406.412566,
-          406.412566
+          378.594827,
+          378.594827,
+          383.290091,
+          388.342716,
+          388.342716
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          252.859031
+          164.847218,
+          159.081854,
+          156.831122
         ],
         "boxplot": [
-          252.859031,
-          252.859031,
-          252.859031,
-          252.859031,
-          252.859031
+          156.831122,
+          156.831122,
+          159.081854,
+          164.847218,
+          164.847218
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          762.28347
+          386.450815,
+          174.568492,
+          182.346686
         ],
         "boxplot": [
-          762.28347,
-          762.28347,
-          762.28347,
-          762.28347,
-          762.28347
+          174.568492,
+          174.568492,
+          182.346686,
+          386.450815,
+          386.450815
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          89.530342
+          61.586655,
+          60.600333,
+          60.95481
         ],
         "boxplot": [
-          89.530342,
-          89.530342,
-          89.530342,
-          89.530342,
-          89.530342
+          60.600333,
+          60.600333,
+          60.95481,
+          61.586655,
+          61.586655
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          1777.648185
+          1669.075899,
+          1665.354621,
+          1649.877641
         ],
         "boxplot": [
-          1777.648185,
-          1777.648185,
-          1777.648185,
-          1777.648185,
-          1777.648185
+          1649.877641,
+          1649.877641,
+          1665.354621,
+          1669.075899,
+          1669.075899
         ]
       }
     ],
@@ -1436,66 +1532,76 @@
       {
         "adapter": "chdb",
         "values": [
-          466.187475
+          453.087787,
+          459.448687,
+          444.245005
         ],
         "boxplot": [
-          466.187475,
-          466.187475,
-          466.187475,
-          466.187475,
-          466.187475
+          444.245005,
+          444.245005,
+          453.087787,
+          459.448687,
+          459.448687
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          270.020864
+          146.31582,
+          139.302787,
+          144.69545
         ],
         "boxplot": [
-          270.020864,
-          270.020864,
-          270.020864,
-          270.020864,
-          270.020864
+          139.302787,
+          139.302787,
+          144.69545,
+          146.31582,
+          146.31582
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          193.852902
+          168.814687,
+          173.593059,
+          173.183848
         ],
         "boxplot": [
-          193.852902,
-          193.852902,
-          193.852902,
-          193.852902,
-          193.852902
+          168.814687,
+          168.814687,
+          173.183848,
+          173.593059,
+          173.593059
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          691.906659
+          689.037516,
+          684.798864,
+          678.643295
         ],
         "boxplot": [
-          691.906659,
-          691.906659,
-          691.906659,
-          691.906659,
-          691.906659
+          678.643295,
+          678.643295,
+          684.798864,
+          689.037516,
+          689.037516
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          321.612157
+          228.993916,
+          248.30569,
+          217.402774
         ],
         "boxplot": [
-          321.612157,
-          321.612157,
-          321.612157,
-          321.612157,
-          321.612157
+          217.402774,
+          217.402774,
+          228.993916,
+          248.30569,
+          248.30569
         ]
       },
       {
@@ -1512,27 +1618,31 @@
       {
         "adapter": "rayforce",
         "values": [
-          9447.316562
+          122.598303,
+          115.725888,
+          116.838069
         ],
         "boxplot": [
-          9447.316562,
-          9447.316562,
-          9447.316562,
-          9447.316562,
-          9447.316562
+          115.725888,
+          115.725888,
+          116.838069,
+          122.598303,
+          122.598303
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          4343.443243
+          4222.697174,
+          4286.89303,
+          4230.389915
         ],
         "boxplot": [
-          4343.443243,
-          4343.443243,
-          4343.443243,
-          4343.443243,
-          4343.443243
+          4222.697174,
+          4222.697174,
+          4230.389915,
+          4286.89303,
+          4286.89303
         ]
       }
     ],
@@ -1540,105 +1650,121 @@
       {
         "adapter": "chdb",
         "values": [
-          235.302985
+          215.157642,
+          209.515102,
+          211.374778
         ],
         "boxplot": [
-          235.302985,
-          235.302985,
-          235.302985,
-          235.302985,
-          235.302985
+          209.515102,
+          209.515102,
+          211.374778,
+          215.157642,
+          215.157642
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          251.641367
+          144.114944,
+          144.604597,
+          137.037066
         ],
         "boxplot": [
-          251.641367,
-          251.641367,
-          251.641367,
-          251.641367,
-          251.641367
+          137.037066,
+          137.037066,
+          144.114944,
+          144.604597,
+          144.604597
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          105.644674
+          98.159878,
+          99.512167,
+          99.50334
         ],
         "boxplot": [
-          105.644674,
-          105.644674,
-          105.644674,
-          105.644674,
-          105.644674
+          98.159878,
+          98.159878,
+          99.50334,
+          99.512167,
+          99.512167
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          867.738697
+          833.44627,
+          813.404382,
+          817.886259
         ],
         "boxplot": [
-          867.738697,
-          867.738697,
-          867.738697,
-          867.738697,
-          867.738697
+          813.404382,
+          813.404382,
+          817.886259,
+          833.44627,
+          833.44627
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          349.792922
+          249.139551,
+          261.610351,
+          268.910421
         ],
         "boxplot": [
-          349.792922,
-          349.792922,
-          349.792922,
-          349.792922,
-          349.792922
+          249.139551,
+          249.139551,
+          261.610351,
+          268.910421,
+          268.910421
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          219.950529
+          203.402134,
+          202.718069,
+          194.509675
         ],
         "boxplot": [
-          219.950529,
-          219.950529,
-          219.950529,
-          219.950529,
-          219.950529
+          194.509675,
+          194.509675,
+          202.718069,
+          203.402134,
+          203.402134
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          67.263035
+          55.640867,
+          51.331701,
+          52.560073
         ],
         "boxplot": [
-          67.263035,
-          67.263035,
-          67.263035,
-          67.263035,
-          67.263035
+          51.331701,
+          51.331701,
+          52.560073,
+          55.640867,
+          55.640867
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          1333.510931
+          1200.69256,
+          1215.404567,
+          1207.686664
         ],
         "boxplot": [
-          1333.510931,
-          1333.510931,
-          1333.510931,
-          1333.510931,
-          1333.510931
+          1200.69256,
+          1200.69256,
+          1207.686664,
+          1215.404567,
+          1215.404567
         ]
       }
     ],
@@ -1646,105 +1772,121 @@
       {
         "adapter": "chdb",
         "values": [
-          581.626291
+          559.211737,
+          500.194318,
+          506.077265
         ],
         "boxplot": [
-          581.626291,
-          581.626291,
-          581.626291,
-          581.626291,
-          581.626291
+          500.194318,
+          500.194318,
+          506.077265,
+          559.211737,
+          559.211737
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          359.246195
+          267.060379,
+          241.315255,
+          258.800138
         ],
         "boxplot": [
-          359.246195,
-          359.246195,
-          359.246195,
-          359.246195,
-          359.246195
+          241.315255,
+          241.315255,
+          258.800138,
+          267.060379,
+          267.060379
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          163.864023
+          150.318978,
+          152.719076,
+          149.948713
         ],
         "boxplot": [
-          163.864023,
-          163.864023,
-          163.864023,
-          163.864023,
-          163.864023
+          149.948713,
+          149.948713,
+          150.318978,
+          152.719076,
+          152.719076
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          6353.91252
+          6764.323433,
+          6682.050531,
+          7102.674417
         ],
         "boxplot": [
-          6353.91252,
-          6353.91252,
-          6353.91252,
-          6353.91252,
-          6353.91252
+          6682.050531,
+          6682.050531,
+          6764.323433,
+          7102.674417,
+          7102.674417
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          663.255744
+          498.552965,
+          504.525043,
+          501.297309
         ],
         "boxplot": [
-          663.255744,
-          663.255744,
-          663.255744,
-          663.255744,
-          663.255744
+          498.552965,
+          498.552965,
+          501.297309,
+          504.525043,
+          504.525043
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          31508.071142
+          30421.238441,
+          30521.369253,
+          30383.316998
         ],
         "boxplot": [
-          31508.071142,
-          31508.071142,
-          31508.071142,
-          31508.071142,
-          31508.071142
+          30383.316998,
+          30383.316998,
+          30421.238441,
+          30521.369253,
+          30521.369253
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          473.452573
+          43.499336,
+          43.71632,
+          44.232354
         ],
         "boxplot": [
-          473.452573,
-          473.452573,
-          473.452573,
-          473.452573,
-          473.452573
+          43.499336,
+          43.499336,
+          43.71632,
+          44.232354,
+          44.232354
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          3454.785854
+          3351.275443,
+          3242.958476,
+          3331.245013
         ],
         "boxplot": [
-          3454.785854,
-          3454.785854,
-          3454.785854,
-          3454.785854,
-          3454.785854
+          3242.958476,
+          3242.958476,
+          3331.245013,
+          3351.275443,
+          3351.275443
         ]
       }
     ],
@@ -1752,105 +1894,121 @@
       {
         "adapter": "chdb",
         "values": [
-          206.361847
+          197.809132,
+          186.558688,
+          198.21192
         ],
         "boxplot": [
-          206.361847,
-          206.361847,
-          206.361847,
-          206.361847,
-          206.361847
+          186.558688,
+          186.558688,
+          197.809132,
+          198.21192,
+          198.21192
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          228.741086
+          68.358554,
+          68.358052,
+          68.720553
         ],
         "boxplot": [
-          228.741086,
-          228.741086,
-          228.741086,
-          228.741086,
-          228.741086
+          68.358052,
+          68.358052,
+          68.358554,
+          68.720553,
+          68.720553
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          75.630648
+          75.84191,
+          78.425417,
+          77.082025
         ],
         "boxplot": [
-          75.630648,
-          75.630648,
-          75.630648,
-          75.630648,
-          75.630648
+          75.84191,
+          75.84191,
+          77.082025,
+          78.425417,
+          78.425417
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          7491.130648
+          7846.94732,
+          7327.17581,
+          7358.763911
         ],
         "boxplot": [
-          7491.130648,
-          7491.130648,
-          7491.130648,
-          7491.130648,
-          7491.130648
+          7327.17581,
+          7327.17581,
+          7358.763911,
+          7846.94732,
+          7846.94732
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          585.096253
+          469.013539,
+          396.981935,
+          394.637956
         ],
         "boxplot": [
-          585.096253,
-          585.096253,
-          585.096253,
-          585.096253,
-          585.096253
+          394.637956,
+          394.637956,
+          396.981935,
+          469.013539,
+          469.013539
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          119.655048
+          85.436637,
+          74.576997,
+          77.287295
         ],
         "boxplot": [
-          119.655048,
-          119.655048,
-          119.655048,
-          119.655048,
-          119.655048
+          74.576997,
+          74.576997,
+          77.287295,
+          85.436637,
+          85.436637
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          6501.738587
+          45.710182,
+          44.148594,
+          44.297218
         ],
         "boxplot": [
-          6501.738587,
-          6501.738587,
-          6501.738587,
-          6501.738587,
-          6501.738587
+          44.148594,
+          44.148594,
+          44.297218,
+          45.710182,
+          45.710182
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          766.003944
+          658.507397,
+          637.856987,
+          620.532707
         ],
         "boxplot": [
-          766.003944,
-          766.003944,
-          766.003944,
-          766.003944,
-          766.003944
+          620.532707,
+          620.532707,
+          637.856987,
+          658.507397,
+          658.507397
         ]
       }
     ],
@@ -1858,105 +2016,121 @@
       {
         "adapter": "chdb",
         "values": [
-          972.088772
+          998.131234,
+          1031.141544,
+          975.172898
         ],
         "boxplot": [
-          972.088772,
-          972.088772,
-          972.088772,
-          972.088772,
-          972.088772
+          975.172898,
+          975.172898,
+          998.131234,
+          1031.141544,
+          1031.141544
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          709.193493
+          555.225294,
+          527.377763,
+          578.735743
         ],
         "boxplot": [
-          709.193493,
-          709.193493,
-          709.193493,
-          709.193493,
-          709.193493
+          527.377763,
+          527.377763,
+          555.225294,
+          578.735743,
+          578.735743
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          292.445105
+          281.210832,
+          263.099363,
+          272.939404
         ],
         "boxplot": [
-          292.445105,
-          292.445105,
-          292.445105,
-          292.445105,
-          292.445105
+          263.099363,
+          263.099363,
+          272.939404,
+          281.210832,
+          281.210832
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          5189.288591
+          5129.918475,
+          5044.723325,
+          5147.677481
         ],
         "boxplot": [
-          5189.288591,
-          5189.288591,
-          5189.288591,
-          5189.288591,
-          5189.288591
+          5044.723325,
+          5044.723325,
+          5129.918475,
+          5147.677481,
+          5147.677481
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          416.538297
+          379.361764,
+          350.382613,
+          384.602431
         ],
         "boxplot": [
-          416.538297,
-          416.538297,
-          416.538297,
-          416.538297,
-          416.538297
+          350.382613,
+          350.382613,
+          379.361764,
+          384.602431,
+          384.602431
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          4277.010157
+          4232.199804,
+          4275.666763,
+          4235.046959
         ],
         "boxplot": [
-          4277.010157,
-          4277.010157,
-          4277.010157,
-          4277.010157,
-          4277.010157
+          4232.199804,
+          4232.199804,
+          4235.046959,
+          4275.666763,
+          4275.666763
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          81.348005
+          69.267955,
+          73.174577,
+          71.737685
         ],
         "boxplot": [
-          81.348005,
-          81.348005,
-          81.348005,
-          81.348005,
-          81.348005
+          69.267955,
+          69.267955,
+          71.737685,
+          73.174577,
+          73.174577
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          15523.338924
+          2247.060885,
+          2203.143508,
+          2231.055977
         ],
         "boxplot": [
-          15523.338924,
-          15523.338924,
-          15523.338924,
-          15523.338924,
-          15523.338924
+          2203.143508,
+          2203.143508,
+          2231.055977,
+          2247.060885,
+          2247.060885
         ]
       }
     ],
@@ -1964,105 +2138,121 @@
       {
         "adapter": "chdb",
         "values": [
-          1005.09269
+          1074.450237,
+          1037.678963,
+          1076.113169
         ],
         "boxplot": [
-          1005.09269,
-          1005.09269,
-          1005.09269,
-          1005.09269,
-          1005.09269
+          1037.678963,
+          1037.678963,
+          1074.450237,
+          1076.113169,
+          1076.113169
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          798.253563
+          656.455689,
+          642.123059,
+          685.436442
         ],
         "boxplot": [
-          798.253563,
-          798.253563,
-          798.253563,
-          798.253563,
-          798.253563
+          642.123059,
+          642.123059,
+          656.455689,
+          685.436442,
+          685.436442
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          416.39568
+          377.948517,
+          362.383215,
+          376.457753
         ],
         "boxplot": [
-          416.39568,
-          416.39568,
-          416.39568,
-          416.39568,
-          416.39568
+          362.383215,
+          362.383215,
+          376.457753,
+          377.948517,
+          377.948517
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          6224.312358
+          6360.756933,
+          6399.53636,
+          6407.078895
         ],
         "boxplot": [
-          6224.312358,
-          6224.312358,
-          6224.312358,
-          6224.312358,
-          6224.312358
+          6360.756933,
+          6360.756933,
+          6399.53636,
+          6407.078895,
+          6407.078895
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          1190.993986
+          675.657401,
+          633.201003,
+          630.862441
         ],
         "boxplot": [
-          1190.993986,
-          1190.993986,
-          1190.993986,
-          1190.993986,
-          1190.993986
+          630.862441,
+          630.862441,
+          633.201003,
+          675.657401,
+          675.657401
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          15569.756519
+          15768.783768,
+          15728.108063,
+          15956.315349
         ],
         "boxplot": [
-          15569.756519,
-          15569.756519,
-          15569.756519,
-          15569.756519,
-          15569.756519
+          15728.108063,
+          15728.108063,
+          15768.783768,
+          15956.315349,
+          15956.315349
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          354.402484
+          294.930163,
+          291.980657,
+          305.792324
         ],
         "boxplot": [
-          354.402484,
-          354.402484,
-          354.402484,
-          354.402484,
-          354.402484
+          291.980657,
+          291.980657,
+          294.930163,
+          305.792324,
+          305.792324
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          24879.076162
+          24861.021267,
+          24685.523838,
+          23968.748249
         ],
         "boxplot": [
-          24879.076162,
-          24879.076162,
-          24879.076162,
-          24879.076162,
-          24879.076162
+          23968.748249,
+          23968.748249,
+          24685.523838,
+          24861.021267,
+          24861.021267
         ]
       }
     ],
@@ -2070,105 +2260,121 @@
       {
         "adapter": "chdb",
         "values": [
-          162.751644
+          129.006715,
+          132.655831,
+          135.49498
         ],
         "boxplot": [
-          162.751644,
-          162.751644,
-          162.751644,
-          162.751644,
-          162.751644
+          129.006715,
+          129.006715,
+          132.655831,
+          135.49498,
+          135.49498
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          623.914781
+          80.005731,
+          99.838113,
+          99.345774
         ],
         "boxplot": [
-          623.914781,
-          623.914781,
-          623.914781,
-          623.914781,
-          623.914781
+          80.005731,
+          80.005731,
+          99.345774,
+          99.838113,
+          99.838113
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          189.078106
+          179.997772,
+          174.805672,
+          175.509406
         ],
         "boxplot": [
-          189.078106,
-          189.078106,
-          189.078106,
-          189.078106,
-          189.078106
+          174.805672,
+          174.805672,
+          175.509406,
+          179.997772,
+          179.997772
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          1073.219927
+          1042.08066,
+          1176.226644,
+          1080.004436
         ],
         "boxplot": [
-          1073.219927,
-          1073.219927,
-          1073.219927,
-          1073.219927,
-          1073.219927
+          1042.08066,
+          1042.08066,
+          1080.004436,
+          1176.226644,
+          1176.226644
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          360.540581
+          230.438742,
+          227.047278,
+          224.686192
         ],
         "boxplot": [
-          360.540581,
-          360.540581,
-          360.540581,
-          360.540581,
-          360.540581
+          224.686192,
+          224.686192,
+          227.047278,
+          230.438742,
+          230.438742
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          16313.354288
+          14309.449067,
+          14245.418187,
+          14344.183105
         ],
         "boxplot": [
-          16313.354288,
-          16313.354288,
-          16313.354288,
-          16313.354288,
-          16313.354288
+          14245.418187,
+          14245.418187,
+          14309.449067,
+          14344.183105,
+          14344.183105
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          151.521339
+          144.039665,
+          137.312012,
+          145.369654
         ],
         "boxplot": [
-          151.521339,
-          151.521339,
-          151.521339,
-          151.521339,
-          151.521339
+          137.312012,
+          137.312012,
+          144.039665,
+          145.369654,
+          145.369654
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          13184.282993
+          11852.142934,
+          11597.968047,
+          11535.41277
         ],
         "boxplot": [
-          13184.282993,
-          13184.282993,
-          13184.282993,
-          13184.282993,
-          13184.282993
+          11535.41277,
+          11535.41277,
+          11597.968047,
+          11852.142934,
+          11852.142934
         ]
       }
     ],
@@ -2176,105 +2382,121 @@
       {
         "adapter": "chdb",
         "values": [
-          221.980773
+          174.420515,
+          171.309216,
+          177.882242
         ],
         "boxplot": [
-          221.980773,
-          221.980773,
-          221.980773,
-          221.980773,
-          221.980773
+          171.309216,
+          171.309216,
+          174.420515,
+          177.882242,
+          177.882242
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          619.231973
+          111.387797,
+          103.748767,
+          95.37253
         ],
         "boxplot": [
-          619.231973,
-          619.231973,
-          619.231973,
-          619.231973,
-          619.231973
+          95.37253,
+          95.37253,
+          103.748767,
+          111.387797,
+          111.387797
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          241.00555
+          214.091979,
+          215.039938,
+          213.305296
         ],
         "boxplot": [
-          241.00555,
-          241.00555,
-          241.00555,
-          241.00555,
-          241.00555
+          213.305296,
+          213.305296,
+          214.091979,
+          215.039938,
+          215.039938
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          1282.715123
+          1045.473362,
+          1216.390376,
+          1391.131266
         ],
         "boxplot": [
-          1282.715123,
-          1282.715123,
-          1282.715123,
-          1282.715123,
-          1282.715123
+          1045.473362,
+          1045.473362,
+          1216.390376,
+          1391.131266,
+          1391.131266
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          499.947691
+          340.820397,
+          341.983357,
+          325.521594
         ],
         "boxplot": [
-          499.947691,
-          499.947691,
-          499.947691,
-          499.947691,
-          499.947691
+          325.521594,
+          325.521594,
+          340.820397,
+          341.983357,
+          341.983357
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          18156.964444
+          16111.858509,
+          16087.644869,
+          16207.829899
         ],
         "boxplot": [
-          18156.964444,
-          18156.964444,
-          18156.964444,
-          18156.964444,
-          18156.964444
+          16087.644869,
+          16087.644869,
+          16111.858509,
+          16207.829899,
+          16207.829899
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          159.783744
+          139.930445,
+          142.333472,
+          142.318494
         ],
         "boxplot": [
-          159.783744,
-          159.783744,
-          159.783744,
-          159.783744,
-          159.783744
+          139.930445,
+          139.930445,
+          142.318494,
+          142.333472,
+          142.333472
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          21876.092598
+          13293.619332,
+          13070.692247,
+          13527.540949
         ],
         "boxplot": [
-          21876.092598,
-          21876.092598,
-          21876.092598,
-          21876.092598,
-          21876.092598
+          13070.692247,
+          13070.692247,
+          13293.619332,
+          13527.540949,
+          13527.540949
         ]
       }
     ],
@@ -2282,105 +2504,121 @@
       {
         "adapter": "chdb",
         "values": [
-          202.915108
+          168.256697,
+          171.845838,
+          172.769831
         ],
         "boxplot": [
-          202.915108,
-          202.915108,
-          202.915108,
-          202.915108,
-          202.915108
+          168.256697,
+          168.256697,
+          171.845838,
+          172.769831,
+          172.769831
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          609.604849
+          97.388287,
+          101.14655,
+          110.3626
         ],
         "boxplot": [
-          609.604849,
-          609.604849,
-          609.604849,
-          609.604849,
-          609.604849
+          97.388287,
+          97.388287,
+          101.14655,
+          110.3626,
+          110.3626
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          268.574366
+          240.237181,
+          247.959521,
+          246.125441
         ],
         "boxplot": [
-          268.574366,
-          268.574366,
-          268.574366,
-          268.574366,
-          268.574366
+          240.237181,
+          240.237181,
+          246.125441,
+          247.959521,
+          247.959521
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          923.832433
+          741.148991,
+          899.851598,
+          737.070716
         ],
         "boxplot": [
-          923.832433,
-          923.832433,
-          923.832433,
-          923.832433,
-          923.832433
+          737.070716,
+          737.070716,
+          741.148991,
+          899.851598,
+          899.851598
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          256.278358
+          176.877041,
+          211.807356,
+          94.594811
         ],
         "boxplot": [
-          256.278358,
-          256.278358,
-          256.278358,
-          256.278358,
-          256.278358
+          94.594811,
+          94.594811,
+          176.877041,
+          211.807356,
+          211.807356
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          18249.050062
+          16087.1392,
+          15964.96156,
+          16046.214371
         ],
         "boxplot": [
-          18249.050062,
-          18249.050062,
-          18249.050062,
-          18249.050062,
-          18249.050062
+          15964.96156,
+          15964.96156,
+          16046.214371,
+          16087.1392,
+          16087.1392
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          148.632613
+          139.398495,
+          138.555615,
+          139.479078
         ],
         "boxplot": [
-          148.632613,
-          148.632613,
-          148.632613,
-          148.632613,
-          148.632613
+          138.555615,
+          138.555615,
+          139.398495,
+          139.479078,
+          139.479078
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          21658.052858
+          13638.682693,
+          13368.155045,
+          13601.151587
         ],
         "boxplot": [
-          21658.052858,
-          21658.052858,
-          21658.052858,
-          21658.052858,
-          21658.052858
+          13368.155045,
+          13368.155045,
+          13601.151587,
+          13638.682693,
+          13638.682693
         ]
       }
     ],
@@ -2388,105 +2626,121 @@
       {
         "adapter": "chdb",
         "values": [
-          253.040547
+          182.332681,
+          181.340688,
+          184.857239
         ],
         "boxplot": [
-          253.040547,
-          253.040547,
-          253.040547,
-          253.040547,
-          253.040547
+          181.340688,
+          181.340688,
+          182.332681,
+          184.857239,
+          184.857239
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          716.531551
+          106.45929,
+          106.348718,
+          111.468571
         ],
         "boxplot": [
-          716.531551,
-          716.531551,
-          716.531551,
-          716.531551,
-          716.531551
+          106.348718,
+          106.348718,
+          106.45929,
+          111.468571,
+          111.468571
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          257.178825
+          231.806296,
+          233.351365,
+          234.380761
         ],
         "boxplot": [
-          257.178825,
-          257.178825,
-          257.178825,
-          257.178825,
-          257.178825
+          231.806296,
+          231.806296,
+          233.351365,
+          234.380761,
+          234.380761
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          1625.2432
+          1555.135819,
+          1598.403628,
+          1613.536613
         ],
         "boxplot": [
-          1625.2432,
-          1625.2432,
-          1625.2432,
-          1625.2432,
-          1625.2432
+          1555.135819,
+          1555.135819,
+          1598.403628,
+          1613.536613,
+          1613.536613
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          502.031644
+          468.458587,
+          477.107574,
+          375.151772
         ],
         "boxplot": [
-          502.031644,
-          502.031644,
-          502.031644,
-          502.031644,
-          502.031644
+          375.151772,
+          375.151772,
+          468.458587,
+          477.107574,
+          477.107574
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          18553.707245
+          16485.265719,
+          16392.33682,
+          16394.185625
         ],
         "boxplot": [
-          18553.707245,
-          18553.707245,
-          18553.707245,
-          18553.707245,
-          18553.707245
+          16392.33682,
+          16392.33682,
+          16394.185625,
+          16485.265719,
+          16485.265719
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          149.290883
+          129.275066,
+          129.882856,
+          129.674419
         ],
         "boxplot": [
-          149.290883,
-          149.290883,
-          149.290883,
-          149.290883,
-          149.290883
+          129.275066,
+          129.275066,
+          129.674419,
+          129.882856,
+          129.882856
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          30342.673817
+          14624.072473,
+          13991.069901,
+          14057.200478
         ],
         "boxplot": [
-          30342.673817,
-          30342.673817,
-          30342.673817,
-          30342.673817,
-          30342.673817
+          13991.069901,
+          13991.069901,
+          14057.200478,
+          14624.072473,
+          14624.072473
         ]
       }
     ],
@@ -2494,105 +2748,121 @@
       {
         "adapter": "chdb",
         "values": [
-          1813.041727
+          1709.929497,
+          1658.177736,
+          1641.267264
         ],
         "boxplot": [
-          1813.041727,
-          1813.041727,
-          1813.041727,
-          1813.041727,
-          1813.041727
+          1641.267264,
+          1641.267264,
+          1658.177736,
+          1709.929497,
+          1709.929497
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          1117.924887
+          750.881138,
+          755.655539,
+          777.236578
         ],
         "boxplot": [
-          1117.924887,
-          1117.924887,
-          1117.924887,
-          1117.924887,
-          1117.924887
+          750.881138,
+          750.881138,
+          755.655539,
+          777.236578,
+          777.236578
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          659.490842
+          610.520465,
+          613.277146,
+          629.556508
         ],
         "boxplot": [
-          659.490842,
-          659.490842,
-          659.490842,
-          659.490842,
-          659.490842
+          610.520465,
+          610.520465,
+          613.277146,
+          629.556508,
+          629.556508
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          7341.243806
+          7632.194563,
+          7918.887224,
+          7670.759169
         ],
         "boxplot": [
-          7341.243806,
-          7341.243806,
-          7341.243806,
-          7341.243806,
-          7341.243806
+          7632.194563,
+          7632.194563,
+          7670.759169,
+          7918.887224,
+          7918.887224
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          924.750399
+          910.41143,
+          844.780382,
+          836.352233
         ],
         "boxplot": [
-          924.750399,
-          924.750399,
-          924.750399,
-          924.750399,
-          924.750399
+          836.352233,
+          836.352233,
+          844.780382,
+          910.41143,
+          910.41143
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          40322.616774
+          37866.247345,
+          38043.093997,
+          37725.778773
         ],
         "boxplot": [
-          40322.616774,
-          40322.616774,
-          40322.616774,
-          40322.616774,
-          40322.616774
+          37725.778773,
+          37725.778773,
+          37866.247345,
+          38043.093997,
+          38043.093997
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          371.122031
+          321.044684,
+          321.56106,
+          319.224158
         ],
         "boxplot": [
-          371.122031,
-          371.122031,
-          371.122031,
-          371.122031,
-          371.122031
+          319.224158,
+          319.224158,
+          321.044684,
+          321.56106,
+          321.56106
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          36804.534961
+          27273.149847,
+          26266.474896,
+          26270.215698
         ],
         "boxplot": [
-          36804.534961,
-          36804.534961,
-          36804.534961,
-          36804.534961,
-          36804.534961
+          26266.474896,
+          26266.474896,
+          26270.215698,
+          27273.149847,
+          27273.149847
         ]
       }
     ],
@@ -2600,105 +2870,121 @@
       {
         "adapter": "chdb",
         "values": [
-          5205.11515
+          5380.389279,
+          5207.261077,
+          5395.780965
         ],
         "boxplot": [
-          5205.11515,
-          5205.11515,
-          5205.11515,
-          5205.11515,
-          5205.11515
+          5207.261077,
+          5207.261077,
+          5380.389279,
+          5395.780965,
+          5395.780965
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          2039.132937
+          1980.648815,
+          2034.685768,
+          1904.412737
         ],
         "boxplot": [
-          2039.132937,
-          2039.132937,
-          2039.132937,
-          2039.132937,
-          2039.132937
+          1904.412737,
+          1904.412737,
+          1980.648815,
+          2034.685768,
+          2034.685768
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          1152.045091
+          1156.850754,
+          1124.145129,
+          1115.668546
         ],
         "boxplot": [
-          1152.045091,
-          1152.045091,
-          1152.045091,
-          1152.045091,
-          1152.045091
+          1115.668546,
+          1115.668546,
+          1124.145129,
+          1156.850754,
+          1156.850754
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          8274.461746
+          8444.056259,
+          8587.095275,
+          9120.008162
         ],
         "boxplot": [
-          8274.461746,
-          8274.461746,
-          8274.461746,
-          8274.461746,
-          8274.461746
+          8444.056259,
+          8444.056259,
+          8587.095275,
+          9120.008162,
+          9120.008162
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          2098.159706
+          1975.190001,
+          2009.836914,
+          2009.47697
         ],
         "boxplot": [
-          2098.159706,
-          2098.159706,
-          2098.159706,
-          2098.159706,
-          2098.159706
+          1975.190001,
+          1975.190001,
+          2009.47697,
+          2009.836914,
+          2009.836914
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          22566.508323
+          23213.641959,
+          23211.821406,
+          23267.539625
         ],
         "boxplot": [
-          22566.508323,
-          22566.508323,
-          22566.508323,
-          22566.508323,
-          22566.508323
+          23211.821406,
+          23211.821406,
+          23213.641959,
+          23267.539625,
+          23267.539625
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          285.188761
+          261.700101,
+          258.27403,
+          261.426378
         ],
         "boxplot": [
-          285.188761,
-          285.188761,
-          285.188761,
-          285.188761,
-          285.188761
+          258.27403,
+          258.27403,
+          261.426378,
+          261.700101,
+          261.700101
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          22693.532475
+          21679.676276,
+          21783.745466,
+          21989.421376
         ],
         "boxplot": [
-          22693.532475,
-          22693.532475,
-          22693.532475,
-          22693.532475,
-          22693.532475
+          21679.676276,
+          21679.676276,
+          21783.745466,
+          21989.421376,
+          21989.421376
         ]
       }
     ],
@@ -2706,105 +2992,121 @@
       {
         "adapter": "chdb",
         "values": [
-          574.788223
+          543.168091,
+          532.063402,
+          509.733936
         ],
         "boxplot": [
-          574.788223,
-          574.788223,
-          574.788223,
-          574.788223,
-          574.788223
+          509.733936,
+          509.733936,
+          532.063402,
+          543.168091,
+          543.168091
         ]
       },
       {
         "adapter": "datafusion",
         "values": [
-          1238.655734
+          1126.720878,
+          1100.132101,
+          1091.108364
         ],
         "boxplot": [
-          1238.655734,
-          1238.655734,
-          1238.655734,
-          1238.655734,
-          1238.655734
+          1091.108364,
+          1091.108364,
+          1100.132101,
+          1126.720878,
+          1126.720878
         ]
       },
       {
         "adapter": "duckdb",
         "values": [
-          377.423913
+          355.148863,
+          345.798383,
+          348.810142
         ],
         "boxplot": [
-          377.423913,
-          377.423913,
-          377.423913,
-          377.423913,
-          377.423913
+          345.798383,
+          345.798383,
+          348.810142,
+          355.148863,
+          355.148863
         ]
       },
       {
         "adapter": "pandas",
         "values": [
-          9307.864031
+          9627.548241,
+          9499.166645,
+          9462.449926
         ],
         "boxplot": [
-          9307.864031,
-          9307.864031,
-          9307.864031,
-          9307.864031,
-          9307.864031
+          9462.449926,
+          9462.449926,
+          9499.166645,
+          9627.548241,
+          9627.548241
         ]
       },
       {
         "adapter": "polars",
         "values": [
-          803.520472
+          693.818645,
+          563.839667,
+          570.439905
         ],
         "boxplot": [
-          803.520472,
-          803.520472,
-          803.520472,
-          803.520472,
-          803.520472
+          563.839667,
+          563.839667,
+          570.439905,
+          693.818645,
+          693.818645
         ]
       },
       {
         "adapter": "questdb",
         "values": [
-          18630.266256
+          19581.008101,
+          19680.789027,
+          19465.248305
         ],
         "boxplot": [
-          18630.266256,
-          18630.266256,
-          18630.266256,
-          18630.266256,
-          18630.266256
+          19465.248305,
+          19465.248305,
+          19581.008101,
+          19680.789027,
+          19680.789027
         ]
       },
       {
         "adapter": "rayforce",
         "values": [
-          113.875671
+          88.973229,
+          84.759846,
+          84.521892
         ],
         "boxplot": [
-          113.875671,
-          113.875671,
-          113.875671,
-          113.875671,
-          113.875671
+          84.521892,
+          84.521892,
+          84.759846,
+          88.973229,
+          88.973229
         ]
       },
       {
         "adapter": "timescale",
         "values": [
-          13514.783628
+          13069.92866,
+          13397.564727,
+          13138.568813
         ],
         "boxplot": [
-          13514.783628,
-          13514.783628,
-          13514.783628,
-          13514.783628,
-          13514.783628
+          13069.92866,
+          13069.92866,
+          13138.568813,
+          13397.564727,
+          13397.564727
         ]
       }
     ]
@@ -2897,7 +3199,7 @@
       "pandas": "df.groupby([\"id2\",\"id4\"]).apply(lambda g: g[\"v1\"].corr(g[\"v2\"]) ** 2)",
       "polars": "df.group_by(\"id2\",\"id4\").agg((pl.corr(\"v1\",\"v2\")**2).alias(\"r2\"))",
       "questdb": "SELECT id2, id4, POWER(corr(v1, v2), 2) FROM data GROUP BY id2, id4",
-      "rayforce": "t.select(r2=Column(\"v1\").pearson_corr(Column(\"v2\"))**2).by(\"id2\",\"id4\").execute()",
+      "rayforce": "# Two-stage: pearson_corr at top first, then square the result\nagg = t.select(r=Column(\"v1\").pearson_corr(Column(\"v2\"))).by(\"id2\",\"id4\").execute()\nagg.select(\"id2\", \"id4\", r2=Column(\"r\")*Column(\"r\")).execute()",
       "timescale": "SELECT id2, id4, POWER(CORR(v1, v2), 2) FROM data GROUP BY id2, id4"
     },
     "groupby_q10": {
