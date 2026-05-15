@@ -33,7 +33,7 @@ class RayforceAdapter(Adapter):
         "groupby_q5":  't.select(v1=Column("v1").sum(), v2=Column("v2").sum(), v3=Column("v3").sum()).by("id6").execute()',
         "groupby_q6":  't.select(v3_median=Column("v3").median(), v3_std=Column("v3").std()).by("id4","id5").execute()',
         "groupby_q7":  '# Two-stage workaround for engine NYI on arithmetic-of-aggregates per-group:\nagg = t.select(v1m=Column("v1").max(), v2m=Column("v2").min()).by("id3").execute()\nagg.select("id3", range_v1_v2=Column("v1m") - Column("v2m")).execute()',
-        "groupby_q8":  "(do (set _g (select {largest2_v3: (top v3 2) by: id6 from: t})) (set _ids (at _g 'id6)) (set _n (count _ids)) (table [id6 largest2_v3] (list (at _ids (div (til (* 2 _n)) 2)) (raze (at _g 'largest2_v3)))))",
+        "groupby_q8":  't.select(largest2_v3=Column("v3").top(2)).by("id6").execute()',
         "groupby_q9":  '# Two-stage: pearson_corr at top first, then square the result\nagg = t.select(r=Column("v1").pearson_corr(Column("v2"))).by("id2","id4").execute()\nagg.select("id2", "id4", r2=Column("r")*Column("r")).execute()',
         "groupby_q10": 't.select(v3=Column("v3").sum(), cnt=Column("v1").count()).by("id1","id2","id3","id4","id5","id6").execute()',
         "join_q1":     '# pre-project right to (key, v2) to avoid to_dict() collapse on dup cols\nx.inner_join(small.select("id1","v2").execute(), on=["id1"]).execute()',
@@ -304,29 +304,17 @@ class RayforceAdapter(Adapter):
     def run_groupby_q8(self) -> BenchmarkResult:
         """Q8: largest two v3 by id6 — canonical H2O.
 
-        Engine-side explode so the timed result matches DuckDB/polars's
-        2-rows-per-group shape (200k rows for 100k id6 groups).
-        Without the explode rayforce returns 100k LIST cells; check
-        still passes via Python-side explode in materialize(), but the
-        bench timing would skip the row-materialisation that SQL
-        adapters pay for.  Engine-side `raze`/`map(take)` keeps the
-        explode inside the timer where it belongs.
+        The engine's OP_GROUP_TOPK_ROWFORM operator emits row form
+        directly (one row per kept-value, not nested LIST<F64>[K]
+        cells), so the natural chained API matches DuckDB/polars's
+        2-rows-per-group shape (200k rows for 100k id6 groups) without
+        any adapter-side explode.
         """
-        tbl = self._get_symbol()
-        # Vectorised explode: replicate each id6 twice via
-        # `(at ids (div (til (* 2 N)) 2))` — all built-ins, no per-element
-        # lambda dispatch.  Assumes K=2 everywhere (true for canonical
-        # H2O 10m k100; groups always have ≥2 non-null v3).  raze of
-        # LIST<F64>[2] mirrors the same expansion on the value side.
-        return self._run_timed_query(
-            "(do "
-            "(set _g (select {largest2_v3: (top v3 2) by: id6 from: "
-            + tbl + "})) "
-            "(set _ids (at _g 'id6)) "
-            "(set _n (count _ids)) "
-            "(table [id6 largest2_v3] "
-            "(list (at _ids (div (til (* 2 _n)) 2)) "
-            "(raze (at _g 'largest2_v3)))))",
+        t = self._get_table_obj()
+        C = self._Column
+        return self._timed(
+            lambda: t.select(largest2_v3=C("v3").top(2)
+                             ).by("id6").execute(),
             "groupby_q8",
         )
 
@@ -558,11 +546,10 @@ class RayforceAdapter(Adapter):
                 result = agg.select("id3",
                                     range_v1_v2=C("v1m") - C("v2m")).execute()
             elif op == "groupby_q8":
-                # Correctness path: small check sizes may have groups
-                # with <2 non-null v3 (K=1 cells), so we can't assume
-                # the K=2-uniform fast formula used by run_groupby_q8.
-                # Engine call returns the LIST<F64>[K] shape; Python
-                # loop below explodes by per-cell count.
+                # Engine's OP_GROUP_TOPK_ROWFORM emits row form
+                # directly — one row per (id6, kept_value).  Variable-K
+                # behaviour (groups with <K non-null v3 emit fewer
+                # rows) is handled engine-side.
                 result = t.select(largest2_v3=C("v3").top(2)
                                   ).by("id6").execute()
             elif op == "groupby_q9":
@@ -626,26 +613,8 @@ class RayforceAdapter(Adapter):
             d["r2"] = [math.nan if c < 2 else v for v, c in zip(r2, cnt)]
             del d["_cnt"]
 
-        # q8: variable-K explode for the check path — small data sizes
-        # have groups with fewer than 2 non-null v3, so per-cell length
-        # varies.  run_groupby_q8 uses the K=2-uniform fast vectorised
-        # form (valid for canonical 10m k100); here we walk each cell
-        # and replicate id6 by its actual length.
-        if op == "groupby_q8" and "largest2_v3" in d:
-            ids, vals = d["id6"], d["largest2_v3"]
-            new_ids, new_vals = [], []
-            for i, v in zip(ids, vals):
-                if hasattr(v, "to_list"):
-                    inner = list(v.to_list())
-                elif isinstance(v, (list, tuple)):
-                    inner = list(v)
-                else:
-                    inner = [v]
-                inner = [x.to_python() if hasattr(x, "to_python") else x
-                         for x in inner]
-                new_ids.extend([i] * len(inner))
-                new_vals.extend(inner)
-            d = {"id6": new_ids, "largest2_v3": new_vals}
+        # q8: engine's OP_GROUP_TOPK_ROWFORM emits row form natively;
+        # no Python-side explode required.
 
         df = pl.from_dict(d)
 
