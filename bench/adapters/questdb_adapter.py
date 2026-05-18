@@ -96,10 +96,15 @@ class QuestDBAdapter(Adapter):
         float_cols = [name for name, dtype in df.schema.items() if dtype == pl.Float64]
         str_cols = [name for name, dtype in df.schema.items() if dtype in (pl.Utf8, pl.String)]
 
-        # Use ILP for fast ingestion
+        # Use ILP for ingestion.  Flush every FLUSH_EVERY rows so the
+        # server can start committing before send finishes — without
+        # periodic flush, all rows sit in the sender's local buffer until
+        # the with-block exits, making first-commit visibility race
+        # against the polling deadline below.
+        FLUSH_EVERY = 100_000
         conf = f"tcp::addr={self._host}:{self._ilp_port};"
         with self._Sender.from_conf(conf) as sender:
-            for row in df.iter_rows(named=True):
+            for i, row in enumerate(df.iter_rows(named=True)):
                 sender.row(
                     sql_table_name,
                     symbols={col: row[col] for col in str_cols},
@@ -109,16 +114,19 @@ class QuestDBAdapter(Adapter):
                     },
                     at=self._ServerTimestamp,
                 )
+                if (i + 1) % FLUSH_EVERY == 0:
+                    sender.flush()
             sender.flush()
 
         # ILP is async — the rows (and even the table itself, on a first
         # write) aren't queryable until QuestDB commits them (default
-        # cadence ~1s). Block until count() matches the load, treating any
-        # error from the SELECT as "not visible yet".
+        # cadence ~1s).  For multi-million-row loads the commit chases
+        # the send tail by tens of seconds; 5-minute deadline covers the
+        # canonical-join `big` (N=10M) without false ILP timeouts.
         import time as _time
         expected = df.height
         actual = 0
-        deadline = _time.time() + 30
+        deadline = _time.time() + 300
         while _time.time() < deadline:
             try:
                 with self._conn.cursor() as cur:
@@ -253,9 +261,12 @@ class QuestDBAdapter(Adapter):
         float_cols = [n for n, d in df.schema.items() if d == pl.Float64]
         str_cols = [n for n, d in df.schema.items() if d in (pl.Utf8, pl.String)]
 
+        # Periodic flush so server commits in parallel with send — same
+        # rationale as load_data().
+        FLUSH_EVERY = 100_000
         conf = f"tcp::addr={self._host}:{self._ilp_port};"
         with self._Sender.from_conf(conf) as sender:
-            for row in df.iter_rows(named=True):
+            for i, row in enumerate(df.iter_rows(named=True)):
                 sender.row(
                     right_table,
                     symbols={c: row[c] for c in str_cols},
@@ -265,11 +276,13 @@ class QuestDBAdapter(Adapter):
                     },
                     at=self._ServerTimestamp,
                 )
+                if (i + 1) % FLUSH_EVERY == 0:
+                    sender.flush()
             sender.flush()
 
         # Wait for ILP commit visibility (same dance as load_data).
         expected = df.height
-        deadline = _time.time() + 30
+        deadline = _time.time() + 300
         while _time.time() < deadline:
             try:
                 with self._conn.cursor() as cur:
@@ -374,20 +387,24 @@ class QuestDBAdapter(Adapter):
         # Random N-character strings are high-cardinality — push them as
         # STRING via ILP `columns`, not SYMBOL via `symbols` (Symbol is
         # a dictionary type and chokes on N=1M unique values).
+        # Periodic flush so server commits in parallel with send.
+        FLUSH_EVERY = 100_000
         conf = f"tcp::addr={self._host}:{self._ilp_port};"
         with self._Sender.from_conf(conf) as sender:
-            for row in df.iter_rows(named=True):
+            for i, row in enumerate(df.iter_rows(named=True)):
                 v = row["v"]
                 sender.row(sort_table, columns={"v": v},
                            at=self._ServerTimestamp)
+                if (i + 1) % FLUSH_EVERY == 0:
+                    sender.flush()
             sender.flush()
 
-        # Wait for ILP commit visibility. 1M-row ILP commits can take a
-        # while; raise loudly on timeout so we don't sort an empty table
+        # Wait for ILP commit visibility. 10M-row ILP commits can take
+        # minutes; raise loudly on timeout so we don't sort an empty table
         # and report fake 0.36ms / 0 rows.
         expected = df.height
         actual = 0
-        deadline = _time.time() + 120
+        deadline = _time.time() + 300
         while _time.time() < deadline:
             try:
                 with self._conn.cursor() as cur:

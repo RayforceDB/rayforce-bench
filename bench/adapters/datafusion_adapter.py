@@ -55,23 +55,25 @@ class DataFusionAdapter(Adapter):
     def load_data(self, path: Path, table_name: str = "data") -> None:
         ctx = self._ensure_ctx()
         df_table = f"bench_{table_name}"
-        # register_csv reads lazily; force materialization by collecting
-        # into an in-memory table so subsequent timed queries don't pay
-        # for disk reads.
+        # Read CSV once and register the materialized RecordBatches as
+        # an in-memory table.  Without this, register_csv produces a
+        # listing table that re-parses CSV on every query — page cache
+        # avoids disk I/O but the parse cost remains, tilting timing
+        # against DataFusion vs adapters that hold native columnar
+        # storage (duckdb/chdb/polars/pandas/rayforce all do).
         try:
             ctx.deregister_table(df_table)
         except Exception:
             pass
-        ctx.register_csv(df_table, str(path))
-        # Materialize: read all batches, register as memtable.
-        batches = ctx.sql(f"SELECT * FROM {df_table}").collect()
-        ctx.deregister_table(df_table)
-        from datafusion import RecordBatchStream  # noqa: F401
-        # The simplest robust path: keep CSV registered but warm OS page
-        # cache by collecting once. Re-register to drop any stream state.
-        ctx.register_csv(df_table, str(path))
-        # Warm by collecting once (already done above).
-        del batches
+        csv_tmp = f"{df_table}__csv"
+        try:
+            ctx.deregister_table(csv_tmp)
+        except Exception:
+            pass
+        ctx.register_csv(csv_tmp, str(path))
+        batches = ctx.sql(f"SELECT * FROM {csv_tmp}").collect()
+        ctx.deregister_table(csv_tmp)
+        ctx.register_record_batches(df_table, [batches])
         self._table_names[table_name] = df_table
 
     def _get_table(self, name: str = "data") -> str:
