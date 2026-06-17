@@ -33,7 +33,7 @@ class RayforceAdapter(Adapter):
         "groupby_q5":  't.select(v1=Column("v1").sum(), v2=Column("v2").sum(), v3=Column("v3").sum()).by("id6").execute()',
         "groupby_q6":  't.select(v3_median=Column("v3").median(), v3_std=Column("v3").std()).by("id4","id5").execute()',
         "groupby_q7":  '# Two-stage workaround for engine NYI on arithmetic-of-aggregates per-group:\nagg = t.select(v1m=Column("v1").max(), v2m=Column("v2").min()).by("id3").execute()\nagg.select("id3", range_v1_v2=Column("v1m") - Column("v2m")).execute()',
-        "groupby_q8":  't.select(largest2_v3=Column("v3").top(2)).by("id6").execute()',
+        "groupby_q8":  't.select(largest2_v3=Column("v3").top(2)).by("id6").ungroup().execute()',
         "groupby_q9":  '# Two-stage: pearson_corr at top first, then square the result\nagg = t.select(r=Column("v1").pearson_corr(Column("v2"))).by("id2","id4").execute()\nagg.select("id2", "id4", r2=Column("r")*Column("r")).execute()',
         "groupby_q10": 't.select(v3=Column("v3").sum(), cnt=Column("v1").count()).by("id1","id2","id3","id4","id5","id6").execute()',
         "join_q1":     '# pre-project right to (key, v2) to avoid to_dict() collapse on dup cols\nx.inner_join(small.select("id1","v2").execute(), on=["id1"]).execute()',
@@ -304,17 +304,18 @@ class RayforceAdapter(Adapter):
     def run_groupby_q8(self) -> BenchmarkResult:
         """Q8: largest two v3 by id6 — canonical H2O.
 
-        The engine's OP_GROUP_TOPK_ROWFORM operator emits row form
-        directly (one row per kept-value, not nested LIST<F64>[K]
-        cells), so the natural chained API matches DuckDB/polars's
-        2-rows-per-group shape (200k rows for 100k id6 groups) without
-        any adapter-side explode.
+        v2's per-group ``top(2)`` emits a nested LIST column: one
+        ``LIST<F64>[K]`` cell per id6 group (~100k rows). ``.ungroup()``
+        flattens that to the 2-rows-per-group row form (~200k rows) that
+        matches the SQL reference / polars. Variable-K is handled
+        naturally: groups with <2 non-null v3 carry shorter lists that
+        expand to fewer rows, and empty lists drop the group entirely.
         """
         t = self._get_table_obj()
         C = self._Column
         return self._timed(
             lambda: t.select(largest2_v3=C("v3").top(2)
-                             ).by("id6").execute(),
+                             ).by("id6").ungroup().execute(),
             "groupby_q8",
         )
 
@@ -546,12 +547,15 @@ class RayforceAdapter(Adapter):
                 result = agg.select("id3",
                                     range_v1_v2=C("v1m") - C("v2m")).execute()
             elif op == "groupby_q8":
-                # Engine's OP_GROUP_TOPK_ROWFORM emits row form
-                # directly — one row per (id6, kept_value).  Variable-K
-                # behaviour (groups with <K non-null v3 emit fewer
-                # rows) is handled engine-side.
+                # v2's per-group top(2) emits a nested LIST<F64>[K]
+                # column (one list per id6 group); .ungroup() flattens
+                # it to the 2-rows-per-group row form that matches the
+                # SQL reference / polars. Variable-K is handled
+                # naturally: groups with <2 non-null v3 carry shorter
+                # lists that expand to fewer rows; empty lists drop the
+                # group.
                 result = t.select(largest2_v3=C("v3").top(2)
-                                  ).by("id6").execute()
+                                  ).by("id6").ungroup().execute()
             elif op == "groupby_q9":
                 # Two-stage to keep OP_PEARSON_CORR at the top of the
                 # first select (see run_groupby_q9 docstring).  Carry
@@ -613,8 +617,8 @@ class RayforceAdapter(Adapter):
             d["r2"] = [math.nan if c < 2 else v for v, c in zip(r2, cnt)]
             del d["_cnt"]
 
-        # q8: engine's OP_GROUP_TOPK_ROWFORM emits row form natively;
-        # no Python-side explode required.
+        # q8: .ungroup() already flattened the nested top(2) LIST column
+        # into row form engine-side; no Python-side explode required.
 
         df = pl.from_dict(d)
 
