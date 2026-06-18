@@ -530,15 +530,11 @@ class RayforceAdapter(Adapter):
                                   v2=C("v2").sum(),
                                   v3=C("v3").sum()).by("id6").execute()
             elif op == "groupby_q6":
-                # Extra `_cnt` column lets us reconstruct n<=1 nulls in
-                # v3_std after to_dict() — the wrapper drops the
-                # typed-null bit when materialising F64 vectors, so the
-                # engine's correct 0Nf for sample-std-of-1 surfaces here
-                # as 0.0. Post-process below replaces those with NaN
-                # which check.py's canonicalize folds to null.
+                # std-of-1 yields the engine's typed null (0Nf); the
+                # per-column to_numpy() materialisation below surfaces it
+                # as NaN directly, so no _cnt reconstruction is needed.
                 result = t.select(v3_median=C("v3").median(),
-                                  v3_std=C("v3").std(),
-                                  _cnt=C("v3").count()
+                                  v3_std=C("v3").std()
                                   ).by("id4", "id5").execute()
             elif op == "groupby_q7":
                 # Two-stage workaround — see run_groupby_q7 for rationale.
@@ -558,17 +554,13 @@ class RayforceAdapter(Adapter):
                                   ).by("id6").ungroup().execute()
             elif op == "groupby_q9":
                 # Two-stage to keep OP_PEARSON_CORR at the top of the
-                # first select (see run_groupby_q9 docstring).  Carry
-                # `_cnt` to reconstruct NaN where n<2 — pearson_corr is
-                # undefined and engine emits typed-null F64 (which the
-                # wrapper's to_python() surfaces as 0.0; cnt-based mask
-                # below restores polars-comparable NaN).
-                agg = t.select(r=C("v1").pearson_corr(C("v2")),
-                               _cnt=C("v1").count()
+                # first select (see run_groupby_q9 docstring). pearson is
+                # undefined for n<2 → engine emits typed-null F64, which
+                # to_numpy() below surfaces as NaN directly (no _cnt mask).
+                agg = t.select(r=C("v1").pearson_corr(C("v2"))
                                ).by("id2", "id4").execute()
                 result = agg.select("id2", "id4",
-                                    r2=C("r") * C("r"),
-                                    _cnt=C("_cnt")).execute()
+                                    r2=C("r") * C("r")).execute()
             elif op == "groupby_q10":
                 result = t.select(v3=C("v3").sum(),
                                   cnt=C("v1").count()
@@ -583,63 +575,28 @@ class RayforceAdapter(Adapter):
 
         if result is None:
             return pl.DataFrame()
-        # to_dict() can return wrapped scalar types (I64(3), F64(...));
-        # polars treats those as Object dtype and refuses to write IPC.
-        # Unwrap via .to_python() each rayforce scalar provides.
-        d = result.to_dict()
-        for col, vals in d.items():
-            if vals and hasattr(vals[0], "to_python"):
-                # Wrapper note: `.to_python()` on F64 silently drops the
-                # typed-null bit (engine returns 0Nf for e.g. stddev on
-                # n<=1, but Python sees 0.0). Per-query nil handling
-                # lives below — q6 reconstructs nulls via _cnt.
-                d[col] = [v.to_python() for v in vals]
+        # Materialise per-column via to_numpy(): the raw-buffer export
+        # yields uniform typed arrays with the engine's typed nulls (0Nf)
+        # surfaced as NaN. That removes the whole class of wrapper
+        # workarounds the old to_dict()/.to_python() path needed:
+        #   - no per-element unwrap (no mixed plain-float/boxed-scalar),
+        #   - no q6 _cnt mask (std-of-1 0Nf → NaN directly),
+        #   - no q9 _cnt mask (pearson n<2 0Nf → NaN directly),
+        #   - no join_left anti-match (unmatched v2 0Nf → NaN directly).
+        # LIST/symbol columns fall back to to_list(). check.py's
+        # canonicalize folds NaN→null before comparing.
+        names = [c.value if hasattr(c, "value") else str(c)
+                 for c in result.columns()]
+        d = {}
+        for name, col in zip(names, result.values()):
+            if hasattr(col, "to_numpy"):
+                d[name] = col.to_numpy()
+            elif hasattr(col, "to_list"):
+                d[name] = col.to_list()
+            else:
+                d[name] = list(col)
 
-        # q6: replace v3_std with NaN where group size <= 1 (engine
-        # returns 0Nf, but the wrapper drops the null bit and surfaces
-        # 0.0). check.py's canonicalize will fold NaN→null.
-        if op == "groupby_q6" and "_cnt" in d:
-            import math
-            cnt = list(d["_cnt"])
-            std = list(d["v3_std"])
-            d["v3_std"] = [math.nan if c <= 1 else v for v, c in zip(std, cnt)]
-            del d["_cnt"]
-
-        # q9: same wrapper-null trick — pearson_corr is undefined when
-        # n<2 (engine emits 0Nf, wrapper surfaces 0.0); also undefined
-        # when either side has zero variance (engine emits NaN already,
-        # passes through to_python unchanged).  Mask r² to NaN for the
-        # n<2 case.
-        if op == "groupby_q9" and "_cnt" in d:
-            import math
-            cnt = list(d["_cnt"])
-            r2  = list(d["r2"])
-            d["r2"] = [math.nan if c < 2 else v for v, c in zip(r2, cnt)]
-            del d["_cnt"]
-
-        # q8: .ungroup() already flattened the nested top(2) LIST column
-        # into row form engine-side; no Python-side explode required.
-
-        df = pl.from_dict(d)
-
-        # join_left: rayforce's left_join surfaces v2=0.0 for unmatched
-        # rows because the wrapper's to_dict() drops the F64 null bit.
-        # Reconstruct null v2 via a polars-side anti-match against the
-        # right CSV's keys.
-        if op == "join_left" and right_path is not None and "v2" in df.columns:
-            right_keys = (pl.read_csv(right_path)
-                            .select(["id1", "id2", "id3"])
-                            .unique()
-                            .with_columns(pl.lit(True).alias("_match")))
-            df = df.join(right_keys, on=["id1", "id2", "id3"], how="left")
-            df = df.with_columns(
-                pl.when(pl.col("_match").is_null())
-                  .then(None)
-                  .otherwise(pl.col("v2"))
-                  .alias("v2")
-            ).drop("_match")
-
-        return df
+        return pl.from_dict(d)
 
     def close(self) -> None:
         self._table_names.clear()
